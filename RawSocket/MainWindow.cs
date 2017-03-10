@@ -27,7 +27,7 @@ using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.IpV6;
 using PcapDotNet.Packets.Transport;
 
-namespace RawSocket
+namespace SteganographyFramework
 {
     public partial class MainWindow : Form
     {
@@ -245,8 +245,8 @@ namespace RawSocket
                 buttonClient.Text = "Stop speaking";
 
                 speaker = new Client(this);
-                speaker.SourceIP = comboBoxClientAddress.Text;
-                speaker.DestinationIP = textBoxDestination.Text;
+                speaker.SourceIP = new IpV4Address(comboBoxClientAddress.Text);
+                speaker.DestinationIP = new IpV4Address(textBoxDestination.Text);
                 speaker.StegoMethod = comboBoxMethod.SelectedValue.ToString();
                 speaker.DestinationPort = Convert.ToUInt16(numericUpDownServerPort.Value);
                 speaker.SourcePort = Convert.ToUInt16(numericUpDownClientPort.Value);
@@ -276,5 +276,5 @@ namespace RawSocket
             }
 
         }
-    }
+    }  
 }

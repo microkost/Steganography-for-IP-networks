@@ -16,7 +16,7 @@ using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.IpV6;
 using PcapDotNet.Packets.Transport;
 
-namespace RawSocket
+namespace SteganographyFramework
 {
     public class SendPacketTMP
     {

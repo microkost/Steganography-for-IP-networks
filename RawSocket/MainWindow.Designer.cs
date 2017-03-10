@@ -1,4 +1,4 @@
-﻿namespace RawSocket
+﻿namespace SteganographyFramework
 {
     partial class MainWindow
     {

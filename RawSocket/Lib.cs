@@ -18,7 +18,7 @@ using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.IpV6;
 using PcapDotNet.Packets.Transport;
 
-namespace RawSocket
+namespace SteganographyFramework
 {
     public static class Lib
     {
@@ -68,11 +68,6 @@ namespace RawSocket
 
             return (deviceIndex);
         }
-
-        public static MacAddress GetMacAddress(this LivePacketDevice livePacketDevice)
-        {
-            return livePacketDevice.GetMacAddress();
-        }
         public static bool checkPrerequisites()
         {
             if (allDevices == null)
@@ -83,6 +78,58 @@ namespace RawSocket
                 return false;
 
             return true;
+        }
+        
+        public static MacAddress getDestinationMacAddress(PacketCommunicator communicator, IpV4Address ipAddress) //because destination mac address needs to be requested for network
+        {
+            //build arp request
+            //send it
+            //wait for arp respond
+
+            //BAAAAAD!
+            /*
+            EthernetLayer ethernetLayer = new EthernetLayer
+                {
+                    Source = new MacAddress("01:01:01:01:01:01"),
+                    //Destination = new MacAddress("02:02:02:02:02:02"),
+                    EtherType = EthernetType.None, // Will be filled automatically.
+                };
+
+            ArpLayer arpLayer = new ArpLayer
+                {
+                    ProtocolType = EthernetType.IpV4,
+                    Operation = ArpOperation.Request,
+                    SenderHardwareAddress = new byte[] { 3, 3, 3, 3, 3, 3 }.AsReadOnly(), // 03:03:03:03:03:03.
+                    SenderProtocolAddress = new byte[] { 1, 2, 3, 4 }.AsReadOnly(), // 1.2.3.4.
+                    TargetHardwareAddress = new byte[] { 4, 4, 4, 4, 4, 4 }.AsReadOnly(), // 04:04:04:04:04:04.
+                    TargetProtocolAddress = new byte[] { 11, 22, 33, 44 }.AsReadOnly(), // 11.22.33.44.
+                };
+
+            PacketBuilder builder = new PacketBuilder(ethernetLayer, arpLayer);
+
+            Packet packet = builder.Build(DateTime.Now);
+            */
+
+            /* DEMO TCP!!!
+            communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
+            Packet packet;
+            while (true)
+            {
+                if (communicator.ReceivePacket(out packet) == PacketCommunicatorReceiveResult.Ok)
+                {
+                    Console.WriteLine("Expected ack number: " + _expectedAckNumber);
+                    Console.WriteLine("Received ack number: " + packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber);
+                    if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == _expectedAckNumber)
+                    {
+                        break;
+                    }
+
+                }
+                SendGet(communicator);
+            }
+            */
+
+            return new MacAddress("02:02:02:02:02:02");
         }
     }
 }

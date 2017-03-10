@@ -21,7 +21,7 @@ using PcapDotNet.Packets.IpV6;
 using PcapDotNet.Packets.Transport;
 using System.Windows.Forms;
 
-namespace RawSocket
+namespace SteganographyFramework
 {
     public class Server
     {
