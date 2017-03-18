@@ -113,9 +113,8 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SendPacketTMP.cs" />
     <Compile Include="Server.cs" />
-    <Compile Include="Uselecc texts.cs" />
+    <Compile Include="Useless texts.cs" />
     <EmbeddedResource Include="MainWindow.resx">
       <DependentUpon>MainWindow.cs</DependentUpon>
     </EmbeddedResource>

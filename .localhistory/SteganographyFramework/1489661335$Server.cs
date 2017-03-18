@@ -1,36 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-
-//PREBRAT
-using PcapDotNet.Base;
 using PcapDotNet.Core;
 using PcapDotNet.Packets;
-using PcapDotNet.Packets.Arp;
-using PcapDotNet.Packets.Dns;
-using PcapDotNet.Packets.Ethernet;
-using PcapDotNet.Packets.Gre;
-using PcapDotNet.Packets.Http;
-using PcapDotNet.Packets.Icmp;
-using PcapDotNet.Packets.Igmp;
-using PcapDotNet.Packets.IpV4;
-using PcapDotNet.Packets.IpV6;
-using PcapDotNet.Packets.Transport;
 using System.Windows.Forms;
+using PcapDotNet.Packets.IpV4;
 
 namespace SteganographyFramework
 {
     public class Server
     {
         public volatile bool terminate = false;
-        public string serverIP { get; set; }
+        public IpV4Address serverIP { get; set; }
 
         private MainWindow mv; //not good
         private PacketDevice selectedDevice = null;
-        private string secret = "";
+        //private string secret = "";
         public int DestinationPort { get; set; } //port on which is server listening //is listening on all
         public string StegoMethod { get; set; } //contains name of choosen method
 
@@ -53,15 +37,13 @@ namespace SteganographyFramework
                 return;
             }
 
-            secret = ""; //reset message
-
             selectedDevice = Lib.allDevices[Lib.getSelectedInterfaceIndex(serverIP)]; // Take the selected adapter
-            //Additional information: Index was out of range. Must be non-negative and less than the size of the collection.
 
             // Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 SettextBoxDebug(String.Format("Listening on {0} {1}...", serverIP, selectedDevice.Description));
+
                 /*
                 using (BerkeleyPacketFilter filter = communicator.CreateFilter("udp")) //remove UDP //check if really remove UDP
                 {
@@ -70,8 +52,7 @@ namespace SteganographyFramework
                 }
                 */
 
-                // Retrieve the packets
-                Packet packet;
+                Packet packet; // Retrieve the packets
                 do
                 {
                     PacketCommunicatorReceiveResult result = communicator.ReceivePacket(out packet);
@@ -81,7 +62,15 @@ namespace SteganographyFramework
                             continue;
                         case PacketCommunicatorReceiveResult.Ok:
                             {
-                                ProcessIncomingPacket(packet);
+                                communicator.ReceivePackets(0, ProcessIncomingPacket);
+                                //communicator.ReceiveSomePackets(0, ProcessIncomingPacket);
+                                //ProcessIncomingPacket(packet);
+                                /*
+                                if (packet.IsValid) //to by bylo lepší dělat filtrem  //&& packet.IpV4.CurrentDestination == serverIP
+                                {
+                                    ProcessIncomingPacket(packet);
+                                }
+                                */
                                 break;
                             }
                         default:
@@ -89,8 +78,7 @@ namespace SteganographyFramework
                     }
                 } while (!terminate);
 
-                secret = GetSecretMessage(capturedPackets, StegoMethod);
-                SettextBoxDebug(String.Format("Final secret: {0}", secret));
+                SettextBoxDebug(String.Format("Secret in this session: {0}", GetSecretMessage(capturedPackets, StegoMethod)));
                 return;
             }
         }
@@ -104,15 +92,29 @@ namespace SteganographyFramework
 
         public void ProcessIncomingPacket(Packet packet) //switch back to private
         {
-            if (packet.IpV4 != null && packet.IpV4.Udp == null) //check packet for IPv4 and is not UDP, because we are not interested by UDP
+            string secret = "";
+
+            SettextBoxDebug((packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+
+            if (packet.IpV4.Udp.IsValid) //UDP methods
             {
-                SettextBoxDebug((packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
-
-                if (String.Equals(StegoMethod, Lib.listOfStegoMethods[0])) //ICMP
+                if (packet.IpV4.Udp.DestinationPort == DestinationPort)
                 {
-
+                    SettextBoxDebug("Magic");
                 }
-                else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[1])) //TCP
+                else if (packet.IpV4.Udp.DestinationPort == 53)
+                {
+                    SettextBoxDebug("DNS 53");
+                }
+                else
+                {
+                    //TODO: section for this which contains magic and garbage from network
+                    SettextBoxDebug("Balast");
+                }
+            }
+            else if (packet.IpV4.Tcp.IsValid) //general
+            {
+                if (String.Equals(StegoMethod, Lib.listOfStegoMethods[1])) //TCP
                 {
                     int recognizedDestPort;
                     bool isNumeric = int.TryParse("packet.IpV4.Tcp.DestinationPort", out recognizedDestPort); //protection
@@ -123,11 +125,8 @@ namespace SteganographyFramework
                         SettextBoxDebug(String.Format("received: {0}", receivedChar));
                     }
                 }
-                else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[2])) //IP
-                {
-                    SettextBoxDebug("Vybrana moznost 2");
-                }
-                else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
+
+                if (String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
                 {
                     int recognizedDestPort;
                     bool isNumeric = int.TryParse("packet.IpV4.Tcp.DestinationPort", out recognizedDestPort); //protection
@@ -137,6 +136,25 @@ namespace SteganographyFramework
                     }
                 }
             }
+            else if (packet.IpV4.Icmp.IsValid)
+            {
+                if (String.Equals(StegoMethod, Lib.listOfStegoMethods[0])) //ICMP
+                {
+
+                }
+            }
+            else if (packet.IpV4.IsValid)
+            {
+                if (String.Equals(StegoMethod, Lib.listOfStegoMethods[2])) //IP
+                {
+                    SettextBoxDebug("Vybrana moznost 2");
+                }
+            }
+            else
+            {
+                SettextBoxDebug("Not fits to any criteria");
+            }
+
 
         }
         private string GetSecretMessage(List<Packet> packets, string usedMethod)
@@ -147,7 +165,7 @@ namespace SteganographyFramework
                 return "nothing to process";
 
             if (String.Equals(usedMethod, Lib.listOfStegoMethods[3]))
-            {                                
+            {
                 foreach (Packet p in packets)
                 {
                     output += Convert.ToChar(p.IpV4.TypeOfService);
