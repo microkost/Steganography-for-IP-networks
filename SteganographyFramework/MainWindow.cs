@@ -48,10 +48,11 @@ namespace SteganographyFramework
             InitialProcedure();
         }
 
-        public MainWindow(bool isServer)
+        public MainWindow(bool isServer, string method)
         {
             InitializeComponent();
             this.isServer = isServer; //isServer == false then isClient
+            this.comboBoxMethod.SelectedValue = method;
             InitialProcedure();
         }
 
@@ -178,7 +179,7 @@ namespace SteganographyFramework
         }
         private void buttonPlus_Click(object sender, EventArgs e) //one more window with agent
         {
-            Form MainWindow2 = new MainWindow(!isServer); //should have constructor with iterating ports
+            Form MainWindow2 = new MainWindow(!isServer, comboBoxMethod.SelectedValue.ToString());
             MainWindow2.Show();
         }
 

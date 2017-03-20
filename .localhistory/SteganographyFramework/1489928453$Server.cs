@@ -44,9 +44,9 @@ namespace SteganographyFramework
 
             selectedDevice = Lib.allDevices[Lib.getSelectedInterfaceIndex(serverIP)]; // Take the selected adapter
 
+            // Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
-                //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout
                 SettextBoxDebug(String.Format("Listening on {0} {1}...", serverIP, selectedDevice.Description));
 
                 string filter = String.Format("tcp port {0} or icmp or udp port 53", DestinationPort);
@@ -65,9 +65,9 @@ namespace SteganographyFramework
                         case PacketCommunicatorReceiveResult.Ok:
                             {
                                 SettextBoxDebug(">Processing...");
-                                if (packet.IsValid && packet.IpV4 != null) //only IPv4
+                                if (packet.IsValid && packet.IpV4 != null)
                                     ProcessIncomingV4Packet(packet);
-                                //communicator.ReceivePackets(0, ProcessIncomingV4Packet);
+                                    //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //only IPv4
                                 break;
                             }
                         default:
@@ -75,25 +75,17 @@ namespace SteganographyFramework
                     }
                 } while (!terminate);
 
-                string secret = GetSecretMessage(StegoPackets); //process result of steganography
+                string secret = GetSecretMessage(StegoPackets);
                 SettextBoxDebug(String.Format("Secret in this session: {0}", secret));
                 return;
             }
         }
-        public void SettextBoxDebug(string text) //printing function for almost all windows
+        public void SettextBoxDebug(string text) //state printing function for main window
         {
-            try
+            mv.Invoke((MethodInvoker)delegate
             {
-                mv.Invoke((MethodInvoker)delegate //An unhandled exception: Cannot access a disposed object when closing app
-                {
-                    mv.textBoxDebug.Text = text + "\r\n" + mv.textBoxDebug.Text; // runs on UI thread
-                });
-            }
-            catch
-            {
-                SettextBoxDebug("Printing failed at server location, dont close it when is still listening"); //stupid solution like that!
-                mv.Close();
-            }
+                mv.textBoxDebug.Text = text + "\r\n" + mv.textBoxDebug.Text; // runs on UI thread
+            });
         }
 
         public void ProcessIncomingV4Packet(Packet packet) //recognizing steganography, collect it and reply if nessesary
@@ -102,17 +94,15 @@ namespace SteganographyFramework
             if (ip.IsValid == false)
                 return;
 
-            //SettextBoxDebug(">>IPv4 " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
-
-            IcmpIdentifiedDatagram icmp = (IcmpIdentifiedDatagram)ip.Icmp; //parsing layers for processing
+            IcmpDatagram icmp = ip.Icmp; //parsing layers
             TcpDatagram tcp = ip.Tcp;
             UdpDatagram udp = ip.Udp;
             DnsDatagram dns = udp.Dns;
-           
+
+            //SettextBoxDebug(">>IPv4 " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+
             //try to recognize magic sequence //some state construction //maybe recognize IP from which is going traffic
             //if magic processing save packet to StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
-            //MAGIC should reply with "reply 0 / destination unrecheable 3 / time exceeded 11
-            //until server believes that messages contains magic, needs to remember source IP
 
             //ICMP methods
             if (icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
@@ -120,19 +110,22 @@ namespace SteganographyFramework
                 SettextBoxDebug(">>Adding ICMP...");
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
 
-                if (icmp.GetType() == typeof(IcmpEchoDatagram)) //if icmp request than send reply
+                if (packet.IpV4.Icmp.GetType() == typeof(IcmpEchoLayer)) //if icmp request than send reply
                 {
                     SettextBoxDebug(">>Reply ICMP...");
 
-                    EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
-                    IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses
+                    EthernetLayer ethernetLayer = new EthernetLayer(); //TODO: Call methods from CLIENT class GetEthernetLayer
+                    ethernetLayer.Source = packet.Ethernet.Destination;
+                    ethernetLayer.Destination = packet.Ethernet.Source;
+
+                    IpV4Layer ipV4Layer = new IpV4Layer();
+                    ipV4Layer.CurrentDestination = packet.IpV4.Source;
+                    ipV4Layer.Source = serverIP;
 
                     IcmpEchoReplyLayer icmpLayer = new IcmpEchoReplyLayer();
-                    icmpLayer.SequenceNumber = icmp.SequenceNumber;
-                    icmpLayer.Identifier = icmp.Identifier;
 
                     PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer);
-                    SendReplyPacket(builder.Build(DateTime.Now)); //send immeiaditelly
+                    SendReplyPacket(builder.Build(DateTime.Now));
                 }
             }
 
@@ -192,7 +185,7 @@ namespace SteganographyFramework
                 if (ip.IsValid == false)
                     break;
 
-                IcmpIdentifiedDatagram icmp = (IcmpIdentifiedDatagram)ip.Icmp; //parsing layers
+                IcmpDatagram icmp = ip.Icmp; //parsing layers
                 TcpDatagram tcp = ip.Tcp;
                 UdpDatagram udp = ip.Udp;
                 DnsDatagram dns = udp.Dns;
@@ -201,12 +194,17 @@ namespace SteganographyFramework
                 {
                     SettextBoxDebug(">>>Resolving ICMP...");
 
-                    if (icmp.GetType() == typeof(IcmpEchoDatagram))
-                    {
-                        output += (char)icmp.Identifier;
-                        output += (char)icmp.SequenceNumber;
-                    }
+                    //IcmpMessageType MessageType = packet.IpV4.ExtractLayer();  //LayerMessageType();
+                    // 'PcapDotNet.Packets.ILayer'
 
+                    Datagram datagram = icmp.Payload;
+                    
+
+
+                IcmpEchoLayer icmpLayer = (IcmpEchoLayer)packet.IpV4.Icmp.ExtractLayer(); //Additional information: Unable to cast object of type 'PcapDotNet.Packets.IpV4.IpV4Layer' to type 'PcapDotNet.Packets.Icmp.IcmpEchoLayer'.
+                    //Additional information: Unable to cast object of type 'PcapDotNet.Packets.Icmp.IcmpUnknownLayer' to type 'PcapDotNet.Packets.Icmp.IcmpEchoLayer'.
+                    output += icmpLayer.Identifier;
+                    output += icmpLayer.SequenceNumber;
                 }
 
                 else if (String.Equals(method, Lib.listOfStegoMethods[1])) //TCP

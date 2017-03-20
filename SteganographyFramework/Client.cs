@@ -47,6 +47,7 @@ namespace SteganographyFramework
         {
             int selectedInterface = Lib.getSelectedInterfaceIndex(SourceIP); //get index
             MacAddressSource = Lib.allDevices[selectedInterface].GetMacAddress(); //get real MAC address of outbound interface
+            MacAddressDestination = NetworkMethods.getDestinationMacAddress(DestinationIP); //get real destination mac based on arp request
 
             if (Secret == null) //when there is no secret to transffer (wrong initialization)
                 return;
@@ -54,8 +55,7 @@ namespace SteganographyFramework
             do //to controll thread until terminate is true
             {
                 using (PacketCommunicator communicator = Lib.allDevices[selectedInterface].Open(100, PacketDeviceOpenAttributes.Promiscuous, 1000)) //name of the device //size // promiscuous mode // read timeout
-                {
-                    MacAddressDestination = Lib.getDestinationMacAddress(communicator, DestinationIP); //get destination mac based on arp request
+                {                    
 
                     if (Secret.Length == 0)
                     {
@@ -66,14 +66,13 @@ namespace SteganographyFramework
                     SettextBoxDebug(String.Format("Processing of method {0} started", StegoMethod));
                     if (String.Equals(StegoMethod, Lib.listOfStegoMethods[0])) //ICMP
                     {
-                        EthernetLayer ethernetLayer = GetEthernetLayer(); //2 Ethernet Layer                        
-                        IpV4Layer ipV4Layer = GetIpV4Layer(); //3 IPv4 Layer                             
-                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer
+                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2 Ethernet Layer                        
+                        IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer                             
+                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer                        
 
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
 
                         //send start sequence
-
                         for (int i = 0; i < Secret.Length;)
                         {
 
@@ -98,6 +97,7 @@ namespace SteganographyFramework
 
                             Packet packet = builder.Build(DateTime.Now); // Rebuild the packet
                             communicator.SendPacket(packet); // Send down the packet                            
+                            System.Threading.Thread.Sleep(1000); //wait 1s for sending next one to simulate real network
                         }
 
                         //send end sequence
@@ -111,10 +111,10 @@ namespace SteganographyFramework
                         List<Packet> stegosent = new List<Packet>(); //debug only
 
                         //2
-                        EthernetLayer ethernetLayer = GetEthernetLayer();
+                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
 
                         //3
-                        IpV4Layer ipv4Vrstva = GetIpV4Layer();
+                        IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
                         ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
                         ipv4Vrstva.Source = SourceIP;
                         ipv4Vrstva.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
@@ -123,7 +123,7 @@ namespace SteganographyFramework
                         ipv4Vrstva.Identification = 555; //STEGO
                         ipv4Vrstva.Options = IpV4Options.None;
                         ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
-                        ipv4Vrstva.Ttl = 100;
+                        ipv4Vrstva.Ttl = 128;
 
                         //4
                         TcpLayer tcpLayer = new TcpLayer //= BuildTcpLayer();
@@ -169,10 +169,10 @@ namespace SteganographyFramework
                         //SYN paket obsahuje prázdný TCP segment a má nastavený příznak SYN v TCP hlavičce.                            
 
                         // Ethernet Layer
-                        EthernetLayer ethernetVrstva = GetEthernetLayer();
+                        EthernetLayer ethernetVrstva = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
 
                         // IPv4 Layer
-                        IpV4Layer ipv4Vrstva = GetIpV4Layer();
+                        IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
                         ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
                         ipv4Vrstva.Identification = 555; //STEGO                        
 
@@ -217,8 +217,8 @@ namespace SteganographyFramework
 
                         foreach (char c in Secret)
                         {
-                            EthernetLayer ethernetLayer = GetEthernetLayer();
-                            IpV4Layer ipV4Layer = GetIpV4Layer();
+                            EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
+                            IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
 
                             UdpLayer udpLayer = new UdpLayer //be aware of filters in server! //for this port
                             {
@@ -298,15 +298,9 @@ namespace SteganographyFramework
         }
 
 
-        public EthernetLayer GetEthernetLayer()
-        {
-            EthernetLayer ethernetVrstva = new EthernetLayer();
-            ethernetVrstva.Source = MacAddressSource;
-            ethernetVrstva.Destination = MacAddressDestination;
-            ethernetVrstva.EtherType = EthernetType.None; //Will be filled automatically.                            
-            return ethernetVrstva;
-        }
 
+
+        /*
         public IpV4Layer GetIpV4Layer() //(IpV4Protocol carryingLayer)
         {
             IpV4Layer ipv4Vrstva = new IpV4Layer();
@@ -317,9 +311,9 @@ namespace SteganographyFramework
             ipv4Vrstva.HeaderChecksum = null; //Will be filled automatically.
             ipv4Vrstva.Identification = 1;
             ipv4Vrstva.Options = IpV4Options.None;
-            ipv4Vrstva.Ttl = 255;
+            ipv4Vrstva.Ttl = 128;
 
-            /*
+            //
             if (carryingLayer == IpV4Protocol.Tcp)
                 ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
 
@@ -328,10 +322,11 @@ namespace SteganographyFramework
 
             if (carryingLayer == IpV4Protocol.UdpLite)
                 ipv4Vrstva.Protocol = IpV4Protocol.UdpLite;
-            */
+            //
 
             return ipv4Vrstva;
         }
+        */
 
         public TcpLayer GetTcpLayer(TcpControlBits SetBits = TcpControlBits.Synchronize) //default SYN
         {
