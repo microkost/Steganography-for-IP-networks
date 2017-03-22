@@ -1,26 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using PcapDotNet.Base;
 using PcapDotNet.Core;
-using PcapDotNet.Packets;
-using PcapDotNet.Packets.Arp;
-using PcapDotNet.Packets.Dns;
-using PcapDotNet.Packets.Ethernet;
-using PcapDotNet.Packets.Gre;
-using PcapDotNet.Packets.Http;
-using PcapDotNet.Packets.Icmp;
-using PcapDotNet.Packets.Igmp;
 using PcapDotNet.Packets.IpV4;
-using PcapDotNet.Packets.IpV6;
-using PcapDotNet.Packets.Transport;
-using System.Diagnostics;
-using System.Net.NetworkInformation;
-using System.Net;
-using System.Runtime.InteropServices;
 
 namespace SteganographyFramework
 {

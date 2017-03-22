@@ -323,7 +323,7 @@
             this.textBoxSecret.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.textBoxSecret.Size = new System.Drawing.Size(529, 59);
             this.textBoxSecret.TabIndex = 15;
-            this.textBoxSecret.Text = "HelloWorld";
+            this.textBoxSecret.Text = "he:ll:oW:or:ld:fr:om:ko:s0:14:8v:sb:ef:ef:cc:a5:87:93:30:15";
             // 
             // label7
             // 

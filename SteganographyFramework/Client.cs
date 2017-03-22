@@ -55,7 +55,7 @@ namespace SteganographyFramework
             do //to controll thread until terminate is true
             {
                 using (PacketCommunicator communicator = Lib.allDevices[selectedInterface].Open(100, PacketDeviceOpenAttributes.Promiscuous, 1000)) //name of the device //size // promiscuous mode // read timeout
-                {                    
+                {
 
                     if (Secret.Length == 0)
                     {
@@ -215,48 +215,29 @@ namespace SteganographyFramework
                     {
                         List<Packet> stegosent = new List<Packet>(); //debug only
 
+                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
+                        IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
+                        UdpLayer udpLayer = NetworkMethods.GetUdpLayer(SourcePort, 53);
+
+                        List<String> domainsToAsk = new List<string>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
+                        int indexindomains = 0;
+
                         foreach (char c in Secret)
                         {
-                            EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
-                            IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
+                            if (indexindomains == domainsToAsk.Count())
+                                indexindomains = 0;
 
-                            UdpLayer udpLayer = new UdpLayer //be aware of filters in server! //for this port
-                            {
-                                SourcePort = SourcePort,
-                                DestinationPort = 53,
-                                Checksum = null, // Will be filled automatically.
-                                CalculateChecksumValue = true,
-                            };
-
-                            DnsLayer dnsLayer = new DnsLayer
-                            {
-                                Id = 100,
-                                IsResponse = false,
-                                OpCode = DnsOpCode.Query,
-                                IsAuthoritativeAnswer = false,
-                                IsTruncated = false,
-                                IsRecursionDesired = true,
-                                IsRecursionAvailable = false,
-                                FutureUse = false,
-                                IsAuthenticData = false,
-                                IsCheckingDisabled = false,
-                                ResponseCode = DnsResponseCode.NoError,
-                                Queries = new[]
-                                {
-                                          new DnsQueryResourceRecord(new DnsDomainName("vsb.cz"), DnsType.A, DnsClass.Internet),
-                                },
-                                Answers = null,
-                                Authorities = null,
-                                Additionals = null,
-                                DomainNameCompressionMode = DnsDomainNameCompressionMode.All,
-                            };                            
+                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer((ushort)c); //total capacity 16 bit, idea to make a XOR
+                            dnsLayer.IsResponse = false;
+                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethods.GetDnsQuery(domainsToAsk[indexindomains++]) }; //ndex was out of range. Must be non-negative and less than the size of the collection.
 
                             PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, udpLayer, dnsLayer);
                             Packet packet = builder.Build(DateTime.Now);
                             communicator.SendPacket(packet);
-
-                            terminate = true;
+                            System.Threading.Thread.Sleep(900); //wait 1s for sending next one to simulate real network                        
                         }
+
+                        terminate = true;
 
                     }
                     else
@@ -297,36 +278,6 @@ namespace SteganographyFramework
             this.terminate = true;
         }
 
-
-
-
-        /*
-        public IpV4Layer GetIpV4Layer() //(IpV4Protocol carryingLayer)
-        {
-            IpV4Layer ipv4Vrstva = new IpV4Layer();
-            ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
-            ipv4Vrstva.Source = SourceIP;
-            ipv4Vrstva.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
-            ipv4Vrstva.Fragmentation = IpV4Fragmentation.None;
-            ipv4Vrstva.HeaderChecksum = null; //Will be filled automatically.
-            ipv4Vrstva.Identification = 1;
-            ipv4Vrstva.Options = IpV4Options.None;
-            ipv4Vrstva.Ttl = 128;
-
-            //
-            if (carryingLayer == IpV4Protocol.Tcp)
-                ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
-
-            if (carryingLayer == IpV4Protocol.Udp)
-                ipv4Vrstva.Protocol = IpV4Protocol.Udp;
-
-            if (carryingLayer == IpV4Protocol.UdpLite)
-                ipv4Vrstva.Protocol = IpV4Protocol.UdpLite;
-            //
-
-            return ipv4Vrstva;
-        }
-        */
 
         public TcpLayer GetTcpLayer(TcpControlBits SetBits = TcpControlBits.Synchronize) //default SYN
         {

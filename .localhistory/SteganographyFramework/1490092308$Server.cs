@@ -21,7 +21,6 @@ namespace SteganographyFramework
 
         public int DestinationPort { get; set; } //port on which is server listening //is listening on all
         public string StegoMethod { get; set; } //contains name of choosen method
-        public ushort SourcePort { get; private set; }
 
         private List<Tuple<Packet, String>> StegoPackets; //contains steganography to process
 
@@ -50,10 +49,9 @@ namespace SteganographyFramework
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout
                 SettextBoxDebug(String.Format("Listening on {0} {1}...", serverIP, selectedDevice.Description));
 
-                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
-                string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", DestinationPort); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
+                string filter = String.Format("tcp port {0} or icmp or udp port 53", DestinationPort);
                 communicator.SetFilter(filter); // Compile and set the filter
-                //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
+                //Changing process: implement new method and capture traffic through Wireshark, prepare filter then extend local filtering string by new rule
 
                 Packet packet; // Retrieve the packets
                 do
@@ -66,10 +64,10 @@ namespace SteganographyFramework
                             continue;
                         case PacketCommunicatorReceiveResult.Ok:
                             {
-                                //SettextBoxDebug(">Processing...");
+                                SettextBoxDebug(">Processing...");
                                 if (packet.IsValid && packet.IpV4 != null) //only IPv4
                                     ProcessIncomingV4Packet(packet);
-                                //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
+                                //communicator.ReceivePackets(0, ProcessIncomingV4Packet);
                                 break;
                             }
                         default:
@@ -77,10 +75,8 @@ namespace SteganographyFramework
                     }
                 } while (!terminate);
 
-                SettextBoxDebug(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
                 string secret = GetSecretMessage(StegoPackets); //process result of steganography
                 SettextBoxDebug(String.Format("Secret in this session: {0}", secret));
-                StegoPackets.Clear();
                 return;
             }
         }
@@ -95,7 +91,7 @@ namespace SteganographyFramework
             }
             catch
             {
-                SettextBoxDebug("Printing failed at server location => dont close it when is still listening"); //temporary solution
+                SettextBoxDebug("Printing failed at server location, dont close it when is still listening"); //stupid solution like that!
                 mv.Close();
             }
         }
@@ -108,30 +104,25 @@ namespace SteganographyFramework
 
             //SettextBoxDebug(">>IPv4 " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
 
-            IcmpIdentifiedDatagram icmp = null;
-            if (ip.Icmp.IsValid == true)
-            {
-                icmp = (IcmpIdentifiedDatagram)ip.Icmp; //parsing layers for processing            
-            }
-
-            TcpDatagram tcp = ip.Tcp; //needs also try catch solution?
+            IcmpIdentifiedDatagram icmp = (IcmpIdentifiedDatagram)ip.Icmp; //parsing layers for processing
+            TcpDatagram tcp = ip.Tcp;
             UdpDatagram udp = ip.Udp;
             DnsDatagram dns = udp.Dns;
-
+           
             //try to recognize magic sequence //some state construction //maybe recognize IP from which is going traffic
             //if magic processing save packet to StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
             //MAGIC should reply with "reply 0 / destination unrecheable 3 / time exceeded 11
             //until server believes that messages contains magic, needs to remember source IP
 
             //ICMP methods
-            if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
+            if (icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
             {
                 SettextBoxDebug(">>Adding ICMP...");
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
 
                 if (icmp.GetType() == typeof(IcmpEchoDatagram)) //if icmp request than send reply
                 {
-                    SettextBoxDebug(">>Replying ICMP...");
+                    SettextBoxDebug(">>Reply ICMP...");
 
                     EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
                     IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses
@@ -146,7 +137,7 @@ namespace SteganographyFramework
             }
 
             //TCP methods
-            else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
+            else if (tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
             {
                 /*//not nessesary test port here cause of first filter
                 int recognizedDestPort;
@@ -158,49 +149,29 @@ namespace SteganographyFramework
             }
 
 
-            else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
+            else if (ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
             {
                 SettextBoxDebug(">>Adding ISN+IP...");
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
             }
 
             //IP methods
-            else if (ip != null && ip.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[2])) //IP
+            else if (ip.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[2])) //IP
             {
                 SettextBoxDebug(">>Adding IP...");
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
             }
 
             //DNS methods
-            else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
+            else if (dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
             {
                 SettextBoxDebug(">>Adding DNS...");
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
-
-                SettextBoxDebug(">>Replying DNS...");
-
-                EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order
-                IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order
-                UdpLayer udpLayer = NetworkMethods.GetUdpLayer(53, udp.SourcePort); //reverse order
-                DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer(dns.Id);
-                dnsLayer.IsResponse = true;
-                dnsLayer.Queries = dns.Queries; //include original request
-
-                List<DnsDataResourceRecord> answers = new List<DnsDataResourceRecord>(); //used for collecting answers if they came in list
-                foreach (DnsQueryResourceRecord rec in dns.Queries)
-                {
-                    answers.Add(NetworkMethods.GetDnsAnswer(rec.DomainName, rec.DnsType, NetworkMethods.getIPfromHostnameViaDNS(rec.DomainName.ToString()).ToString()));
-                    //cannot answer for IPv6
-                }
-                dnsLayer.Answers = answers;
-
-                PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, udpLayer, dnsLayer);
-                SendReplyPacket(builder.Build(DateTime.Now));
             }
 
             else
             {
-                SettextBoxDebug(">>Nothing fits to any criteria... Is correct method selected?");
+                SettextBoxDebug(">>Nothing fits to any criteria... Is right method selected?");
             }
 
             return;
@@ -221,12 +192,7 @@ namespace SteganographyFramework
                 if (ip.IsValid == false)
                     break;
 
-                IcmpIdentifiedDatagram icmp = null;
-                if (ip.Icmp.IsValid == true)
-                {
-                    icmp = (IcmpIdentifiedDatagram)ip.Icmp; //parsing layers for processing            
-                }
-
+                IcmpIdentifiedDatagram icmp = (IcmpIdentifiedDatagram)ip.Icmp; //parsing layers
                 TcpDatagram tcp = ip.Tcp;
                 UdpDatagram udp = ip.Udp;
                 DnsDatagram dns = udp.Dns;
@@ -272,7 +238,7 @@ namespace SteganographyFramework
 
                 else if (String.Equals(method, Lib.listOfStegoMethods[4])) //DNS
                 {
-                    output += Convert.ToChar(dns.Id);
+                    output += "E!";
                 }
 
             }

@@ -1,5 +1,9 @@
-﻿using PcapDotNet.Packets.Ethernet;
+﻿using PcapDotNet.Base;
+using PcapDotNet.Packets;
+using PcapDotNet.Packets.Dns;
+using PcapDotNet.Packets.Ethernet;
 using PcapDotNet.Packets.IpV4;
+using PcapDotNet.Packets.Transport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,11 +54,15 @@ namespace SteganographyFramework
                 ipAddress = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip
             }
 
-            MacAddress macAddress = new MacAddress(GetMacAddress(ipAddress.ToString())); //get L2 destination address for inserted IP address
-
-            if (macAddress == null) //in case of failure
+            MacAddress macAddress;
+            try
+            {
+                macAddress = new MacAddress(GetMacAddress(ipAddress.ToString())); //get L2 destination address for inserted IP address
+            }
+            catch
             {
                 macAddress = new MacAddress("02:02:02:02:02:02");
+
             }
 
             return macAddress;
@@ -129,8 +137,136 @@ namespace SteganographyFramework
         }
 
         //---------L4------------------------------------------------------------------------------------------------------------
+
+        public static UdpLayer GetUdpLayer(ushort sourcePort, ushort destinationPort)
+        {
+
+            UdpLayer udpLayer = new UdpLayer();
+            udpLayer.SourcePort = sourcePort;
+            udpLayer.DestinationPort = destinationPort;
+            udpLayer.Checksum = null; // Will be filled automatically
+            udpLayer.CalculateChecksumValue = true;
+
+            return udpLayer;
+        }
+
         //---------L5------------------------------------------------------------------------------------------------------------
         //---------L6------------------------------------------------------------------------------------------------------------
         //---------L7------------------------------------------------------------------------------------------------------------
+
+        public static DnsLayer GetDnsHeaderLayer(ushort id) //+hardcoded IP + hardo
+        {
+            DnsLayer dnsVrstva = new DnsLayer();        //knowledge in RFC1035, layers: Header AND (Question OR Answer OR Authority OR Additional)
+            dnsVrstva.Id = id;                          //16 bit identifier assigned by the program; is copied to the corresponding reply
+            dnsVrstva.IsResponse = false;               //message is a query(0), or a response(1).
+            dnsVrstva.OpCode = DnsOpCode.Query;         //specifies kind of query in this message. This value is set by the originator of a query and copied into the response.
+            dnsVrstva.IsAuthoritativeAnswer = true;     //responding name server is an  authority for the domain name in question section.
+            dnsVrstva.IsTruncated = false;              //was shortened than permitted value on the channel
+            dnsVrstva.IsRecursionDesired = true;        //may be set in a query and is copied into the response; name server try to pursue the query recursively
+            dnsVrstva.IsRecursionAvailable = true;      //this be is set or cleared in a response
+            dnsVrstva.FutureUse = false;                //Must be zero in all queries and responses. (3 bits)
+            dnsVrstva.IsAuthenticData = true;
+            dnsVrstva.IsCheckingDisabled = false;
+            dnsVrstva.ResponseCode = DnsResponseCode.NoError;   //4 bit field  as part of responses //Values 6-15 Reserved for future use.
+            dnsVrstva.Queries = null;
+            dnsVrstva.Answers = null;
+            dnsVrstva.Authorities = null;
+            dnsVrstva.Additionals = null;
+            dnsVrstva.DomainNameCompressionMode = DnsDomainNameCompressionMode.Nothing; //should be suspicious, original = All
+            return dnsVrstva;
+        }
+        public static DnsQueryResourceRecord GetDnsQuery(string domainName, DnsType type = DnsType.A)
+        {
+            return new DnsQueryResourceRecord(new DnsDomainName(domainName), type, DnsClass.Internet);
+            //DnsType = code of the query (A/CNAME...) https://en.wikipedia.org/wiki/List_of_DNS_record_types
+        }
+
+        public static DnsDataResourceRecord GetDnsAnswer(DnsDomainName domainName, DnsType type, string ipaddressOrText)
+        {
+            int ttl = 3600;
+            if (type == DnsType.A)
+            {
+                IPAddress address;
+                if (IPAddress.TryParse(ipaddressOrText, out address))
+                {
+                    return new DnsDataResourceRecord(domainName, DnsType.A, DnsClass.Internet, ttl, new DnsResourceDataIpV4(new IpV4Address(address.ToString())));
+                }
+
+                //missing else
+
+            }
+            else if (type == DnsType.Txt)
+            {
+                return new DnsDataResourceRecord(domainName, DnsType.Txt, DnsClass.Internet, ttl, new DnsResourceDataText(new[] { new DataSegment(Encoding.ASCII.GetBytes(ipaddressOrText)) }.AsReadOnly()));
+            }
+
+            //more types should be implemented
+
+            return null;
+        }
+
+        public static DnsDataResourceRecord GetDnsAuthority(string domainName)
+        {
+            int ttl = 3600;
+            return new DnsDataResourceRecord(new DnsDomainName(domainName), DnsType.MailExchange, DnsClass.Internet, ttl, new DnsResourceDataMailExchange(100, new DnsDomainName(domainName))); //it is correct or enought general?
+        }
+
+        public static DnsDataResourceRecord GetDnsAdditional(string domainName)
+        {
+            ushort ttl = 3600;
+            return new DnsOptResourceRecord(new DnsDomainName(domainName), ttl, 0, DnsOptVersion.Version0, DnsOptFlags.DnsSecOk,
+                   new DnsResourceDataOptions(new DnsOptions(new DnsOptionUpdateLease(100), new DnsOptionLongLivedQuery(1, DnsLongLivedQueryOpCode.Refresh, DnsLongLivedQueryErrorCode.NoError, 10, 20))));
+        }
+
+        public static IpV4Address getIPfromHostnameViaDNS(string hostname) //oficial DNS service, returns sample in case of failure
+        {
+            IPHostEntry host;
+            try
+            {
+                host = Dns.GetHostEntry(hostname);
+            }
+            catch
+            {
+                host = null;
+                //TODO WARNING implement
+            }
+
+            IPAddress address;
+            if (host != null && IPAddress.TryParse(host.AddressList[0].ToString(), out address))
+            {
+                switch (address.AddressFamily)
+                {
+                    case System.Net.Sockets.AddressFamily.InterNetwork:
+                        break;
+                    default:
+                        address = IPAddress.Parse("208.67.222.222");
+                        break;
+                }
+            }
+            else
+            {
+                address = System.Net.IPAddress.Parse("208.67.222.222");
+            }
+
+            return new IpV4Address(address.ToString()); //like a pro, sry
+        }
+
+        public static List<IpV4Address> getIPfromHostnameViaDNSdirect(string hostname) //another attemp for DNS service, not used
+        {
+            IPAddress[] ips;
+            ips = Dns.GetHostAddresses(hostname);
+
+            ///source https://msdn.microsoft.com/en-us/library/system.net.dns.gethostaddresses.aspx
+
+            List<IpV4Address> ipaddresses = new List<IpV4Address>();
+            foreach (IPAddress ip in ips)
+            {
+                ipaddresses.Add(new IpV4Address(ip.ToString()));
+            }
+
+            return ipaddresses;
+        }
+
+        //---------Universal-----------------------------------------------------------------------------------------------------        
     }
 }
