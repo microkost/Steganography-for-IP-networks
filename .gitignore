@@ -12,6 +12,7 @@
 
 #Not nessesary things
 [Bb]ackup/
+.localhistory
 
 # Build results
 [Dd]ebug/
