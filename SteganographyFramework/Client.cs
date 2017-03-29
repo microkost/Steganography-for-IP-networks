@@ -20,6 +20,7 @@ using PcapDotNet.Packets.Transport;
 using PcapDotNet.Core.Extensions; //getMacAddress!
 
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace SteganographyFramework
 {
@@ -41,7 +42,7 @@ namespace SteganographyFramework
         private uint ackNumberLocal { get; set; } //for TCP answers
         private uint ackNumberRemote { get; set; } //for TCP answers
         private uint seqNumberLocal { get; set; } //for TCP answers
-        private uint seqNumberRemote { get; set; } //for TCP answers
+        private uint? seqNumberRemote { get; set; } //for TCP answers
 
         public Client(MainWindow mv)
         {
@@ -109,25 +110,31 @@ namespace SteganographyFramework
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[1])) //TCP
                     {
-                        //List<Packet> stegosent = new List<Packet>(); //debug only
-
                         EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2                        
                         IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3
                         ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
 
-                        /* Procedure on client side
+                        /* How it works
                             * client sending SYN               seq = generated         ack = 0
+                            * server sending SYNACK            seq = generated         ack = received seq + 1
                             * client sending ACK               seq = received ack      ack = received seq + 1
                             * client sending PSH, DATA         seq = same as before    ack = same as before
+                            * server sending ACK               seq = received ack      ack = received seq + size of data
+                            * server sending DATA optional     seq = same as before    ack = same as before
                             * client sending ACK               seq = received ack      ack = received seq + size of data
                             * client sending DATA              seq = same as before    ack = same as before
-                        */
+                            * server sending ACK               seq = received ack      ack = received seq + size of data
+                            * client sending DATA              seq = same as before    ack = same as before
+                            * ...
+                            * server sending ACK               seq = received ack      ack = received seq + size of data
+                            * client sending FINACK            seq = same as before    ack = same as before
+                            * server sending FINACK            seq = received ack      ack = received seq + 1
+                            * client sending ACK               seq = received ack      ack = received seq + 1 
+                            */
 
                         //4
                         seqNumberLocal = 100; //(uint)(Lib.getSynOrAckRandNumber() - (Lib.getSynOrAckRandNumber() / 2));
                         ackNumberLocal = 0;
-                        //seqNumberRemote = ackNumberLocal;
-                        //ackNumberRemote = seqNumberLocal;
 
                         //SYN
                         TcpLayer tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize);
@@ -140,20 +147,19 @@ namespace SteganographyFramework
 
                         //SYN ACK
                         seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
-                        if (seqNumberRemote <= 0)
+                        if (seqNumberRemote == null)
                         {
                             SettextBoxDebug(">TCP ACK not received!");
                             continue; //retransmission
                         }
                         SettextBoxDebug(">received TCP SYN ACK");
                         seqNumberLocal = ackNumberRemote;
-                        ackNumberLocal = seqNumberRemote + 1;
+                        ackNumberLocal = (uint)seqNumberRemote + 1;
 
                         //ACK
                         tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
                         builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                         communicator.SendPacket(builder.Build(DateTime.Now)); //Send down ACK packet
-                        //System.Threading.Thread.Sleep(1000); //wait between ack and sending data
 
                         //DATA (they are not using window yet)
                         List<String> FAKEdomainsToAsk = new List<string>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
@@ -179,35 +185,33 @@ namespace SteganographyFramework
                             Packet packet = builder.Build(DateTime.Now);
                             communicator.SendPacket(packet);
 
-                            //ACK DATA
+                            //ACK sended DATA
                             uint payloadsize = (uint)packet.Ethernet.IpV4.Tcp.PayloadLength;
-                            ackNumberLocal = seqNumberLocal + payloadsize; //expected value from oposite side
-                            ackNumberRemote = ackNumberLocal; //because we know it
+                            seqNumberLocal += payloadsize; //expected value from oposite side
 
                             SettextBoxDebug(">waiting for TCP ACK");
-                            seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberLocal); //in ack is expected value
-                            if (seqNumberRemote == 0)
+                            seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, seqNumberLocal); //in ack is expected value
+                            if (seqNumberRemote == null)
                             {
                                 SettextBoxDebug(">TCP ACK not received!");
-                                seqNumberRemote = ackNumberLocal; //do not use seqNumberRemote in calculation be
+                                seqNumberRemote = ackNumberLocal;
                                 i--; //resend same char
                                 continue;
                             }
                             SettextBoxDebug(">received TCP ACK");
-                            seqNumberLocal = ackNumberRemote;
                         }
 
-                        /*
-                 * server sending ACK               seq = received ack      ack = received seq + size of data
-                 * client sending FINACK            seq = same as before    ack = same as before
-                 * server sending FINACK            seq = received ack      ack = received seq + 1
-                 * client sending ACK               seq = received ack      ack = received seq + 1
-                 * */
-
                         //finish TCP connection
-                        bool isSucessfullyFinished = false;
-                        do
+                        Stopwatch sw = new Stopwatch(); //for timeout
+                        sw.Start();
+                        while (true)
                         {
+                            if (sw.ElapsedMilliseconds > 20000) //timeout break
+                            {
+                                sw.Stop();
+                                break;
+                            }
+
                             //client's FIN ACK
                             tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //REALLY ACK?
                             builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
@@ -218,28 +222,25 @@ namespace SteganographyFramework
                             ackNumberLocal = seqNumberLocal + 1; //expected value from oposite side
                             ackNumberRemote = seqNumberLocal + 1; //because we know it                        
                             seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //in ack is expected value
-                            if (seqNumberRemote <= 0)
+                            if (seqNumberRemote == null)
                             {
                                 SettextBoxDebug(">TCP closing ACK not received!");
                                 continue; //retransmission
                             }
+
                             SettextBoxDebug(">received TCP closing ACK");
                             seqNumberLocal = ackNumberRemote;
-                            ackNumberLocal = seqNumberRemote + 1;                           
-                            
+                            ackNumberLocal = (uint)seqNumberRemote + 1;
+
                             //send ACK as reply for server's FIN ACK
                             tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
                             builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                             communicator.SendPacket(builder.Build(DateTime.Now));
                             SettextBoxDebug(">communication closed");
-
-                            isSucessfullyFinished = true;
                             break;
-                        }
-                        while (isSucessfullyFinished);
+                        }                    
 
-                        //SettextBoxDebug(String.Format("Sent {0}", Lib.listOfStegoMethods[1].ToString()));
-                        terminate = true;
+                        terminate = true; //terminate thread
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[2])) //IP
                     {
@@ -304,6 +305,8 @@ namespace SteganographyFramework
                         UdpLayer udpLayer = NetworkMethods.GetUdpLayer(SourcePort, 53);
 
                         List<String> domainsToAsk = new List<string>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
+                        //ask for PTR record, ask for IPs...
+
                         int indexindomains = 0;
 
                         foreach (char c in Secret)

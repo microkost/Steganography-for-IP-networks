@@ -26,7 +26,7 @@ namespace SteganographyFramework
         private uint ackNumberRemote { get; set; } //for TCP answers
         private uint seqNumberLocal { get; set; } //for TCP answers
         private uint seqNumberRemote { get; set; } //for TCP answers
-        private uint seqNumberBase { get; set; }
+        private uint? seqNumberBase { get; set; }
         private uint ackNumberBase { get; set; }
 
         private List<Tuple<Packet, String>> StegoPackets; //contains steganography to process
@@ -34,7 +34,8 @@ namespace SteganographyFramework
         public Server(MainWindow mv)
         {
             this.mv = mv;
-            StegoPackets = new List<Tuple<Packet, String>>();            
+            StegoPackets = new List<Tuple<Packet, String>>();
+            seqNumberBase = null;      
         }
         public void Terminate()
         {
@@ -161,6 +162,7 @@ namespace SteganographyFramework
             {
                 if (tcp.DestinationPort != DestinationPort)
                     return;
+
                 EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
                 IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses     
                 ipV4Layer.Protocol = IpV4Protocol.Tcp; //set ISN
@@ -191,10 +193,9 @@ namespace SteganographyFramework
                 if (tcp.ControlBits == TcpControlBits.Synchronize) //receive SYN
                 {
                     SettextBoxDebug(">>Replying with TCP SYN/ACK...");
-
                     seqNumberLocal = 200; //Lib.getSynOrAckRandNumber();
                     ackNumberLocal = seqNumberRemote;
-                    seqNumberBase = seqNumberLocal;
+                    seqNumberBase = seqNumberLocal; //setting value is enstablished connection, setting to null is terminating
                     ackNumberBase = ackNumberLocal;
                     ackNumberLocal++;
                     tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
@@ -203,32 +204,32 @@ namespace SteganographyFramework
                     return;
                 }
 
+                if (seqNumberBase == null) //test of enstablished connection
+                    return;
+
+                if (tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
+                {
+                    seqNumberLocal = ackNumberRemote;
+                    ackNumberLocal = seqNumberRemote + 1;
+                    
+                    SettextBoxDebug(">>Ending TCP connection with FINACK"); //SEND ALSO FIN ACK
+                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
+                    builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
+                    SendReplyPacket(builder.Build(DateTime.Now));
+
+                    //wait for ACK, ideally
+
+                    seqNumberBase = null; //reset enstablished connection
+                    return;
+                }
+
                 seqNumberLocal = ackNumberRemote;
                 ackNumberLocal = (uint)(seqNumberRemote + tcp.PayloadLength);
-                if ((tcp.ControlBits & TcpControlBits.Acknowledgment)>0 && (seqNumberLocal-seqNumberBase==1) && (ackNumberLocal - ackNumberBase == 1)) //receive ACK //include syn+ack incremented
+                if ((tcp.ControlBits & TcpControlBits.Acknowledgment)>0 && (seqNumberLocal-seqNumberBase==1) && (ackNumberLocal - ackNumberBase == 1)) //receive ACK
                 {
-                    //check if remote seq == local ack and remote ack == local seq + payload size
                     SettextBoxDebug(">>Handshake complete!");
                     return;
-                }
-
-                if (tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive SYN
-                {
-                    //DEBUG!
-                    SettextBoxDebug(">>Replying with TCP ACK for FIN");
-                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
-                    builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
-                    SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly
-
-                    //SEND ALSO FIN ACK
-                    SettextBoxDebug(">>Replying with TCP FIN ACK");
-                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, ackNumberLocal + 1, seqNumberLocal +1, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
-                    builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
-                    SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly
-
-                    //wait for ACK
-                    return;
-                }
+                }                
 
                 SettextBoxDebug(">>Adding TCP..."); //before first adding check PSH: Push Function
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));

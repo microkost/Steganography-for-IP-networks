@@ -168,7 +168,7 @@ namespace SteganographyFramework
         }
 
         //ACK
-        public static uint WaitForTcpAck(PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
+        public static uint? WaitForTcpAck(PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
         {
             communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
             Stopwatch sw = new Stopwatch(); //for timeout
@@ -188,7 +188,7 @@ namespace SteganographyFramework
                 if (sw.ElapsedMilliseconds > 20000) //timeout break
                 {
                     sw.Stop();
-                    return 0;
+                    return null;
                 }
             }
         }
