@@ -1,4 +1,5 @@
-﻿using PcapDotNet.Base;
+﻿using PcapDotNet.Core;
+using PcapDotNet.Base;
 using PcapDotNet.Core;
 using PcapDotNet.Packets;
 using PcapDotNet.Packets.Dns;
@@ -157,32 +158,41 @@ namespace SteganographyFramework
             tcpLayer.SourcePort = sourcePort;
             tcpLayer.DestinationPort = destinationPort;
             tcpLayer.SequenceNumber = sequenceNumber;
-            tcpLayer.AcknowledgmentNumber = acknowledgmentNumber;
+            tcpLayer.AcknowledgmentNumber = acknowledgmentNumber;        
             tcpLayer.ControlBits = SetBit; //needs to be changed regarding flow of TCP!
 
             tcpLayer.Window = 100;
             tcpLayer.Checksum = null; //Will be filled automatically
             tcpLayer.UrgentPointer = 0;
             tcpLayer.Options = TcpOptions.None;
-            return tcpLayer;
+            return tcpLayer;           
         }
 
         //ACK
-        public static uint WaitForTcpAck(PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
+        public static uint WaitForTcpAck(PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint sequenceNumberExpected)
         {
             communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
+            
             Stopwatch sw = new Stopwatch(); //for timeout
             sw.Start();
 
             while (true)
             {
                 Packet packet;
-                if (communicator.ReceivePacket(out packet) == PacketCommunicatorReceiveResult.Ok && packet.Ethernet.IpV4.Tcp.ControlBits == waitForBit)
-                {
-                    if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == ackNumberExpected) //debug point
-                    {
-                        return packet.Ethernet.IpV4.Tcp.SequenceNumber; //if ACK fits, return SEQ
+                try { 
+                communicator.ReceivePacket(out packet);
+                //if (communicator.ReceivePacket(out packet) == PacketCommunicatorReceiveResult.Ok)
+                //{
+                    uint cislo = packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber;
+                    if (packet.Ethernet.IpV4.Tcp.SequenceNumber == sequenceNumberExpected) //also check SYN ACK bits
+                    {                        
+                        return packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber;
                     }
+                    //}
+                }
+                catch
+                {
+
                 }
 
                 if (sw.ElapsedMilliseconds > 20000) //timeout break
@@ -191,7 +201,35 @@ namespace SteganographyFramework
                     return 0;
                 }
             }
+
+            
         }
+
+        /* //basically same func
+        private static bool WaitForResponse(PacketCommunicator communicator, IpV4Address DestinationIpV4, IpV4Address SourceIpV4, ushort _destinationPort, ushort _sourcePort, uint _expectedAckNumber)
+        {
+            communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
+            Packet packet;
+            while (true)
+            {
+                if (communicator.ReceivePacket(out packet) == PacketCommunicatorReceiveResult.Ok)
+                {
+                    //Console.WriteLine("Expected ack number: " + _expectedAckNumber);
+                    //Console.WriteLine("Received ack number: " + packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber);
+                    if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == _expectedAckNumber)
+                    {
+                        return true;
+                    }
+                }
+                //timeout break
+                //SendGet(communicator);
+            }
+        }
+        */
+
+        /*
+         * what to do? SendSyn() = ControlBits = TcpControlBits.Synchronize, and after sending do _expectedAckNumber = _seqNumber + 1;
+         */
 
         //---------L5------------------------------------------------------------------------------------------------------------
         //---------L6------------------------------------------------------------------------------------------------------------

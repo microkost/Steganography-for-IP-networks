@@ -22,20 +22,26 @@ namespace SteganographyFramework
         public int DestinationPort { get; set; } //port on which is server listening //is listening on all
         public string StegoMethod { get; set; } //contains name of choosen method
         public ushort SourcePort { get; private set; }
+        private uint ackNumberLocal { get; set; } //for TCP answers
+        private uint ackNumberRemote { get; set; } //for TCP answers
+        private uint seqNumberLocal { get; set; } //for TCP answers
+        private uint seqNumberRemote { get; set; } //for TCP answers
+        private uint seqNumberBase { get; set; }
+        private uint ackNumberBase { get; set; }
 
         private List<Tuple<Packet, String>> StegoPackets; //contains steganography to process
 
         public Server(MainWindow mv)
         {
             this.mv = mv;
-            StegoPackets = new List<Tuple<Packet, String>>();
+            StegoPackets = new List<Tuple<Packet, String>>();            
         }
         public void Terminate()
         {
             this.terminate = true;
         }
 
-        public void Listening() //thread listening method (not inicializator, but "service styled" on background
+        public void Listening() //thread listening method (not inicializator, but "service styled" on background)
         {
             if (Lib.checkPrerequisites() == false)
             {
@@ -49,11 +55,11 @@ namespace SteganographyFramework
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout
                 SettextBoxDebug(String.Format("Listening on {0} {1}...", serverIP, selectedDevice.Description));
-
-                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
+                
                 string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", DestinationPort); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
-                communicator.SetFilter(filter); // Compile and set the filter
+                communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
                 //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
+                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
 
                 Packet packet; // Retrieve the packets
                 do
@@ -123,6 +129,11 @@ namespace SteganographyFramework
             //MAGIC should reply with "reply 0 / destination unrecheable 3 / time exceeded 11
             //until server believes that messages contains magic, needs to remember source IP
 
+            /*//not nessesary test port here cause of first filter
+            int recognizedDestPort;
+            bool isNumeric = int.TryParse("packet.IpV4.Tcp.DestinationPort", out recognizedDestPort);
+            if (isNumeric && recognizedDestPort == DestinationPort)*/
+
             //ICMP methods
             if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
             {
@@ -148,13 +159,84 @@ namespace SteganographyFramework
             //TCP methods
             else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
             {
-                /*//not nessesary test port here cause of first filter
-                int recognizedDestPort;
-                bool isNumeric = int.TryParse("packet.IpV4.Tcp.DestinationPort", out recognizedDestPort);
-                if (isNumeric && recognizedDestPort == DestinationPort)*/
+                if (tcp.DestinationPort != DestinationPort)
+                    return;
+                EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
+                IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses     
+                ipV4Layer.Protocol = IpV4Protocol.Tcp; //set ISN
 
-                SettextBoxDebug(">>Adding TCP...");
+                seqNumberRemote = tcp.SequenceNumber;
+                ackNumberRemote = tcp.AcknowledgmentNumber;
+                TcpLayer tcLayer;
+                PacketBuilder builder;
+
+                /* How it works
+                 * client sending SYN               seq = generated         ack = 0
+                 * server sending SYNACK            seq = generated         ack = received seq + 1
+                 * client sending ACK               seq = received ack      ack = received seq + 1
+                 * client sending PSH, DATA         seq = same as before    ack = same as before
+                 * server sending ACK               seq = received ack      ack = received seq + size of data
+                 * server sending DATA optional     seq = same as before    ack = same as before
+                 * client sending ACK               seq = received ack      ack = received seq + size of data
+                 * client sending DATA              seq = same as before    ack = same as before
+                 * server sending ACK               seq = received ack      ack = received seq + size of data
+                 * client sending DATA              seq = same as before    ack = same as before
+                 * ...
+                 * server sending ACK               seq = received ack      ack = received seq + size of data
+                 * client sending FINACK            seq = same as before    ack = same as before
+                 * server sending FINACK            seq = received ack      ack = received seq + 1
+                 * client sending ACK               seq = received ack      ack = received seq + 1
+                 */
+
+                if (tcp.ControlBits == TcpControlBits.Synchronize) //receive SYN
+                {
+                    SettextBoxDebug(">>Replying with TCP SYN/ACK...");
+
+                    seqNumberLocal = 200; //Lib.getSynOrAckRandNumber();
+                    ackNumberLocal = seqNumberRemote;
+                    seqNumberBase = seqNumberLocal;
+                    ackNumberBase = ackNumberLocal;
+                    ackNumberLocal++;
+                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
+                    builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
+                    SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly
+                    return;
+                }
+
+                seqNumberLocal = ackNumberRemote;
+                ackNumberLocal = (uint)(seqNumberRemote + tcp.PayloadLength);
+                if ((tcp.ControlBits & TcpControlBits.Acknowledgment)>0 && (seqNumberLocal-seqNumberBase==1) && (ackNumberLocal - ackNumberBase == 1)) //receive ACK //include syn+ack incremented
+                {
+                    //check if remote seq == local ack and remote ack == local seq + payload size
+                    SettextBoxDebug(">>Handshake complete!");
+                    return;
+                }
+
+                if (tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive SYN
+                {
+                    //DEBUG!
+                    SettextBoxDebug(">>Replying with TCP ACK for FIN");
+                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
+                    builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
+                    SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly
+
+                    //SEND ALSO FIN ACK
+                    SettextBoxDebug(">>Replying with TCP FIN ACK");
+                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, ackNumberLocal + 1, seqNumberLocal +1, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
+                    builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
+                    SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly
+
+                    //wait for ACK
+                    return;
+                }
+
+                SettextBoxDebug(">>Adding TCP..."); //before first adding check PSH: Push Function
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
+
+                SettextBoxDebug(">>Replying with ACK...");
+                tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
+                builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
+                SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly              
             }
 
 
@@ -246,8 +328,15 @@ namespace SteganographyFramework
                 else if (String.Equals(method, Lib.listOfStegoMethods[1])) //TCP
                 {
                     SettextBoxDebug(">>>Resolving TCP...");
-                    char receivedChar = Convert.ToChar(packet.IpV4.TypeOfService);
-                    output += receivedChar;
+                    try
+                    {
+                        char receivedChar = Convert.ToChar(packet.IpV4.TypeOfService);
+                        output += receivedChar;
+                    }
+                    catch
+                    {
+                        //TODOSOMETHING
+                    }
 
                 }
 

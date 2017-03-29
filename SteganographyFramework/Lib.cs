@@ -61,5 +61,11 @@ namespace SteganographyFramework
 
             return true;
         }
+
+        public static uint getSynOrAckRandNumber() //for generating random SYN and ACK numbers
+        {
+            //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
+            return 20710000;
+        }
     }
 }

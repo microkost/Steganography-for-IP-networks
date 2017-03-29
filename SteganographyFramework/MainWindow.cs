@@ -1,31 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using System.Runtime.InteropServices; //console
-using System.Net.Sockets;
-using System.Net;
 using System.Threading;
-
-using PcapDotNet.Base;
 using PcapDotNet.Core;
-using PcapDotNet.Packets;
-using PcapDotNet.Packets.Arp;
-using PcapDotNet.Packets.Dns;
-using PcapDotNet.Packets.Ethernet;
-using PcapDotNet.Packets.Gre;
-using PcapDotNet.Packets.Http;
-using PcapDotNet.Packets.Icmp;
-using PcapDotNet.Packets.Igmp;
 using PcapDotNet.Packets.IpV4;
-using PcapDotNet.Packets.IpV6;
-using PcapDotNet.Packets.Transport;
 
 namespace SteganographyFramework
 {
@@ -34,26 +15,41 @@ namespace SteganographyFramework
         private Thread serverThread;
         private Thread clientThread;
 
-        Server listener; //instantion for thread
-        Client speaker;
+        Server listener; //for thread
+        Client speaker; //for thread
 
         private bool isServer = true; //which role has app now
         private bool isServerListening = false;
         private bool isClientSpeaking = false;
-
-        //public delegate void ParameterizedThreadStart(bool isServerListening);
         public MainWindow()
         {
             InitializeComponent();
             InitialProcedure();
+
+            //TMP just for debug
+            //stego he:ll:oW:or:ld:fr:om:ko:s0:14:8v:sb:ef:ef:cc:a5:87:93:30:15
+            //stego W0R1dFr0mKO5l48
+            try
+            {
+                comboBoxMethod.SelectedIndex = 1;
+                comboBoxServerAddress.SelectedIndex = 2;
+            }
+            catch
+            {
+            }
         }
 
         public MainWindow(bool isServer, string method)
         {
             InitializeComponent();
             this.isServer = isServer; //isServer == false then isClient
-            this.comboBoxMethod.SelectedValue = method;
             InitialProcedure();
+            try
+            {
+                comboBoxMethod.SelectedIndex = comboBoxMethod.FindStringExact(method);
+            }
+            catch
+            { }
         }
 
         private void InitialProcedure()
@@ -75,12 +71,11 @@ namespace SteganographyFramework
 
             if (Lib.checkPrerequisites() == false)
             {
-                //get devices
-                //TODO some protection
+                //get devices //TODO some protection
             }
 
             List<String> IPv4addresses = new List<String>();
-            //IPv4addresses.Add("127.0.0.1"); //add localhost //TODO solution!
+            //IPv4addresses.Add("127.0.0.1"); //add localhost //TODO
 
             int i = 0;
             foreach (LivePacketDevice lpd in Lib.allDevices)
@@ -99,7 +94,6 @@ namespace SteganographyFramework
                 {
                     string tmp = nonparsed.ToString();
                     string[] words = tmp.Split(' '); //string: Address: Internet 192.168.124.1 Netmask: Internet 255.255.255.0 Broadcast: Internet 0.0.0.0
-
 
                     if (words[1] == "Internet6")
                     {
@@ -250,7 +244,7 @@ namespace SteganographyFramework
                 speaker.DestinationIP = new IpV4Address(textBoxDestination.Text);
                 speaker.StegoMethod = comboBoxMethod.SelectedValue.ToString();
                 speaker.DestinationPort = Convert.ToUInt16(numericUpDownServerPort.Value);
-                speaker.SourcePort = Convert.ToUInt16(numericUpDownClientPort.Value);
+                speaker.SourcePort = Convert.ToUInt16(numericUpDownClientPort.Value); //should be (ushort)(4123 + new Random().Next() % 1000);
                 speaker.Secret = textBoxSecret.Text;
 
                 clientThread = new Thread(speaker.Speaking);
@@ -268,7 +262,7 @@ namespace SteganographyFramework
         {
             if (speaker != null)
             {
-                speaker.StegoMethod = comboBoxMethod.SelectedValue.ToString();                
+                speaker.StegoMethod = comboBoxMethod.SelectedValue.ToString();
             }
 
             if (listener != null)
@@ -277,5 +271,5 @@ namespace SteganographyFramework
             }
 
         }
-    }  
+    }
 }

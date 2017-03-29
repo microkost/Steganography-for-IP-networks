@@ -36,12 +36,8 @@ namespace SteganographyFramework
         public IpV4Address DestinationIP { get; set; }
         public ushort DestinationPort { get; set; }
         public ushort SourcePort { get; set; }
-        public MacAddress MacAddressSource { get; set; } = new MacAddress("01:01:01:01:01:01"); //replaced by real MAC after selecting interface
-        public MacAddress MacAddressDestination { get; set; } = new MacAddress("02:02:02:02:02:02"); //replaced by ARP request later
-        private uint ackNumberLocal { get; set; } //for TCP answers
-        private uint ackNumberRemote { get; set; } //for TCP answers
-        private uint seqNumberLocal { get; set; } //for TCP answers
-        private uint seqNumberRemote { get; set; } //for TCP answers
+        public MacAddress MacAddressSource { get; set; } = new MacAddress("01:01:01:01:01:01"); //replaced by real after selecting interface
+        public MacAddress MacAddressDestination { get; set; } = new MacAddress("02:02:02:02:02:02");
 
         public Client(MainWindow mv)
         {
@@ -63,7 +59,7 @@ namespace SteganographyFramework
 
                     if (Secret.Length == 0)
                     {
-                        SettextBoxDebug("Message to transfer has zero lenght");
+                        SettextBoxDebug("Message has zero lenght");
                         break;
                     }
 
@@ -76,7 +72,7 @@ namespace SteganographyFramework
 
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
 
-                        //send stego start sequence
+                        //send start sequence
                         for (int i = 0; i < Secret.Length;)
                         {
 
@@ -100,143 +96,59 @@ namespace SteganographyFramework
                             }
 
                             Packet packet = builder.Build(DateTime.Now); // Rebuild the packet
-                            communicator.SendPacket(packet); // Send down the packet //Additional information: Failed writing to device. WinPcap Error: send error: PacketSendPacket failed
+                            communicator.SendPacket(packet); // Send down the packet                            
                             System.Threading.Thread.Sleep(1000); //wait 1s for sending next one to simulate real network
                         }
 
-                        //send stego end sequence
+                        //send end sequence
+
                         terminate = true;
+
+
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[1])) //TCP
                     {
-                        //List<Packet> stegosent = new List<Packet>(); //debug only
+                        List<Packet> stegosent = new List<Packet>(); //debug only
 
-                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2                        
-                        IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3
+                        //2
+                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
+
+                        //3
+                        IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
+                        ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
+                        ipv4Vrstva.Source = SourceIP;
+                        ipv4Vrstva.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
+                        ipv4Vrstva.Fragmentation = IpV4Fragmentation.None;
+                        ipv4Vrstva.HeaderChecksum = null; //Will be filled automatically.
+                        ipv4Vrstva.Identification = 555; //STEGO
+                        ipv4Vrstva.Options = IpV4Options.None;
                         ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
-
-                        /* Procedure on client side
-                            * client sending SYN               seq = generated         ack = 0
-                            * client sending ACK               seq = received ack      ack = received seq + 1
-                            * client sending PSH, DATA         seq = same as before    ack = same as before
-                            * client sending ACK               seq = received ack      ack = received seq + size of data
-                            * client sending DATA              seq = same as before    ack = same as before
-                        */
+                        ipv4Vrstva.Ttl = 128;
 
                         //4
-                        seqNumberLocal = 100; //(uint)(Lib.getSynOrAckRandNumber() - (Lib.getSynOrAckRandNumber() / 2));
-                        ackNumberLocal = 0;
-                        //seqNumberRemote = ackNumberLocal;
-                        //ackNumberRemote = seqNumberLocal;
-
-                        //SYN
-                        TcpLayer tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize);
-                        PacketBuilder builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
-                        communicator.SendPacket(builder.Build(DateTime.Now)); //Send down the SYN packet
-
-                        SettextBoxDebug(">waiting for TCP SYN ACK");
-                        ackNumberLocal = seqNumberLocal + 1; //expected value from oposite side
-                        ackNumberRemote = seqNumberLocal + 1; //because we know it
-
-                        //SYN ACK
-                        seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
-                        if (seqNumberRemote <= 0)
+                        TcpLayer tcpLayer = new TcpLayer //= BuildTcpLayer();
                         {
-                            SettextBoxDebug(">TCP ACK not received!");
-                            continue; //retransmission
-                        }
-                        SettextBoxDebug(">received TCP SYN ACK");
-                        seqNumberLocal = ackNumberRemote;
-                        ackNumberLocal = seqNumberRemote + 1;
+                            SourcePort = (ushort)SourcePort,
+                            DestinationPort = (ushort)DestinationPort,
+                            SequenceNumber = 2017,
+                            ControlBits = TcpControlBits.Synchronize, //WHEN ACK as first then making troubles!                                
+                        };
 
-                        //ACK
-                        tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
-                        builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
-                        communicator.SendPacket(builder.Build(DateTime.Now)); //Send down ACK packet
-                        //System.Threading.Thread.Sleep(1000); //wait between ack and sending data
-
-                        //DATA (they are not using window yet)
-                        List<String> FAKEdomainsToAsk = new List<string>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
-                        int FAKEindexindomains = 0;
+                        PacketBuilder builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
 
                         char[] secretmessage = Secret.ToCharArray();
-                        for (int i = 0; i < secretmessage.Length; i++)
+                        foreach (char c in secretmessage)
                         {
-                            ipv4Vrstva.TypeOfService = Convert.ToByte((int)secretmessage[i]); //TODO some extra protection //add extra layer of HTTP or something
-                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment | TcpControlBits.Push);
-                            //stego in urgent field
-
-                            //PAYLOAD
-                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer((ushort)secretmessage[i]); //total capacity 16 bit, idea to make a XOR
-                            dnsLayer.IsResponse = false;
-                            if (FAKEindexindomains == FAKEdomainsToAsk.Count)
-                            {
-                                FAKEindexindomains = 0;
-                            }
-                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethods.GetDnsQuery(FAKEdomainsToAsk[FAKEindexindomains++]) };
-
-                            builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer, dnsLayer);
+                            ipv4Vrstva.TypeOfService = Convert.ToByte((int)c); //TODO some extra protection
                             Packet packet = builder.Build(DateTime.Now);
-                            communicator.SendPacket(packet);
-
-                            //ACK DATA
-                            uint payloadsize = (uint)packet.Ethernet.IpV4.Tcp.PayloadLength;
-                            ackNumberLocal = seqNumberLocal + payloadsize; //expected value from oposite side
-                            ackNumberRemote = ackNumberLocal; //because we know it
-
-                            SettextBoxDebug(">waiting for TCP ACK");
-                            seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberLocal); //in ack is expected value
-                            if (seqNumberRemote == 0)
-                            {
-                                SettextBoxDebug(">TCP ACK not received!");
-                                seqNumberRemote = ackNumberLocal; //do not use seqNumberRemote in calculation be
-                                i--; //resend same char
-                                continue;
-                            }
-                            SettextBoxDebug(">received TCP ACK");
-                            seqNumberLocal = ackNumberRemote;
+                            stegosent.Add(packet);
                         }
 
-                        /*
-                 * server sending ACK               seq = received ack      ack = received seq + size of data
-                 * client sending FINACK            seq = same as before    ack = same as before
-                 * server sending FINACK            seq = received ack      ack = received seq + 1
-                 * client sending ACK               seq = received ack      ack = received seq + 1
-                 * */
-
-                        //finish TCP connection
-                        bool isSucessfullyFinished = false;
-                        do
+                        foreach (Packet p in stegosent)
                         {
-                            //client's FIN ACK
-                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //REALLY ACK?
-                            builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
-                            communicator.SendPacket(builder.Build(DateTime.Now)); //Send down the FIN packet
-
-                            //wait for FIN ACK from server
-                            SettextBoxDebug(">waiting for TCP ACK (closing)");
-                            ackNumberLocal = seqNumberLocal + 1; //expected value from oposite side
-                            ackNumberRemote = seqNumberLocal + 1; //because we know it                        
-                            seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //in ack is expected value
-                            if (seqNumberRemote <= 0)
-                            {
-                                SettextBoxDebug(">TCP closing ACK not received!");
-                                continue; //retransmission
-                            }
-                            SettextBoxDebug(">received TCP closing ACK");
-                            seqNumberLocal = ackNumberRemote;
-                            ackNumberLocal = seqNumberRemote + 1;                           
-                            
-                            //send ACK as reply for server's FIN ACK
-                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
-                            builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
-                            communicator.SendPacket(builder.Build(DateTime.Now));
-                            SettextBoxDebug(">communication closed");
-
-                            isSucessfullyFinished = true;
-                            break;
+                            communicator.SendPacket(p);
+                            System.Threading.Thread.Sleep(200);
                         }
-                        while (isSucessfullyFinished);
 
                         //SettextBoxDebug(String.Format("Sent {0}", Lib.listOfStegoMethods[1].ToString()));
                         terminate = true;
@@ -251,6 +163,7 @@ namespace SteganographyFramework
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
                     {
+                        List<Packet> stegosent = new List<Packet>(); //debug only
 
                         //nessesary to do TCP handshake
                         //SYN paket obsahuje prázdný TCP segment a má nastavený příznak SYN v TCP hlavičce.                            
@@ -266,8 +179,9 @@ namespace SteganographyFramework
                         //needs to be finalize? ipv4Vrstva.Finalize();
 
                         // TCPv4 Layer
-                        TcpLayer tcpVrstva = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, Convert.ToUInt32(Secret[1]), 0, TcpControlBits.Synchronize);
-                        //Expert Info (Warn/Protocol): Acknowledgment number: Broken TCP. The acknowledge field is nonzero while the ACK flag is not set
+                        TcpLayer tcpVrstva = GetTcpLayer(TcpControlBits.Synchronize);
+                        tcpVrstva.SequenceNumber = Convert.ToUInt32(Secret[1]); //STEGO
+                        tcpVrstva.AcknowledgmentNumber = 0; //Expert Info (Warn/Protocol): Acknowledgment number: Broken TCP. The acknowledge field is nonzero while the ACK flag is not set
 
                         //what about payload?
                         PayloadLayer payloadVrstva = new PayloadLayer();
@@ -276,6 +190,7 @@ namespace SteganographyFramework
                         PacketBuilder builder = new PacketBuilder(ethernetVrstva, ipv4Vrstva, tcpVrstva, payloadVrstva); // Create the builder that will build our packets, build the packet, send the packet
                         Packet packet = builder.Build(DateTime.Now);
                         communicator.SendPacket(packet);
+                        stegosent.Add(packet);
 
                         //send something like wing mark for recognizing it on server side
 
@@ -291,6 +206,7 @@ namespace SteganographyFramework
                             builder = new PacketBuilder(ethernetVrstva, ipv4Vrstva, tcpVrstva, payloadVrstva/*httpVrstva*/); //probably not nesseary, editing original allowed, but just for sure
                             packet = builder.Build(DateTime.Now);
                             communicator.SendPacket(packet);
+                            stegosent.Add(packet);
 
                         }
                         terminate = true;
@@ -326,7 +242,7 @@ namespace SteganographyFramework
                     }
                     else
                     {
-                        SettextBoxDebug("Nothing happened"); //Additional information: Index was outside the bounds of the array.
+                        SettextBoxDebug("Nothing happened\n");
                     }
                     SettextBoxDebug(String.Format("Processing of method {0} finished\n", StegoMethod));
                 }
@@ -351,17 +267,14 @@ namespace SteganographyFramework
         {
             try
             {
-                Console.WriteLine(text);
                 mv.Invoke((MethodInvoker)delegate //An unhandled exception: Cannot access a disposed object when closing app
                 {
                     mv.textBoxDebug.Text = text + "\r\n" + mv.textBoxDebug.Text; // runs on UI thread
-
                 });
             }
             catch
             {
-
-                SettextBoxDebug("Printing failed at client location => dont close it when is still speaking"); //temporary solution
+                SettextBoxDebug("Printing failed at client location => dont close it when is still listening"); //temporary solution
                 mv.Close();
             }
         }
@@ -369,6 +282,22 @@ namespace SteganographyFramework
         public void Terminate()
         {
             this.terminate = true;
+        }
+
+
+        public TcpLayer GetTcpLayer(TcpControlBits SetBits = TcpControlBits.Synchronize) //default SYN
+        {
+            TcpLayer tcpVrstva = new TcpLayer();
+            tcpVrstva.SourcePort = SourcePort;
+            tcpVrstva.DestinationPort = DestinationPort;
+            tcpVrstva.SequenceNumber = Convert.ToUInt32(1); //Implement naturally!
+            tcpVrstva.AcknowledgmentNumber = 50;
+            tcpVrstva.ControlBits = SetBits; //needs to be changed regarding flow of TCP!
+            tcpVrstva.Window = 100;
+            tcpVrstva.Checksum = null; //Will be filled automatically
+            tcpVrstva.UrgentPointer = 0;
+            tcpVrstva.Options = TcpOptions.None;
+            return tcpVrstva;
         }
 
     }
