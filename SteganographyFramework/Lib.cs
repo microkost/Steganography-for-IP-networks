@@ -12,9 +12,11 @@ namespace SteganographyFramework
         public static IList<LivePacketDevice> allDevices = LivePacketDevice.AllLocalMachine; //list of available devices       
 
         public static PacketDevice selectedDevice; //which device will be used for communication
-        public static int getSelectedInterfaceIndex(IpV4Address tmpIp) //returns index of selected interface to be selected for communication
+        public static int getSelectedInterfaceIndex(IpV4Address ipToIndex) //returns index of selected interface to be selected for communication
         {
-            //exceptions when is notinitialized! Missing protection! Add open device section
+            //exceptions when allDevices are not initialized! Missing protection!
+
+            string tmpIp = ipToIndex.ToString(); //nessesary for lookup method below
 
             int deviceIndex = 0, i = 0; //for device ID
             bool exit = false;
@@ -22,7 +24,9 @@ namespace SteganographyFramework
             foreach (LivePacketDevice lpd in allDevices)
             {
                 if (exit)
+                { 
                     break;
+                }
 
                 foreach (DeviceAddress nonparsed in lpd.Addresses)
                 {
@@ -42,14 +46,14 @@ namespace SteganographyFramework
                 }
             }
 
-            if (allDevices.Count <= i) //TODO better
+            if (allDevices.Count <= i) 
             {
-                deviceIndex = 0;
+                deviceIndex = 0; //TODO better! Is confusing when is any problem in function!
             }
 
             return (deviceIndex);
         }
-        public static bool checkPrerequisites()
+        public static bool checkPrerequisites() //unfinished
         {
             //not finished! used on GUI level
 
@@ -61,7 +65,6 @@ namespace SteganographyFramework
 
             return true;
         }
-
         public static uint getSynOrAckRandNumber() //for generating random SYN and ACK numbers
         {
             //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 

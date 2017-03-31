@@ -59,6 +59,7 @@ namespace SteganographyFramework
 
             do //to controll thread until terminate is true
             {
+                //using (PacketCommunicator communicator = Lib.allDevices[selectedInterface].Open(100, PacketDeviceOpenAttributes.Promiscuous, 1000)) //name of the device //size // promiscuous mode // read timeout
                 using (PacketCommunicator communicator = Lib.allDevices[selectedInterface].Open(100, PacketDeviceOpenAttributes.Promiscuous, 1000)) //name of the device //size // promiscuous mode // read timeout
                 {
 
@@ -71,8 +72,25 @@ namespace SteganographyFramework
                     SettextBoxDebug(String.Format("Processing of method {0} started", StegoMethod));
                     if (String.Equals(StegoMethod, Lib.listOfStegoMethods[0])) //ICMP
                     {
+                        EthernetLayer ethernetLayer = new EthernetLayer();
+                        ethernetLayer.Source = new MacAddress("01:01:01:01:01:01");
+                        ethernetLayer.Destination = new MacAddress("02:02:01:01:01:01");
+                        ethernetLayer.EtherType = EthernetType.None; //Will be filled automatically.   
+                        IpV4Layer ipV4Layer = new IpV4Layer();
+                        ipV4Layer.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
+                        ipV4Layer.Source = SourceIP;
+                        ipV4Layer.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
+                        ipV4Layer.Fragmentation = IpV4Fragmentation.None; //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
+                        ipV4Layer.HeaderChecksum = null; //Will be filled automatically.
+                        ipV4Layer.Identification = 1;
+                        ipV4Layer.Options = IpV4Options.None;
+                        ipV4Layer.Ttl = 128;
+
+                        /*
                         EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2 Ethernet Layer                        
                         IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer                             
+                        */
+
                         IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer                        
 
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
@@ -238,7 +256,7 @@ namespace SteganographyFramework
                             communicator.SendPacket(builder.Build(DateTime.Now));
                             SettextBoxDebug(">communication closed");
                             break;
-                        }                    
+                        }
 
                         terminate = true; //terminate thread
                     }
@@ -305,7 +323,7 @@ namespace SteganographyFramework
                         UdpLayer udpLayer = NetworkMethods.GetUdpLayer(SourcePort, 53);
 
                         List<String> domainsToAsk = new List<string>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
-                        //ask for PTR record, ask for IPs...
+                                                                                                                                                                                                   //ask for PTR record, ask for IPs...
 
                         int indexindomains = 0;
 
@@ -346,6 +364,7 @@ namespace SteganographyFramework
                     isSomethingToSay = true;
                 }
                 */
+
             }
             while (!terminate);
         }

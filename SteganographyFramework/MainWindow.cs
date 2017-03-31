@@ -24,11 +24,17 @@ namespace SteganographyFramework
         public MainWindow()
         {
             InitializeComponent();
-            InitialProcedure();
+            
+            try
+            {
+                InitialProcedure();
+            }
+            catch
+            {
+                MessageBox.Show("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap, ", "Run problem", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
-            //TMP just for debug
-            //stego he:ll:oW:or:ld:fr:om:ko:s0:14:8v:sb:ef:ef:cc:a5:87:93:30:15
-            //stego W0R1dFr0mKO5l48
             try
             {
                 comboBoxMethod.SelectedIndex = 1;
