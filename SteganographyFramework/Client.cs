@@ -3,19 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 using PcapDotNet.Base;
 using PcapDotNet.Packets;
-using PcapDotNet.Packets.Arp;
 using PcapDotNet.Packets.Dns;
 using PcapDotNet.Packets.Ethernet;
-using PcapDotNet.Packets.Gre;
-using PcapDotNet.Packets.Http;
 using PcapDotNet.Packets.Icmp;
-using PcapDotNet.Packets.Igmp;
 using PcapDotNet.Packets.IpV4;
-using PcapDotNet.Packets.IpV6;
 using PcapDotNet.Packets.Transport;
 using PcapDotNet.Core.Extensions; //getMacAddress!
 
@@ -39,9 +33,9 @@ namespace SteganographyFramework
         public ushort SourcePort { get; set; }
         public MacAddress MacAddressSource { get; set; } = new MacAddress("01:01:01:01:01:01"); //replaced by real MAC after selecting interface
         public MacAddress MacAddressDestination { get; set; } = new MacAddress("02:02:02:02:02:02"); //replaced by ARP request later
-        private uint ackNumberLocal { get; set; } //for TCP answers
+        private uint ackNumberLocal { get; set; } //for TCP requests
         private uint ackNumberRemote { get; set; } //for TCP answers
-        private uint seqNumberLocal { get; set; } //for TCP answers
+        private uint seqNumberLocal { get; set; } //for TCP requests
         private uint? seqNumberRemote { get; set; } //for TCP answers
 
         public Client(MainWindow mv)
@@ -59,10 +53,9 @@ namespace SteganographyFramework
 
             do //to controll thread until terminate is true
             {
-                //using (PacketCommunicator communicator = Lib.allDevices[selectedInterface].Open(100, PacketDeviceOpenAttributes.Promiscuous, 1000)) //name of the device //size // promiscuous mode // read timeout
+
                 using (PacketCommunicator communicator = Lib.allDevices[selectedInterface].Open(100, PacketDeviceOpenAttributes.Promiscuous, 1000)) //name of the device //size // promiscuous mode // read timeout
                 {
-
                     if (Secret.Length == 0)
                     {
                         SettextBoxDebug("Message to transfer has zero lenght");
@@ -72,25 +65,9 @@ namespace SteganographyFramework
                     SettextBoxDebug(String.Format("Processing of method {0} started", StegoMethod));
                     if (String.Equals(StegoMethod, Lib.listOfStegoMethods[0])) //ICMP
                     {
-                        EthernetLayer ethernetLayer = new EthernetLayer();
-                        ethernetLayer.Source = new MacAddress("01:01:01:01:01:01");
-                        ethernetLayer.Destination = new MacAddress("02:02:01:01:01:01");
-                        ethernetLayer.EtherType = EthernetType.None; //Will be filled automatically.   
-                        IpV4Layer ipV4Layer = new IpV4Layer();
-                        ipV4Layer.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
-                        ipV4Layer.Source = SourceIP;
-                        ipV4Layer.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
-                        ipV4Layer.Fragmentation = IpV4Fragmentation.None; //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
-                        ipV4Layer.HeaderChecksum = null; //Will be filled automatically.
-                        ipV4Layer.Identification = 1;
-                        ipV4Layer.Options = IpV4Options.None;
-                        ipV4Layer.Ttl = 128;
 
-                        /*
                         EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2 Ethernet Layer                        
-                        IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer                             
-                        */
-
+                        IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer
                         IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer                        
 
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
@@ -98,7 +75,6 @@ namespace SteganographyFramework
                         //send stego start sequence
                         for (int i = 0; i < Secret.Length;)
                         {
-
                             //In each ICMP packet 4 bytes of hidden data can be inserted. The hidden data will be placed in both Identifier (2 bytes) and Sequence number (2 bytes) fields. 
                             try
                             {
@@ -128,31 +104,71 @@ namespace SteganographyFramework
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[1])) //TCP
                     {
+                        //List<string> blockOfSecret = new List<string>(); //debug only
+                        string secretInBin = Cryptography.stringASCII2BinaryNumber(Secret); //prepare stego message: ascii text to bin
+                        if (secretInBin == null)
+                        {
+                            SettextBoxDebug("Sorry, cannot be sended, non ASCII chars in message.");
+                            break;
+                        }
+
+                        string restString = "";
+                        int numberOfTakenBits = (secretInBin.Count() >= 31) ? 31 : secretInBin.Count(); //for sequence number from RFC
+                        if (numberOfTakenBits > 0)
+                        {
+                            restString = secretInBin.Substring(0, numberOfTakenBits); //get first 32 bit and remove them //System.ArgumentOutOfRangeException
+                        }                    
+                        //blockOfSecret.Add(substring);
+
+                        int seqNumberInDec = Convert.ToInt32(restString, 2); //convert bin to uint for sequence number                        
+                        if (seqNumberInDec != 0) //if convert fails
+                        {
+                            while (seqNumberInDec % 11 == 0 && seqNumberInDec != 0) //number cannot be mod 11, generated number is mod 11
+                            {
+                                numberOfTakenBits--;
+                                restString = secretInBin.Substring(0, numberOfTakenBits);
+                                seqNumberInDec = Convert.ToInt32(restString, 2);
+                                //blockOfSecret.Add(restString);
+                            };
+
+                            seqNumberLocal = (uint)seqNumberInDec; //WARNING
+                            ackNumberLocal = 0; //will be sended in first SYN packet
+                            if (numberOfTakenBits > 0)
+                            {
+                                secretInBin = secretInBin.Remove(0, numberOfTakenBits); //remove already used chars in sequence number from secret message
+                            }
+                        }
+                        else
+                        {
+                            seqNumberLocal = Lib.getSynOrAckRandNumber(); //if converting fails //this number is always % 11 == 0! (by stego not by RFC)
+                            ackNumberLocal = 0;
+                        }
+
+                        List<string> partsOfSecretMessage = secretInBin.SplitInParts(16).ToList(); //16 bit for urgent
+                        
+                        //now network processing...
                         EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2                        
                         IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3
                         ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
 
                         /* How it works
-                            * client sending SYN               seq = generated         ack = 0
-                            * server sending SYNACK            seq = generated         ack = received seq + 1
-                            * client sending ACK               seq = received ack      ack = received seq + 1
-                            * client sending PSH, DATA         seq = same as before    ack = same as before
-                            * server sending ACK               seq = received ack      ack = received seq + size of data
-                            * server sending DATA optional     seq = same as before    ack = same as before
-                            * client sending ACK               seq = received ack      ack = received seq + size of data
-                            * client sending DATA              seq = same as before    ack = same as before
-                            * server sending ACK               seq = received ack      ack = received seq + size of data
-                            * client sending DATA              seq = same as before    ack = same as before
-                            * ...
-                            * server sending ACK               seq = received ack      ack = received seq + size of data
-                            * client sending FINACK            seq = same as before    ack = same as before
-                            * server sending FINACK            seq = received ack      ack = received seq + 1
-                            * client sending ACK               seq = received ack      ack = received seq + 1 
-                            */
-
-                        //4
-                        seqNumberLocal = 100; //(uint)(Lib.getSynOrAckRandNumber() - (Lib.getSynOrAckRandNumber() / 2));
-                        ackNumberLocal = 0;
+                         * client sending SYN               seq = generated         ack = 0
+                         * server sending SYNACK            seq = generated         ack = received seq + 1
+                         * client sending ACK               seq = received ack      ack = received seq + 1
+                         *
+                         * client sending PSH, DATA         seq = same as before    ack = same as before
+                         * server sending ACK               seq = received ack      ack = received seq + size of data
+                         * server sending DATA optional     seq = same as before    ack = same as before
+                         * client sending ACK               seq = received ack      ack = received seq + size of data
+                         * client sending DATA              seq = same as before    ack = same as before
+                         * server sending ACK               seq = received ack      ack = received seq + size of data
+                         * client sending DATA              seq = same as before    ack = same as before
+                         * ...
+                         * server sending ACK               seq = received ack      ack = received seq + size of data
+                         * client sending FINACK            seq = same as before    ack = same as before
+                         * server sending FINACK            seq = received ack      ack = received seq + 1
+                         * client sending ACK               seq = received ack      ack = received seq + 1 
+                         */
 
                         //SYN
                         TcpLayer tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize);
@@ -179,19 +195,19 @@ namespace SteganographyFramework
                         builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                         communicator.SendPacket(builder.Build(DateTime.Now)); //Send down ACK packet
 
-                        //DATA (they are not using window yet)
+                        //DATA (sliding window not used!)
                         List<String> FAKEdomainsToAsk = new List<string>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
                         int FAKEindexindomains = 0;
 
-                        char[] secretmessage = Secret.ToCharArray();
-                        for (int i = 0; i < secretmessage.Length; i++)
+                        for (int i = 0; i < partsOfSecretMessage.Count; i++) //foreach secret message
                         {
-                            ipv4Vrstva.TypeOfService = Convert.ToByte((int)secretmessage[i]); //TODO some extra protection //add extra layer of HTTP or something
-                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment | TcpControlBits.Push);
-                            //stego in urgent field
+                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment | TcpControlBits.Push | TcpControlBits.Urgent);
+                            string binValue = partsOfSecretMessage[i].PadLeft(16, '0');
+                            //blockOfSecret.Add(binValue);
+                            tcpLayer.UrgentPointer = Convert.ToUInt16(binValue, 2); ////stego in urgent field (Unsigned 16-bit integer)
 
-                            //PAYLOAD
-                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer((ushort)secretmessage[i]); //total capacity 16 bit, idea to make a XOR
+                            //PAYLOAD need to be changed to HTTP
+                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer(Convert.ToUInt16(binValue, 2)); //total capacity 16 bit, idea to make a XOR
                             dnsLayer.IsResponse = false;
                             if (FAKEindexindomains == FAKEdomainsToAsk.Count)
                             {
@@ -255,6 +271,8 @@ namespace SteganographyFramework
                             builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                             communicator.SendPacket(builder.Build(DateTime.Now));
                             SettextBoxDebug(">communication closed");
+                            //string final =  string.Join(",", blockOfSecret.ToArray());
+                            //SettextBoxDebug(String.Format("Stego: {0}", final));
                             break;
                         }
 
@@ -352,19 +370,6 @@ namespace SteganographyFramework
                     SettextBoxDebug(String.Format("Processing of method {0} finished\n", StegoMethod));
                 }
 
-                /*
-                 if(isSomethingToSay)
-                 {
-                    //whole code
-                 }
-                else
-                {
-                    SettextBoxDebug("Nothing to say, we are going to sleep until recheck\n\n");
-                    System.Threading.Thread.Sleep(10000);
-                    isSomethingToSay = true;
-                }
-                */
-
             }
             while (!terminate);
         }
@@ -382,9 +387,9 @@ namespace SteganographyFramework
             }
             catch
             {
-
-                SettextBoxDebug("Printing failed at client location => dont close it when is still speaking"); //temporary solution
-                mv.Close();
+                SettextBoxDebug("Printing failed at server location => dont close it when is still sending");
+                Environment.Exit(Environment.ExitCode);
+                return;
             }
         }
 

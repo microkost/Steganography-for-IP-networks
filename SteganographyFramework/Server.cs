@@ -8,6 +8,7 @@ using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.Ethernet;
 using PcapDotNet.Packets.Transport;
 using PcapDotNet.Packets.Dns;
+using System.Linq;
 
 namespace SteganographyFramework
 {
@@ -35,7 +36,7 @@ namespace SteganographyFramework
         {
             this.mv = mv;
             StegoPackets = new List<Tuple<Packet, String>>();
-            seqNumberBase = null;      
+            seqNumberBase = null;
         }
         public void Terminate()
         {
@@ -56,7 +57,7 @@ namespace SteganographyFramework
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout
                 SettextBoxDebug(String.Format("Listening on {0} {1}...", serverIP, selectedDevice.Description));
-                
+
                 string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", DestinationPort); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
                 communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
                 //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
@@ -86,8 +87,8 @@ namespace SteganographyFramework
 
                 SettextBoxDebug(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
                 string secret = GetSecretMessage(StegoPackets); //process result of steganography
-                SettextBoxDebug(String.Format("Secret in this session: {0}", secret));
-                StegoPackets.Clear();
+                SettextBoxDebug(String.Format("Secret in this session: {0}\n", secret));
+                //StegoPackets.Clear();
                 return;
             }
         }
@@ -102,8 +103,9 @@ namespace SteganographyFramework
             }
             catch
             {
-                SettextBoxDebug("Printing failed at server location => dont close it when is still listening"); //temporary solution
-                mv.Close();
+                SettextBoxDebug("Printing failed at server location => dont close it when is still listening");
+                Environment.Exit(Environment.ExitCode);
+                return;
             }
         }
 
@@ -193,7 +195,7 @@ namespace SteganographyFramework
                 if (tcp.ControlBits == TcpControlBits.Synchronize) //receive SYN
                 {
                     SettextBoxDebug(">>Replying with TCP SYN/ACK...");
-                    seqNumberLocal = 200; //Lib.getSynOrAckRandNumber();
+                    seqNumberLocal = Lib.getSynOrAckRandNumber() + 11 * 11; //TODO!!!
                     ackNumberLocal = seqNumberRemote;
                     seqNumberBase = seqNumberLocal; //setting value is enstablished connection, setting to null is terminating
                     ackNumberBase = ackNumberLocal;
@@ -201,6 +203,12 @@ namespace SteganographyFramework
                     tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
                     builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
                     SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly
+
+                    if (seqNumberRemote % 11 == 0) //then contains stego in sequence number
+                    {
+                        StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
+                    }
+
                     return;
                 }
 
@@ -211,7 +219,7 @@ namespace SteganographyFramework
                 {
                     seqNumberLocal = ackNumberRemote;
                     ackNumberLocal = seqNumberRemote + 1;
-                    
+
                     SettextBoxDebug(">>Ending TCP connection with FINACK"); //SEND ALSO FIN ACK
                     tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
                     builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
@@ -225,11 +233,11 @@ namespace SteganographyFramework
 
                 seqNumberLocal = ackNumberRemote;
                 ackNumberLocal = (uint)(seqNumberRemote + tcp.PayloadLength);
-                if ((tcp.ControlBits & TcpControlBits.Acknowledgment)>0 && (seqNumberLocal-seqNumberBase==1) && (ackNumberLocal - ackNumberBase == 1)) //receive ACK
+                if ((tcp.ControlBits & TcpControlBits.Acknowledgment) > 0 && (seqNumberLocal - seqNumberBase == 1) && (ackNumberLocal - ackNumberBase == 1)) //receive ACK
                 {
                     SettextBoxDebug(">>Handshake complete!");
                     return;
-                }                
+                }
 
                 SettextBoxDebug(">>Adding TCP..."); //before first adding check PSH: Push Function
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
@@ -291,9 +299,13 @@ namespace SteganographyFramework
         private string GetSecretMessage(List<Tuple<Packet, String>> MessageIncluded)
         {
             string output = ""; //for final message
+            string binary = ""; //for binary number in TCP connections
+            //List<string> blockOfSecret = new List<string>(); //debug only 
 
             if (MessageIncluded == null || MessageIncluded.Count == 0) //protection only
                 return "no message received";
+
+            SettextBoxDebug(String.Format(">>>Resolving {0} packets", MessageIncluded.Count()));
 
             foreach (Tuple<Packet, String> t in MessageIncluded)
             {
@@ -316,8 +328,7 @@ namespace SteganographyFramework
 
                 if (String.Equals(method, Lib.listOfStegoMethods[0])) //ICMP
                 {
-                    SettextBoxDebug(">>>Resolving ICMP...");
-
+                    //SettextBoxDebug(">>>Resolving ICMP...");
                     if (icmp.GetType() == typeof(IcmpEchoDatagram))
                     {
                         output += (char)icmp.Identifier;
@@ -328,17 +339,22 @@ namespace SteganographyFramework
 
                 else if (String.Equals(method, Lib.listOfStegoMethods[1])) //TCP
                 {
-                    SettextBoxDebug(">>>Resolving TCP...");
-                    try
+                    //SettextBoxDebug(">>>Resolving TCP...");
+                    if (t == MessageIncluded.First() && tcp.SequenceNumber % 11 != 0) //otherwise not in SEQ
                     {
-                        char receivedChar = Convert.ToChar(packet.IpV4.TypeOfService);
-                        output += receivedChar;
+                        string binvalue = Convert.ToString(tcp.SequenceNumber - 1, 2); //WARNING -1
+                        binvalue = binvalue.PadLeft(31, '0'); //align missing zeros to get same binary string
+                        //blockOfSecret.Add(binvalue);
+                        binary += binvalue; //add message
                     }
-                    catch
+                    
+                    if (tcp.IsUrgent)
                     {
-                        //TODOSOMETHING
+                        string binvalue = Convert.ToString(tcp.UrgentPointer, 2); 
+                        binvalue = binvalue.PadLeft(16, '0'); //when zeros was cutted
+                        //blockOfSecret.Add(binvalue);                        
+                        binary += binvalue;
                     }
-
                 }
 
                 else if (String.Equals(method, Lib.listOfStegoMethods[2])) //IP
@@ -367,7 +383,13 @@ namespace SteganographyFramework
 
             }
 
-            MessageIncluded.Clear();
+            if (binary != "") //TCP final conversion binary to string
+            {
+                output = Cryptography.binaryNumber2stringASCII(binary);                
+            }
+
+            //string final = string.Join(",", blockOfSecret.ToArray());
+            //SettextBoxDebug(String.Format("Stego: {0}", final));           
             return output;
         }
 

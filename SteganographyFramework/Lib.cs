@@ -68,7 +68,13 @@ namespace SteganographyFramework
         public static uint getSynOrAckRandNumber() //for generating random SYN and ACK numbers
         {
             //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
-            return 20710000;
+
+            uint generatedNum = 20710008; //TODO dont forget to change!
+            while(generatedNum % 11 == 0) //mod 11 is magic which distinguish stego from camouflage
+            {
+                generatedNum++; //regenerate
+            }
+            return generatedNum;
         }
     }
 }

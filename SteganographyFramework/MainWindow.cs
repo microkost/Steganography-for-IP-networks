@@ -38,7 +38,7 @@ namespace SteganographyFramework
             try
             {
                 comboBoxMethod.SelectedIndex = 1;
-                comboBoxServerAddress.SelectedIndex = 2;
+                //comboBoxServerAddress.SelectedIndex = 2;
             }
             catch
             {
@@ -137,8 +137,6 @@ namespace SteganographyFramework
             bs_methods.DataSource = Lib.listOfStegoMethods;
             comboBoxMethod.DataSource = bs_methods;
             comboBoxMethod.SelectedIndex = 0; //default method manual predefined option
-
-
         }
 
         //console window initialization + calling
@@ -228,6 +226,8 @@ namespace SteganographyFramework
         }
         private void buttonSteganogr_Click(object sender, EventArgs e)
         {
+            //TMP message he:ll:oW:or:ld:fr:om:ko:s0:14:8v:sb:ef:ef:cc:a5:87:93:30:15
+
             if (isClientSpeaking == true) //client is speaking DO DISCONNECT
             {
                 isClientSpeaking = false;
