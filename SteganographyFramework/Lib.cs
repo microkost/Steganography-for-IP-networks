@@ -7,7 +7,9 @@ namespace SteganographyFramework
 {
     public static class Lib
     {
-        public static List<String> listOfStegoMethods = new List<String>() { "ICMP", "TCP", "IP", "ISN + IP ID", "DNS" }; //List of methods used in code and GUI, index of method is important!
+        public static List<String> listOfStegoMethods = new List<String>() { "ICMP using identifier and sequence number", "TCP using sequence number and urgent field", "IP", "ISN + IP ID", "DNS using ID" }; //List of methods used in code and GUI, index of method is important!
+
+        public static List<String> listOfDomainsForDNSqueries = new List<String>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
 
         public static IList<LivePacketDevice> allDevices = LivePacketDevice.AllLocalMachine; //list of available devices       
 

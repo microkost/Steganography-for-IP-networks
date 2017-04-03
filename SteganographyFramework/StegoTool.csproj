@@ -103,7 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client.cs" />
-    <Compile Include="Cryptography.cs" />
+    <Compile Include="BinaryOperations.cs" />
     <Compile Include="Lib.cs" />
     <Compile Include="MainWindow.cs">
       <SubType>Form</SubType>

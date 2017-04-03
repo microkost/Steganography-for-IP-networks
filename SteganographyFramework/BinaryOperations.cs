@@ -5,7 +5,7 @@ using System.Text;
 
 namespace SteganographyFramework
 {
-    public static class Cryptography
+    public static class BinaryOperations
     {
         private const int bitsForChar = 8;
 
@@ -33,19 +33,15 @@ namespace SteganographyFramework
 
         public static string binaryNumber2stringASCII(string input) //convert binary number to string
         {
-            /*
-            foreach(char c in input) //testing binary value
-            {
-                if (c != '0' || c != '1')
-                    return null;
-            }
-            */
-
             List<string> binNumToConvert = input.SplitInParts(bitsForChar).ToList();
             string result = "";
             foreach(string num in binNumToConvert)
             {
                 char c = (char)Convert.ToInt32(num, 2);
+
+                if (c == '\0') //dont return end of char earlier!
+                    continue;
+
                 result += c;
             }
 
@@ -66,70 +62,6 @@ namespace SteganographyFramework
                 return null;
             }
         }
-
-        /*
-        public static uint? string2StegoNumber(string inputChars, int howManyBitsMin8) //get number from message
-        {
-            if (howManyBitsMin8 != 8 || howManyBitsMin8 != 16 || howManyBitsMin8 != 32 || howManyBitsMin8 != 64) //check size
-                return null;
-
-            int numofchars = howManyBitsMin8 / bitsForChar; 
-            if(inputChars.Length > numofchars)
-                return null;
-
-            //number of chars is lower than available space
-
-            //number of chars is same as available space
-
-            String result = "";
-            char[] array = inputChars.ToCharArray();
-            for (int i = 0; i < numofchars; i++) //test size! //possible to do in reverse order, just for "cryptography"
-            {
-                char number = array[i]; //get number from char
-                string binValue = Convert.ToString(number, 2);  //convert to binary
-                binValue = binValue.PadLeft(8, '0');            //padding
-                result += binValue;
-            }
-
-            Console.WriteLine(result);
-            int final = Convert.ToInt32(result, 2);
-            return (UInt32)final;
-
-            //number of chars is higher then space
-
-        }
-
-
-        public static string stegoNumber2string(uint binnum, int HowManyBits)
-        {
-            if (HowManyBits % 2 != 0)
-                return null;
-
-            int numofchars = HowManyBits / 8;
-            //number of chars is lower than available space
-            //TODO
-
-            //number of chars is same as available space
-            string binValue = Convert.ToString(binnum, 2);  //convert to binary
-            binValue = binValue.PadLeft(HowManyBits, '0'); //padding
-
-            List<string> charsInBin = new List<string>();
-            charsInBin = binValue.SplitInParts(8).ToList(); //divide into parts
-
-            string final = "";
-            foreach (string s in charsInBin)
-            {
-                char c = (char)Convert.ToInt32(s, 2);
-                final += c;
-            }
-
-            return final;
-
-            //number of chars is higher then space
-            //TODO
-
-        }
-        */
 
         public static IEnumerable<String> SplitInParts(this String s, Int32 partLength) //splits string after every n char //converts to list by using .ToList()
         {

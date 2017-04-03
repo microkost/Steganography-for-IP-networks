@@ -33,24 +33,9 @@ namespace SteganographyFramework
             try
             {
                 //source: https://stephenhaunts.com/2014/01/06/getting-the-mac-address-for-a-machine-on-the-network/
-                /*
-                if (string.IsNullOrEmpty(ipAddress.ToString()))
-                {
-                    return null;
-                }
-                */
-
                 byte[] macAddr = new byte[6];
                 uint macAddrLen = (uint)macAddr.Length;
-
                 int intAddress = BitConverter.ToInt32(IPAddress.Parse(ipAddress.ToString()).GetAddressBytes(), 0);
-                /*
-                if (SendARP(intAddress, 0, macAddr, ref macAddrLen) != 0)
-                {
-                    return null;
-                }
-                */
-
                 string[] str = new string[(int)macAddrLen];
 
                 for (int i = 0; i < macAddrLen; i++)
@@ -62,7 +47,7 @@ namespace SteganographyFramework
             }
             catch
             {
-                macAddress = new MacAddress("02:02:02:02:02:02");
+                macAddress = new MacAddress("02:02:02:02:02:02"); //should be less suspicious
 
             }
 
@@ -78,7 +63,7 @@ namespace SteganographyFramework
         }
 
         //---------L3------------------------------------------------------------------------------------------------------------
-        public static IpV4Layer GetIpV4Layer(IpV4Address SourceIP, IpV4Address DestinationIP) //(IpV4Protocol carryingLayer)
+        public static IpV4Layer GetIpV4Layer(IpV4Address SourceIP, IpV4Address DestinationIP)
         {
             IpV4Layer ipv4Vrstva = new IpV4Layer();
             ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
@@ -89,16 +74,12 @@ namespace SteganographyFramework
             ipv4Vrstva.Identification = 1;
             ipv4Vrstva.Options = IpV4Options.None;
             ipv4Vrstva.Ttl = 128;
-
             /*
             if (carryingLayer == IpV4Protocol.Tcp)
-                ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
+                ipv4Vrstva.Protocol = IpV4Protocol.Tcp;
 
             if (carryingLayer == IpV4Protocol.Udp)
                 ipv4Vrstva.Protocol = IpV4Protocol.Udp;
-
-            if (carryingLayer == IpV4Protocol.UdpLite)
-                ipv4Vrstva.Protocol = IpV4Protocol.UdpLite;
             */
 
             return ipv4Vrstva;
@@ -167,7 +148,6 @@ namespace SteganographyFramework
             return tcpLayer;
         }
 
-        //ACK
         public static uint? WaitForTcpAck(PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
         {
             communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);

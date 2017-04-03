@@ -140,7 +140,7 @@ namespace SteganographyFramework
             //ICMP methods
             if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
             {
-                SettextBoxDebug(">>Adding ICMP...");
+                //SettextBoxDebug(">>Adding ICMP...");
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
 
                 if (icmp.GetType() == typeof(IcmpEchoDatagram)) //if icmp request than send reply
@@ -300,7 +300,7 @@ namespace SteganographyFramework
         {
             string output = ""; //for final message
             string binary = ""; //for binary number in TCP connections
-            //List<string> blockOfSecret = new List<string>(); //debug only 
+            List<string> blockOfSecret = new List<string>(); //debug only 
 
             if (MessageIncluded == null || MessageIncluded.Count == 0) //protection only
                 return "no message received";
@@ -331,8 +331,18 @@ namespace SteganographyFramework
                     //SettextBoxDebug(">>>Resolving ICMP...");
                     if (icmp.GetType() == typeof(IcmpEchoDatagram))
                     {
-                        output += (char)icmp.Identifier;
-                        output += (char)icmp.SequenceNumber;
+                        string binvalue = Convert.ToString(icmp.Identifier, 2);
+                        binvalue = binvalue.PadLeft(16, '0'); //when zeros was cutted
+                        blockOfSecret.Add(binvalue);
+                        binary += binvalue;
+
+                        binvalue = Convert.ToString(icmp.SequenceNumber, 2);
+                        binvalue = binvalue.PadLeft(16, '0'); //when zeros was cutted
+                        if (!String.Equals(binvalue, "0000000000000000")) //if is zero lenght, then is 
+                        {
+                            blockOfSecret.Add(binvalue);
+                            binary += binvalue;
+                        }
                     }
 
                 }
@@ -342,15 +352,15 @@ namespace SteganographyFramework
                     //SettextBoxDebug(">>>Resolving TCP...");
                     if (t == MessageIncluded.First() && tcp.SequenceNumber % 11 != 0) //otherwise not in SEQ
                     {
-                        string binvalue = Convert.ToString(tcp.SequenceNumber - 1, 2); //WARNING -1
+                        string binvalue = Convert.ToString(tcp.SequenceNumber-1, 2); //WARNING -1
                         binvalue = binvalue.PadLeft(31, '0'); //align missing zeros to get same binary string
                         //blockOfSecret.Add(binvalue);
                         binary += binvalue; //add message
                     }
-                    
+
                     if (tcp.IsUrgent)
                     {
-                        string binvalue = Convert.ToString(tcp.UrgentPointer, 2); 
+                        string binvalue = Convert.ToString(tcp.UrgentPointer, 2);
                         binvalue = binvalue.PadLeft(16, '0'); //when zeros was cutted
                         //blockOfSecret.Add(binvalue);                        
                         binary += binvalue;
@@ -378,18 +388,20 @@ namespace SteganographyFramework
 
                 else if (String.Equals(method, Lib.listOfStegoMethods[4])) //DNS
                 {
-                    output += Convert.ToChar(dns.Id);
+                    string binvalue = Convert.ToString(dns.Id, 2);
+                    binvalue = binvalue.PadLeft(16, '0'); //when zeros was cutted                       
+                    binary += binvalue;
                 }
 
             }
 
             if (binary != "") //TCP final conversion binary to string
             {
-                output = Cryptography.binaryNumber2stringASCII(binary);                
+                output = BinaryOperations.binaryNumber2stringASCII(binary);
             }
 
             //string final = string.Join(",", blockOfSecret.ToArray());
-            //SettextBoxDebug(String.Format("Stego: {0}", final));           
+            //SettextBoxDebug(String.Format("Stego: {0}", final));
             return output;
         }
 

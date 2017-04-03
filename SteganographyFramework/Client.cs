@@ -65,47 +65,60 @@ namespace SteganographyFramework
                     SettextBoxDebug(String.Format("Processing of method {0} started", StegoMethod));
                     if (String.Equals(StegoMethod, Lib.listOfStegoMethods[0])) //ICMP
                     {
+                        List<string> blockOfSecret = new List<string>(); //debug only
 
                         EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2 Ethernet Layer                        
                         IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer
                         IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer                        
-
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
 
                         //send stego start sequence
-                        for (int i = 0; i < Secret.Length;)
+                        string secretInBin = BinaryOperations.stringASCII2BinaryNumber(Secret); //prepare stego message: ascii text to bin
+                        if (secretInBin == null)
                         {
-                            //In each ICMP packet 4 bytes of hidden data can be inserted. The hidden data will be placed in both Identifier (2 bytes) and Sequence number (2 bytes) fields. 
-                            try
+                            SettextBoxDebug("Sorry, cannot be sended, non ASCII chars in message.");
+                            break;
+                        }
+                        List<string> partsOfSecretMessage = secretInBin.SplitInParts(16).ToList(); //16 bit for urgent
+
+                        for (int i = 0; i < partsOfSecretMessage.Count;)
+                        {
+                            try //In each ICMP packet 4 bytes of hidden data can be inserted. The hidden data will be placed in both Identifier (2 bytes) and Sequence number (2 bytes) fields. 
                             {
-                                icmpLayer.Identifier = (ushort)Secret[i++];
+                                string binValue = partsOfSecretMessage[i++].PadLeft(16, '0');
+                                //blockOfSecret.Add(binValue);
+                                icmpLayer.Identifier = Convert.ToUInt16(binValue, 2);
+
+                                try
+                                {
+                                    binValue = partsOfSecretMessage[i++].PadLeft(16, '0');
+                                    //blockOfSecret.Add(binValue);
+                                    icmpLayer.SequenceNumber = Convert.ToUInt16(binValue, 2);
+                                }
+                                catch //in case that there are no more letters in string secret previous part, but nothing to sequence
+                                {
+                                    icmpLayer.SequenceNumber = 0;
+                                    //blockOfSecret.Add("0000000000000000");
+                                }
+
+                                Packet packet = builder.Build(DateTime.Now); // Rebuild the packet
+                                communicator.SendPacket(packet); // Send down the packet //Additional information: Failed writing to device. WinPcap Error: send error: PacketSendPacket failed
+                                System.Threading.Thread.Sleep(1000); //wait 1s for sending next one to simulate real network
                             }
                             catch
                             {
-                                //in case that there are no more letters in string secret
+                                //in case that there are no more letters in string secret, not nessesary to do anything
                             }
-
-                            try
-                            {
-                                icmpLayer.SequenceNumber = (ushort)Secret[i++];
-                            }
-                            catch
-                            {
-                                //in case that there are no more letters in string secret
-                            }
-
-                            Packet packet = builder.Build(DateTime.Now); // Rebuild the packet
-                            communicator.SendPacket(packet); // Send down the packet //Additional information: Failed writing to device. WinPcap Error: send error: PacketSendPacket failed
-                            System.Threading.Thread.Sleep(1000); //wait 1s for sending next one to simulate real network
                         }
 
-                        //send stego end sequence
+                        //string final =  string.Join(",", blockOfSecret.ToArray());
+                        //SettextBoxDebug(String.Format("Stego: {0}", final));
                         terminate = true;
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[1])) //TCP
                     {
                         //List<string> blockOfSecret = new List<string>(); //debug only
-                        string secretInBin = Cryptography.stringASCII2BinaryNumber(Secret); //prepare stego message: ascii text to bin
+                        string secretInBin = BinaryOperations.stringASCII2BinaryNumber(Secret); //prepare stego message: ascii text to bin
                         if (secretInBin == null)
                         {
                             SettextBoxDebug("Sorry, cannot be sended, non ASCII chars in message.");
@@ -117,7 +130,7 @@ namespace SteganographyFramework
                         if (numberOfTakenBits > 0)
                         {
                             restString = secretInBin.Substring(0, numberOfTakenBits); //get first 32 bit and remove them //System.ArgumentOutOfRangeException
-                        }                    
+                        }
                         //blockOfSecret.Add(substring);
 
                         int seqNumberInDec = Convert.ToInt32(restString, 2); //convert bin to uint for sequence number                        
@@ -145,7 +158,7 @@ namespace SteganographyFramework
                         }
 
                         List<string> partsOfSecretMessage = secretInBin.SplitInParts(16).ToList(); //16 bit for urgent
-                        
+
                         //now network processing...
                         EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2                        
                         IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3
@@ -334,29 +347,39 @@ namespace SteganographyFramework
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
                     {
-                        List<Packet> stegosent = new List<Packet>(); //debug only
-
                         EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
                         IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
                         UdpLayer udpLayer = NetworkMethods.GetUdpLayer(SourcePort, 53);
 
-                        List<String> domainsToAsk = new List<string>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" }; //used as infinite loop
-                                                                                                                                                                                                   //ask for PTR record, ask for IPs...
-
+                        //improvement: ask for PTR record, ask for IPs...
+                        List<String> domainsToAsk = Lib.listOfDomainsForDNSqueries; 
                         int indexindomains = 0;
 
-                        foreach (char c in Secret)
+                        //List<string> blockOfSecret = new List<string>(); //debug only
+                        string secretInBin = BinaryOperations.stringASCII2BinaryNumber(Secret); //prepare stego message: ascii text to bin
+                        if (secretInBin == null)
                         {
-                            if (indexindomains == domainsToAsk.Count())
+                            SettextBoxDebug("Sorry, cannot be sended, non ASCII chars in message.");
+                            break;
+                        }
+                        List<string> partsOfSecretMessage = secretInBin.SplitInParts(16).ToList(); //prepare splitted messages
+
+                        foreach (string s in partsOfSecretMessage)
+                        {
+                            if (indexindomains == domainsToAsk.Count()) //infinite liest
                                 indexindomains = 0;
 
-                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer((ushort)c); //total capacity 16 bit, idea to make a XOR
+                            string binValue = s.PadLeft(16, '0'); //message padded
+                            //blockOfSecret.Add(binValue); //debug
+
+                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer(Convert.ToUInt16(binValue, 2)); //total capacity 16 bit
                             dnsLayer.IsResponse = false;
-                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethods.GetDnsQuery(domainsToAsk[indexindomains++]) }; //ndex was out of range. Must be non-negative and less than the size of the collection.
+                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethods.GetDnsQuery(domainsToAsk[indexindomains++]) };
 
                             PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, udpLayer, dnsLayer);
                             Packet packet = builder.Build(DateTime.Now);
                             communicator.SendPacket(packet);
+
                             System.Threading.Thread.Sleep(900); //wait 1s for sending next one to simulate real network                        
                         }
 
@@ -367,6 +390,7 @@ namespace SteganographyFramework
                     {
                         SettextBoxDebug("Nothing happened"); //Additional information: Index was outside the bounds of the array.
                     }
+
                     SettextBoxDebug(String.Format("Processing of method {0} finished\n", StegoMethod));
                 }
 
