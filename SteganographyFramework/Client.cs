@@ -89,6 +89,9 @@ namespace SteganographyFramework
                                 //blockOfSecret.Add(binValue);
                                 icmpLayer.Identifier = Convert.ToUInt16(binValue, 2);
 
+                                //modification: standard ping zvýšit hodnotu o to, co vyjadřuje nějaký přenos
+                                //není ochrana...! podle příchozí...
+
                                 try
                                 {
                                     binValue = partsOfSecretMessage[i++].PadLeft(16, '0');
