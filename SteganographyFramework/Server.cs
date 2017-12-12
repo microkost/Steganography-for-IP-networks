@@ -259,6 +259,19 @@ namespace SteganographyFramework
             else if (ip != null && ip.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[2])) //IP
             {
                 SettextBoxDebug(">>Adding IP...");
+
+                //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
+
+                //IP method X - offset number like TTL lower, smth constant is under or value is unmasked... IF allowed!
+
+                //IP method 2 - maximum method (method 1 + usage of flags + fragment offset + 
+
+                //ip method 3 - transparent - count TTL and use some value under as rest...
+
+                //IP method 4 - TypeOfService fild - extrely lame way but... Usage high bits 6 + 7 is "OK"...
+
+                //IP method 5  - 
+
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
             }
 
