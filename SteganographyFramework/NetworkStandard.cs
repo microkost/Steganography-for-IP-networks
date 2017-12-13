@@ -17,10 +17,11 @@ using System.Diagnostics;
 
 namespace SteganographyFramework
 {
-    public static class NetworkMethods
+public static class NetworkMethodsStandard
     {
-        //---------L2------------------------------------------------------------------------------------------------------------
-        [DllImport("iphlpapi.dll", ExactSpelling = true)]
+
+    //---------L2------------------------------------------------------------------------------------------------------------
+    [DllImport("iphlpapi.dll", ExactSpelling = true)]
         private static extern int SendARP(int DestIP, int SrcIP, byte[] pMacAddr, ref uint PhyAddrLen);
         public static MacAddress getDestinationMacAddress(IpV4Address ipAddress) //because destination mac address needs to be requested for network
         {
@@ -122,7 +123,6 @@ namespace SteganographyFramework
 
         public static UdpLayer GetUdpLayer(ushort sourcePort, ushort destinationPort)
         {
-
             UdpLayer udpLayer = new UdpLayer();
             udpLayer.SourcePort = sourcePort;
             udpLayer.DestinationPort = destinationPort;
@@ -299,7 +299,8 @@ namespace SteganographyFramework
             return httpLayer;
             //nessesary to do! _expectedAckNumber = (uint)(_seqNumber + packet.Ethernet.IpV4.Tcp.PayloadLength);
         }
-        //---------Universal-----------------------------------------------------------------------------------------------------        
+
+        //---------Universal-----------------------------------------------------------------------------------------------------                
     }
 }
 

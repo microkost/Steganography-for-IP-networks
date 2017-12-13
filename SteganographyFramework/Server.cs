@@ -147,8 +147,8 @@ namespace SteganographyFramework
                 {
                     SettextBoxDebug(">>Replying ICMP...");
 
-                    EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
-                    IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses
+                    EthernetLayer ethernetLayer = NetworkMethodsStandard.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
+                    IpV4Layer ipV4Layer = NetworkMethodsStandard.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses
 
                     IcmpEchoReplyLayer icmpLayer = new IcmpEchoReplyLayer();
                     icmpLayer.SequenceNumber = icmp.SequenceNumber;
@@ -165,8 +165,8 @@ namespace SteganographyFramework
                 if (tcp.DestinationPort != DestinationPort)
                     return;
 
-                EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
-                IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses     
+                EthernetLayer ethernetLayer = NetworkMethodsStandard.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order of MAC addresses
+                IpV4Layer ipV4Layer = NetworkMethodsStandard.GetIpV4Layer(serverIP, ip.Source); //reversed order of IP addresses     
                 ipV4Layer.Protocol = IpV4Protocol.Tcp; //set ISN
 
                 seqNumberRemote = tcp.SequenceNumber;
@@ -200,7 +200,7 @@ namespace SteganographyFramework
                     seqNumberBase = seqNumberLocal; //setting value is enstablished connection, setting to null is terminating
                     ackNumberBase = ackNumberLocal;
                     ackNumberLocal++;
-                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
+                    tcLayer = NetworkMethodsStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
                     builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
                     SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly
 
@@ -221,7 +221,7 @@ namespace SteganographyFramework
                     ackNumberLocal = seqNumberRemote + 1;
 
                     SettextBoxDebug(">>Ending TCP connection with FINACK"); //SEND ALSO FIN ACK
-                    tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
+                    tcLayer = NetworkMethodsStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
                     builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
                     SendReplyPacket(builder.Build(DateTime.Now));
 
@@ -243,7 +243,7 @@ namespace SteganographyFramework
                 StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
 
                 SettextBoxDebug(">>Replying with ACK...");
-                tcLayer = NetworkMethods.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
+                tcLayer = NetworkMethodsStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment); //seq generated, ack = syn+1
                 builder = new PacketBuilder(ethernetLayer, ipV4Layer, tcLayer);
                 SendReplyPacket(builder.Build(DateTime.Now)); //send immediatelly              
             }
@@ -283,17 +283,17 @@ namespace SteganographyFramework
 
                 SettextBoxDebug(">>Replying DNS...");
 
-                EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order
-                IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(serverIP, ip.Source); //reversed order
-                UdpLayer udpLayer = NetworkMethods.GetUdpLayer(53, udp.SourcePort); //reverse order
-                DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer(dns.Id);
+                EthernetLayer ethernetLayer = NetworkMethodsStandard.GetEthernetLayer(packet.Ethernet.Destination, packet.Ethernet.Source); //reversed order
+                IpV4Layer ipV4Layer = NetworkMethodsStandard.GetIpV4Layer(serverIP, ip.Source); //reversed order
+                UdpLayer udpLayer = NetworkMethodsStandard.GetUdpLayer(53, udp.SourcePort); //reverse order
+                DnsLayer dnsLayer = NetworkMethodsStandard.GetDnsHeaderLayer(dns.Id);
                 dnsLayer.IsResponse = true;
                 dnsLayer.Queries = dns.Queries; //include original request
 
                 List<DnsDataResourceRecord> answers = new List<DnsDataResourceRecord>(); //used for collecting answers if they came in list
                 foreach (DnsQueryResourceRecord rec in dns.Queries)
                 {
-                    answers.Add(NetworkMethods.GetDnsAnswer(rec.DomainName, rec.DnsType, NetworkMethods.getIPfromHostnameViaDNS(rec.DomainName.ToString()).ToString()));
+                    answers.Add(NetworkMethodsStandard.GetDnsAnswer(rec.DomainName, rec.DnsType, NetworkMethodsStandard.getIPfromHostnameViaDNS(rec.DomainName.ToString()).ToString()));
                     //cannot answer for IPv6
                 }
                 dnsLayer.Answers = answers;
@@ -309,6 +309,7 @@ namespace SteganographyFramework
 
             return;
         }
+
         private string GetSecretMessage(List<Tuple<Packet, String>> MessageIncluded)
         {
             string output = ""; //for final message
@@ -365,7 +366,7 @@ namespace SteganographyFramework
                     //SettextBoxDebug(">>>Resolving TCP...");
                     if (t == MessageIncluded.First() && tcp.SequenceNumber % 11 != 0) //otherwise not in SEQ
                     {
-                        string binvalue = Convert.ToString(tcp.SequenceNumber-1, 2); //WARNING -1
+                        string binvalue = Convert.ToString(tcp.SequenceNumber - 1, 2); //WARNING -1
                         binvalue = binvalue.PadLeft(31, '0'); //align missing zeros to get same binary string
                         //blockOfSecret.Add(binvalue);
                         binary += binvalue; //add message

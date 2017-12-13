@@ -46,7 +46,7 @@ namespace SteganographyFramework
         {
             int selectedInterface = Lib.getSelectedInterfaceIndex(SourceIP); //get index
             MacAddressSource = Lib.allDevices[selectedInterface].GetMacAddress(); //get real MAC address of outbound interface
-            MacAddressDestination = NetworkMethods.getDestinationMacAddress(DestinationIP); //get real destination mac based on arp request
+            MacAddressDestination = NetworkMethodsStandard.getDestinationMacAddress(DestinationIP); //get real destination mac based on arp request
 
             if (Secret == null) //when there is no secret to transffer (wrong initialization)
                 return;
@@ -67,8 +67,8 @@ namespace SteganographyFramework
                     {
                         List<string> blockOfSecret = new List<string>(); //debug only
 
-                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2 Ethernet Layer                        
-                        IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer
+                        EthernetLayer ethernetLayer = NetworkMethodsStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2 Ethernet Layer                        
+                        IpV4Layer ipV4Layer = NetworkMethodsStandard.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer
                         IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer                        
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
 
@@ -163,8 +163,8 @@ namespace SteganographyFramework
                         List<string> partsOfSecretMessage = secretInBin.SplitInParts(16).ToList(); //16 bit for urgent
 
                         //now network processing...
-                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2                        
-                        IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP); //3
+                        EthernetLayer ethernetLayer = NetworkMethodsStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2                        
+                        IpV4Layer ipv4Vrstva = NetworkMethodsStandard.GetIpV4Layer(SourceIP, DestinationIP); //3
                         ipv4Vrstva.Protocol = IpV4Protocol.Tcp; //set ISN
 
                         /* How it works
@@ -187,7 +187,7 @@ namespace SteganographyFramework
                          */
 
                         //SYN
-                        TcpLayer tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize);
+                        TcpLayer tcpLayer = NetworkMethodsStandard.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Synchronize);
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                         communicator.SendPacket(builder.Build(DateTime.Now)); //Send down the SYN packet
 
@@ -196,7 +196,7 @@ namespace SteganographyFramework
                         ackNumberRemote = seqNumberLocal + 1; //because we know it
 
                         //SYN ACK
-                        seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
+                        seqNumberRemote = NetworkMethodsStandard.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
                         if (seqNumberRemote == null)
                         {
                             SettextBoxDebug(">TCP ACK not received!");
@@ -207,7 +207,7 @@ namespace SteganographyFramework
                         ackNumberLocal = (uint)seqNumberRemote + 1;
 
                         //ACK
-                        tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
+                        tcpLayer = NetworkMethodsStandard.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
                         builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                         communicator.SendPacket(builder.Build(DateTime.Now)); //Send down ACK packet
 
@@ -217,19 +217,19 @@ namespace SteganographyFramework
 
                         for (int i = 0; i < partsOfSecretMessage.Count; i++) //foreach secret message
                         {
-                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment | TcpControlBits.Push | TcpControlBits.Urgent);
+                            tcpLayer = NetworkMethodsStandard.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment | TcpControlBits.Push | TcpControlBits.Urgent);
                             string binValue = partsOfSecretMessage[i].PadLeft(16, '0');
                             //blockOfSecret.Add(binValue);
                             tcpLayer.UrgentPointer = Convert.ToUInt16(binValue, 2); ////stego in urgent field (Unsigned 16-bit integer)
 
                             //PAYLOAD need to be changed to HTTP
-                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer(Convert.ToUInt16(binValue, 2)); //total capacity 16 bit, idea to make a XOR
+                            DnsLayer dnsLayer = NetworkMethodsStandard.GetDnsHeaderLayer(Convert.ToUInt16(binValue, 2)); //total capacity 16 bit, idea to make a XOR
                             dnsLayer.IsResponse = false;
                             if (FAKEindexindomains == FAKEdomainsToAsk.Count)
                             {
                                 FAKEindexindomains = 0;
                             }
-                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethods.GetDnsQuery(FAKEdomainsToAsk[FAKEindexindomains++]) };
+                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethodsStandard.GetDnsQuery(FAKEdomainsToAsk[FAKEindexindomains++]) };
 
                             builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer, dnsLayer);
                             Packet packet = builder.Build(DateTime.Now);
@@ -240,7 +240,7 @@ namespace SteganographyFramework
                             seqNumberLocal += payloadsize; //expected value from oposite side
 
                             SettextBoxDebug(">waiting for TCP ACK");
-                            seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, seqNumberLocal); //in ack is expected value
+                            seqNumberRemote = NetworkMethodsStandard.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, seqNumberLocal); //in ack is expected value
                             if (seqNumberRemote == null)
                             {
                                 SettextBoxDebug(">TCP ACK not received!");
@@ -263,7 +263,7 @@ namespace SteganographyFramework
                             }
 
                             //client's FIN ACK
-                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //REALLY ACK?
+                            tcpLayer = NetworkMethodsStandard.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //REALLY ACK?
                             builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                             communicator.SendPacket(builder.Build(DateTime.Now)); //Send down the FIN packet
 
@@ -271,7 +271,7 @@ namespace SteganographyFramework
                             SettextBoxDebug(">waiting for TCP ACK (closing)");
                             ackNumberLocal = seqNumberLocal + 1; //expected value from oposite side
                             ackNumberRemote = seqNumberLocal + 1; //because we know it                        
-                            seqNumberRemote = NetworkMethods.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //in ack is expected value
+                            seqNumberRemote = NetworkMethodsStandard.WaitForTcpAck(communicator, SourceIP, DestinationIP, SourcePort, DestinationPort, ackNumberRemote, TcpControlBits.Fin | TcpControlBits.Acknowledgment); //in ack is expected value
                             if (seqNumberRemote == null)
                             {
                                 SettextBoxDebug(">TCP closing ACK not received!");
@@ -283,7 +283,7 @@ namespace SteganographyFramework
                             ackNumberLocal = (uint)seqNumberRemote + 1;
 
                             //send ACK as reply for server's FIN ACK
-                            tcpLayer = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
+                            tcpLayer = NetworkMethodsStandard.GetTcpLayer(SourcePort, DestinationPort, seqNumberLocal, ackNumberLocal, TcpControlBits.Acknowledgment);
                             builder = new PacketBuilder(ethernetLayer, ipv4Vrstva, tcpLayer);
                             communicator.SendPacket(builder.Build(DateTime.Now));
                             SettextBoxDebug(">communication closed");
@@ -309,17 +309,17 @@ namespace SteganographyFramework
                         //SYN paket obsahuje prázdný TCP segment a má nastavený příznak SYN v TCP hlavičce.                            
 
                         // Ethernet Layer
-                        EthernetLayer ethernetVrstva = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
+                        EthernetLayer ethernetVrstva = NetworkMethodsStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination);
 
                         // IPv4 Layer
-                        IpV4Layer ipv4Vrstva = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
+                        IpV4Layer ipv4Vrstva = NetworkMethodsStandard.GetIpV4Layer(SourceIP, DestinationIP);
                         ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
                         ipv4Vrstva.Identification = 555; //STEGO                        
 
                         //needs to be finalize? ipv4Vrstva.Finalize();
 
                         // TCPv4 Layer
-                        TcpLayer tcpVrstva = NetworkMethods.GetTcpLayer(SourcePort, DestinationPort, Convert.ToUInt32(Secret[1]), 0, TcpControlBits.Synchronize);
+                        TcpLayer tcpVrstva = NetworkMethodsStandard.GetTcpLayer(SourcePort, DestinationPort, Convert.ToUInt32(Secret[1]), 0, TcpControlBits.Synchronize);
                         //Expert Info (Warn/Protocol): Acknowledgment number: Broken TCP. The acknowledge field is nonzero while the ACK flag is not set
 
                         //what about payload?
@@ -350,9 +350,9 @@ namespace SteganographyFramework
                     }
                     else if (String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
                     {
-                        EthernetLayer ethernetLayer = NetworkMethods.GetEthernetLayer(MacAddressSource, MacAddressDestination);
-                        IpV4Layer ipV4Layer = NetworkMethods.GetIpV4Layer(SourceIP, DestinationIP);
-                        UdpLayer udpLayer = NetworkMethods.GetUdpLayer(SourcePort, 53);
+                        EthernetLayer ethernetLayer = NetworkMethodsStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination);
+                        IpV4Layer ipV4Layer = NetworkMethodsStandard.GetIpV4Layer(SourceIP, DestinationIP);
+                        UdpLayer udpLayer = NetworkMethodsStandard.GetUdpLayer(SourcePort, 53);
 
                         //improvement: ask for PTR record, ask for IPs...
                         List<String> domainsToAsk = Lib.listOfDomainsForDNSqueries; 
@@ -375,9 +375,9 @@ namespace SteganographyFramework
                             string binValue = s.PadLeft(16, '0'); //message padded
                             //blockOfSecret.Add(binValue); //debug
 
-                            DnsLayer dnsLayer = NetworkMethods.GetDnsHeaderLayer(Convert.ToUInt16(binValue, 2)); //total capacity 16 bit
+                            DnsLayer dnsLayer = NetworkMethodsStandard.GetDnsHeaderLayer(Convert.ToUInt16(binValue, 2)); //total capacity 16 bit
                             dnsLayer.IsResponse = false;
-                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethods.GetDnsQuery(domainsToAsk[indexindomains++]) };
+                            dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetworkMethodsStandard.GetDnsQuery(domainsToAsk[indexindomains++]) };
 
                             PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, udpLayer, dnsLayer);
                             Packet packet = builder.Build(DateTime.Now);
