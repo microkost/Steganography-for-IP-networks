@@ -8,5 +8,6 @@ namespace SteganoNetLib
 {
     class DataCryptoOperations
     {
+        //NOT IN USE, just theoretical
     }
 }

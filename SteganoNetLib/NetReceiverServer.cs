@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SteganoNetLib
 {
-    class DataBinaryOperations
+    public class NetReceiverServer : NetNode
     {
     }
 }

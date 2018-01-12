@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SteganoNetLib
 {
-    public class NetworkClient : NetworkNode
+    public class NetSenderClient : NetNode
     {
     }
 }

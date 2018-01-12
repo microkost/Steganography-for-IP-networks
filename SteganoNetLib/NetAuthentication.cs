@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SteganoNetLib
 {
-    public abstract class NetworkNode
+    public class NetAuthentication
     {
     }
 }

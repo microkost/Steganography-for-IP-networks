@@ -40,11 +40,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DataBinaryOperations.cs" />
+    <Compile Include="DataOperations.cs" />
     <Compile Include="DataCryptoOperations.cs" />
-    <Compile Include="NetworkClient.cs" />
-    <Compile Include="NetworkNode.cs" />
-    <Compile Include="NetworkServer.cs" />
+    <Compile Include="NetAuthentication.cs" />
+    <Compile Include="NetSenderClient.cs" />
+    <Compile Include="NetNode.cs" />
+    <Compile Include="NetReceiverServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace SteganoNetLib
 {
-    public class NetworkServer : NetworkNode
+    public abstract class NetNode
     {
+        //contains common properties for roles like Receiver or Sender
     }
 }
