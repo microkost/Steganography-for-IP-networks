@@ -4,6 +4,8 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoTool", "SteganographyFramework\StegoTool.csproj", "{842DB534-8D1A-4394-A14D-D956E79C64B5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNetLib", "SteganoNetLib\SteganoNetLib.csproj", "{69B9B5AB-0918-4F12-8B28-8AA350ABE800}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{842DB534-8D1A-4394-A14D-D956E79C64B5}.Release|x86.ActiveCfg = Release|x86
 		{842DB534-8D1A-4394-A14D-D956E79C64B5}.Release|x86.Build.0 = Release|x86
 		{842DB534-8D1A-4394-A14D-D956E79C64B5}.Release|x86.Deploy.0 = Release|x86
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x64.Build.0 = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x86.Build.0 = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x64.ActiveCfg = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x64.Build.0 = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.ActiveCfg = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
