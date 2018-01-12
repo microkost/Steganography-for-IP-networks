@@ -2,9 +2,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoTool", "SteganographyFramework\StegoTool.csproj", "{842DB534-8D1A-4394-A14D-D956E79C64B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.WinForms", "SteganographyFramework\SteganoNet.UI.WinForms.csproj", "{842DB534-8D1A-4394-A14D-D956E79C64B5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNetLib", "SteganoNetLib\SteganoNetLib.csproj", "{69B9B5AB-0918-4F12-8B28-8AA350ABE800}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Lib", "SteganoNetLib\SteganoNet.Lib.csproj", "{69B9B5AB-0918-4F12-8B28-8AA350ABE800}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
