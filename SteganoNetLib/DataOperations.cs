@@ -83,7 +83,7 @@ namespace SteganoNetLib
             return Encoding.UTF8.GetByteCount(value) == value.Length;
         }
 
-        public static string CalculateMD5Hash(string input)
+        public static string CalculateHash(string input)
         {
             //source https://blogs.msdn.microsoft.com/csharpfaq/2006/10/09/how-do-i-calculate-a-md5-hash-from-a-string/
             //or to use CRC32 function

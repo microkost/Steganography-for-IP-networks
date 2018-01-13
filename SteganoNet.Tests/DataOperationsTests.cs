@@ -63,19 +63,18 @@ namespace SteganoNet.Tests
             {
                 Assert.AreEqual(1, 1); //System.ArgumentNullException: Parameter cannot be null.
             }
-
         }
 
         [TestMethod]
-        public void CalculateMD5HashTest()
+        public void CalculateHashTest()
         {
             //empty input
 
             //regular operation - it needs to be twice same(!)
-            var actual = SteganoNetLib.DataOperations.CalculateMD5Hash("Hello world");
+            var actual = SteganoNetLib.DataOperations.CalculateHash("Hello world");
             Assert.AreEqual("3e25960a79dbc69b674cd4ec67a72c62", actual);
             Thread.Sleep(100); //0,1s
-            actual = SteganoNetLib.DataOperations.CalculateMD5Hash("Hello world");
+            actual = SteganoNetLib.DataOperations.CalculateHash("Hello world");
             Assert.AreEqual("3e25960a79dbc69b674cd4ec67a72c62", actual);
 
             //testing wrong input
