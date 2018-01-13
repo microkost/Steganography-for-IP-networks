@@ -68,8 +68,14 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="DataOperationsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SteganoNetLib\SteganoNet.Lib.csproj">
+      <Project>{69b9b5ab-0918-4f12-8b28-8aa350abe800}</Project>
+      <Name>SteganoNet.Lib</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

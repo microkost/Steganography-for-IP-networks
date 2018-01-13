@@ -59,7 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataOperations.cs" />
-    <Compile Include="DataCryptoOperations.cs" />
+    <Compile Include="DataOperationsCrypto.cs" />
     <Compile Include="NetAuthentication.cs" />
     <Compile Include="NetSenderClient.cs" />
     <Compile Include="NetNode.cs" />

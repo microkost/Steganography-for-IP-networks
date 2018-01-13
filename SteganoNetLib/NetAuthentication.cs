@@ -8,5 +8,6 @@ namespace SteganoNetLib
 {
     public class NetAuthentication
     {
+
     }
 }

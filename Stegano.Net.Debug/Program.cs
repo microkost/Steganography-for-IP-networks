@@ -4,10 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SteganoNetLib
+namespace Stegano.Net.Debug
 {
-    class DataCryptoOperations
+    class Program
     {
-        //NOT IN USE, just theoretical
+        static void Main(string[] args)
+        {
+            
+        }
     }
 }
