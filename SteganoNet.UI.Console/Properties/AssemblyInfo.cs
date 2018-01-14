@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Stegano.Net.Debug")]
+[assembly: AssemblyTitle("SteganoNet.UI.Console")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Stegano.Net.Debug")]
+[assembly: AssemblyProduct("SteganoNet.UI.Console")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("49d09398-0e96-4faa-8c5a-0d9bbffd5d77")]
+[assembly: Guid("34905160-5786-46d9-8e86-890e771707e3")]
 
 // Version information for an assembly consists of the following four values:
 //

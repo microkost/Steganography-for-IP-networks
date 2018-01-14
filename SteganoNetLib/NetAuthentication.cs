@@ -38,5 +38,9 @@ namespace SteganoNetLib
             else
                 return false;
         }      
+
+        //periodic reminder
+
+        //closing handshake
     }
 }

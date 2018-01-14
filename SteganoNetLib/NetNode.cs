@@ -1,13 +1,29 @@
-﻿using System;
+﻿using PcapDotNet.Packets;
+using PcapDotNet.Packets.Ethernet;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SteganoNetLib
 {
-    public abstract class NetNode
+    public interface INetNode
     {
-        //contains common properties for roles like Receiver or Sender
-    }
+        //contains common properties for common roles like Receiver or Sender
+
+        //steganography parametres
+        string StegoMethod { get; set; }
+        string Secret { get; set; }
+
+        //network parametres
+        string IpSourceInput { get; set; } //not IpV4Address from PcapDotNet (references grow)
+        //IpV4Address SourceIP { get; set; } //internal format
+        string IpDestinationInput { get; set; } //server not need it 
+        //IpV4Address DestinationIP { get; set; } //internal format
+        ushort PortDestination { get; set; }
+        ushort PortSource { get; set; }
+        MacAddress MacAddressSource { get; set; }
+        MacAddress MacAddressDestination { get; set; }
+
+        //methods
+        string GetSecretMessage(List<Tuple<Packet, String>> MessageIncluded);
+    }    
 }

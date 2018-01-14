@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Lib", "SteganoNe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Tests", "SteganoNet.Tests\SteganoNet.Tests.csproj", "{CA73ED25-550E-4FA6-849F-741C607394C9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.Console", "SteganoNet.UI.Console\SteganoNet.UI.Console.csproj", "{34905160-5786-46D9-8E86-890E771707E3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,18 @@ Global
 		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|x64.Build.0 = Release|Any CPU
 		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|x86.ActiveCfg = Release|Any CPU
 		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|x86.Build.0 = Release|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Debug|x64.Build.0 = Debug|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Debug|x86.Build.0 = Debug|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Release|x64.ActiveCfg = Release|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Release|x64.Build.0 = Release|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Release|x86.ActiveCfg = Release|Any CPU
+		{34905160-5786-46D9-8E86-890E771707E3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
