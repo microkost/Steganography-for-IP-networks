@@ -7,8 +7,8 @@
     <ProjectGuid>{69B9B5AB-0918-4F12-8B28-8AA350ABE800}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SteganoNetLib</RootNamespace>
-    <AssemblyName>SteganoNetLib</AssemblyName>
+    <RootNamespace>SteganoNet.Lib</RootNamespace>
+    <AssemblyName>SteganoNet.Lib</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

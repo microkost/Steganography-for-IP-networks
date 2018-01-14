@@ -7,8 +7,8 @@
     <ProjectGuid>{842DB534-8D1A-4394-A14D-D956E79C64B5}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Steganography</RootNamespace>
-    <AssemblyName>Steganography</AssemblyName>
+    <RootNamespace>SteganoNet.UI.WinForms</RootNamespace>
+    <AssemblyName>SteganoNet.UI.WinForms</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
