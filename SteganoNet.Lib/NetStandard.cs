@@ -25,7 +25,7 @@ namespace SteganoNetLib
         }
         public static MacAddress GetMacAddress(IpV4Address ipAddress) //because destination mac address needs to be requested from network
         {
-            if (ipAddress == null || ipAddress.ToString().Length == 0) //in case of input problem
+            if (ipAddress == null || ipAddress.ToString().Length == 0 || ipAddress.Equals("0.0.0.0")) //in case of input problem or unknown
             {
                 ipAddress = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip
             }

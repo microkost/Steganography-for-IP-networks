@@ -32,5 +32,23 @@ namespace SteganoNetLib
             return secretTextOutput;
         }
 
+        public static string ReadCrypto(string cipherInput, int method = 0)
+        {
+            //NOT IN USE, just theoretical upgrade solution
+
+            string clearTextOutput = "";
+            if (method == 0)
+            {
+                clearTextOutput = cipherInput;
+
+            }
+            else
+            {
+                clearTextOutput = cipherInput;
+            }
+
+            return clearTextOutput;
+        }
+
     }
 }
