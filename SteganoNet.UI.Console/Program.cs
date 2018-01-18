@@ -3,10 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SteganoNet.UI.Console
 {
+    public delegate void ThreadStart();
     class Program
     {       
         static void Main(string[] args)
@@ -53,7 +55,7 @@ namespace SteganoNet.UI.Console
                 rs.IpDestinationInput = ipremote;
                 rs.PortDestination = portremote;
 
-                //new thread
+                Thread t = new Thread(new ThreadStart(rs.Listening())); //http://programujte.com/clanek/2008061401-vlakna-v-c-1-dil/
             }
             else //its client
             {             
