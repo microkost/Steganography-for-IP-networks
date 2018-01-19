@@ -2,18 +2,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace SteganoNet.UI.Console
 {
     public delegate void ThreadStart();
     class Program
-    {       
+    {
         static void Main(string[] args)
         {
-
             //select role
             //select interface
             //select running port
@@ -22,49 +19,89 @@ namespace SteganoNet.UI.Console
             //stop
             //analyze results
 
-            if (args.Length == 0 || args == null)
+            System.Console.WriteLine("Welcome in Steganography for IP networks tool.");
+            string role = "s"; //server or client
+
+            if(SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //just to be obvious...
             {
-                System.Console.WriteLine("Please enter a argument.");
+                System.Console.WriteLine("Some nessesary libraries (like PcapDotNet or WinPcap) are not installed!");
+                System.Console.WriteLine("Press any key to exit... ");
+                System.Console.ReadKey();
                 return;
             }
 
-            foreach (string arg in args)
+            if (args.Length == 0 || args == null) //no user parametrized input = run configuration WIZARD
             {
-                System.Console.WriteLine("Received settings: ");
-                System.Console.Write("arg: %s ", arg);
+                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n");
+                //TODO y/n etc...
+                System.Console.Write(" Is this device (s)erver or (c)lient? (s/c) ");
+                role = System.Console.ReadLine();
+                System.Console.WriteLine("");                    
+                //...
             }
+            else //skip the wizard
+            {
+                role = "s"; //DEBUG TMP
+                foreach (string arg in args) 
+                {
+                    System.Console.WriteLine("Received settings: ");
+                    System.Console.Write("arg: %s ", arg);
+                    //TODO PARSING parametres
+                }
+            }
+           
+            //config general
+            string secretMessage = ""; //"VŠB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
+            //string encryptedMessage = DataOperationsCrypto.DoCrypto(secretMessage); //mock
+            Dictionary<int, string> stegoMethods = NetSteganography.GetListOfStegoMethods();
 
-            //general
-            string secretMessage = "VŠB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society. Education is organized within 7 Faculties and 3 All-University Study Programmes.";
-            string encryptedMessage = DataOperationsCrypto.DoCrypto(secretMessage); //mock
-            Dictionary<int, string> stegoMethods = NetDevice.GetListOfStegoMethods();
-
-            //local
-            List<String> ipv4localadd = NetDevice.GetIPv4addressesLocal();            
+            //config local
+            List<String> ipv4localadd = NetDevice.GetIPv4addressesLocal();
             //ushort port = 11000;
 
-            //remote
+            //config remote
             string ipremote = "192.168.1.150";
-            ushort portremote = 11001;            
+            ushort portremote = 11001;
 
-            if (args[0] == "s") //its server
+            if (String.Equals("s", role)) //its server
             {
                 NetReceiverServer rs = new NetReceiverServer(ipv4localadd.First());
-                rs.Secret = secretMessage;
+                //rs.Secret = secretMessage; //client!
                 rs.StegoMethod = stegoMethods[0]; //needs to know because of reply
                 rs.IpDestinationInput = ipremote;
                 rs.PortDestination = portremote;
 
-                Thread t = new Thread(new ThreadStart(rs.Listening())); //http://programujte.com/clanek/2008061401-vlakna-v-c-1-dil/
+                Thread receiverServerThread = new Thread(rs.Listening);
+                receiverServerThread.Name = "ListeningAndReceivingThread";
+                receiverServerThread.Start();
+                //receiverServerThread.IsBackground = true;
+                string receivedString = rs.GetSecretMessage();
+                secretMessage = DataOperationsCrypto.ReadCrypto(receivedString);
+                receiverServerThread.Join();
+
+                //todo now: finish dependency check => WinPcap
+
+                //solve receiving debug info from thread - events?
+                //stop listening
+                //run rs.GetSecretMessage(null)
+                //stop thread
+                //offer new run
+
+                //solve how to run multiple instances of console in one time
             }
-            else //its client
-            {             
+            if (String.Equals("c", role)) //its client
+            {
                 NetSenderClient sc = new NetSenderClient();
 
             }
-
+            else
+            {
+                System.Console.WriteLine("Sorry, I didnt understand your commands. Start again...");
+            }
             
-
+            System.Console.WriteLine("That's all! Thank you for using Steganography for IP networks tool.");
+            System.Console.ReadKey();
         }
     }
+
 }

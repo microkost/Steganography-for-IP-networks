@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using PcapDotNet.Packets;
 using PcapDotNet.Packets.Ethernet;
 using PcapDotNet.Packets.IpV4;
@@ -40,7 +36,7 @@ namespace SteganoNetLib
         
         public void Listening() //thread listening method
         {
-            //TODO checkPrerequisites (try-catch)
+            //TODO checkSettings() //check values in properties...
 
             selectedDevice = NetDevice.GetSelectedDevice(IpOfListeningInterface); //take the selected adapter
 
@@ -87,16 +83,23 @@ namespace SteganoNetLib
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
             //parse packet to layers
-            //recognize and check method (initialize of connection)
+            //recognize and check method (initialize of connection px.)
             //call method from stego library
             //get answer packet and send it NetReply?
 
+            //solve how to work with list of methods... multiple things in one packet
+
             return;
         }
-
-        public string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
+        private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
         {
             return "NotImplementedException";
         }
+
+        public string GetSecretMessage()
+        {
+            return GetSecretMessage(this.StegoPackets);
+        }
+
     }
 }

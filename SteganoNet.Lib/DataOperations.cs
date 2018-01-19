@@ -15,8 +15,8 @@ namespace SteganoNetLib
         //sender: convert ASCII to BINARY
         //receiver: reasemble and convert to ASCII
 
-        //sender: prepare string for sending (alignment) ...is done here?
-        //receiver: un alingment
+        //sender: prepare string for sending (alignment x8) retrun list of <int>
+        //receiver: un alingment => string to list of <int>
 
         //sender: spliting key string, how to recognize gaps? probably not needed, bitsForChar is delimiter
         //receiver: delimiter determining => bitsForChar as settings
@@ -30,6 +30,7 @@ namespace SteganoNetLib
             {
                 //var input2 = Regex.Replace(input, @"[^\u0020-\u007E]", string.Empty); //cut out non ascii chars as solution
                 //input = input2;
+                //if(!IsASCII(input)){return null}; //recheck... if 
                 return null;
             }
 
@@ -101,7 +102,7 @@ namespace SteganoNetLib
             return sb.ToString();            
         }
 
+        //crc or another consistency check appended to string...
         //public static string CalculateCrc32() https://github.com/damieng/DamienGKit/blob/master/CSharp/DamienG.Library/Security/Cryptography/Crc32.cs
-
     }
 }

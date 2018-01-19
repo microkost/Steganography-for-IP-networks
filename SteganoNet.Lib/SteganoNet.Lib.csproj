@@ -80,6 +80,7 @@
     <Compile Include="NetStandard.cs" />
     <Compile Include="NetSteganography.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SystemCheck.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

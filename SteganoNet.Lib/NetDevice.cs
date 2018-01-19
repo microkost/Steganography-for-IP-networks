@@ -2,9 +2,6 @@
 using PcapDotNet.Packets.IpV4;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SteganoNetLib
 {
@@ -45,24 +42,10 @@ namespace SteganoNetLib
 
             if (allDevices.Count <= i)
             {
-                deviceIndex = 0; //TODO better! Is confusing when is any problem in function!
+                deviceIndex = 0; //TODO better! It is confusing when is any problem in code...
             }
 
             return NetDevice.allDevices[deviceIndex];            
-        }
-
-        public static Dictionary<int, string> GetListOfStegoMethods() //<Tuple<Packet, String>
-        {
-            //TODO https://stackoverflow.com/questions/27631137/tuple-vs-dictionary-differences
-            Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>();
-
-            //public static List<String> listOfStegoMethods = new List<String>() { "ICMP using identifier and sequence number", "TCP using sequence number and urgent field", "IP", "ISN + IP ID", "DNS using ID" }; //List of methods used in code and GUI, index of method is important!
-
-            listOfStegoMethods.Add(0, "IP (Type of service)");
-            listOfStegoMethods.Add(1, "IP (Identification)");
-            listOfStegoMethods.Add(2, "IP (Flags)");
-           
-            return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
         }
 
         //L2

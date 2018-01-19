@@ -8,6 +8,7 @@ namespace SteganoNetLib
     public interface INetNode
     {
         //contains common properties for common roles like Receiver or Sender
+        //maybe should be removed for simplicity, not that huge ammout of shared code...
 
         //steganography parametres
         string StegoMethod { get; set; }
@@ -24,6 +25,6 @@ namespace SteganoNetLib
         MacAddress MacAddressDestination { get; set; }
 
         //methods
-        string GetSecretMessage(List<Tuple<Packet, String>> MessageIncluded);
+        string GetSecretMessage(); //no access to Packets obj because of referencies... GetSecretMessage(List<Tuple<Packet, String>> MessageIncluded)
     }    
 }

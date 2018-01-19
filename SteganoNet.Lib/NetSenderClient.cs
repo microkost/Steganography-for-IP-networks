@@ -19,9 +19,14 @@ namespace SteganoNetLib
         public MacAddress MacAddressSource { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public MacAddress MacAddressDestination { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-        public string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
+        private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
         {
-            throw new NotImplementedException();
+            return "NotImplementedException";
+        }
+        public string GetSecretMessage()
+        {
+            //return GetSecretMessage(this.StegoPackets);
+            return "NotImplementedException";
         }
     }
 }
