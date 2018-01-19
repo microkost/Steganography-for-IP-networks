@@ -22,11 +22,11 @@ namespace SteganoNet.Lib
 
                 //dotnetwinpcap.dll or WinPcap.dll
                 System.Reflection.AssemblyName testAssembly1 = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "WinPcap.dll");
-                System.Console.WriteLine("Yes, the WinPcap is installed on computer.");
+                //System.Console.WriteLine("Yes, the WinPcap.dll is installed on computer.");
 
                 //FileNotFoundException: Could not load file or assembly 'PcapDotNet.Core.dll' or one of its dependencies. The specified module could not be found.
                 System.Reflection.AssemblyName testAssembly2 = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "PcapDotNet.Core.dll");
-                System.Console.WriteLine("Yes, the file PcapDotNet.Core.dll is in assembly.");
+                //System.Console.WriteLine("Yes, the file PcapDotNet.Core.dll is in assembly.");
 
                 //PcapDotNet.Base.dll
                 //PcapDotNet.Core.Extensions.dll
@@ -36,7 +36,8 @@ namespace SteganoNet.Lib
             }
             catch (System.IO.FileNotFoundException)
             {
-                System.Console.WriteLine("The file cannot be found.");
+                //System.Console.WriteLine("The file cannot be found.");
+                //should be divided to try-catch for every library to provide some valuable info which dll is actually missing
                 return false;
             }
         }

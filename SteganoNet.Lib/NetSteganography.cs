@@ -22,9 +22,19 @@ namespace SteganoNetLib
 
             //previously public static List<String> listOfStegoMethods = new List<String>() { "ICMP using identifier and sequence number", "TCP using sequence number and urgent field", "IP", "ISN + IP ID", "DNS using ID" }; //List of methods used in code and GUI, index of method is important!
 
-            listOfStegoMethods.Add(0, "IP (Type of service)");
-            listOfStegoMethods.Add(1, "IP (Identification)");
-            listOfStegoMethods.Add(2, "IP (Flags)");
+            /* 
+             * Logic of ID integers:
+             * 0-9 > debug & developer
+             * 1x > physical layer
+             * 2x > data-link layer 
+             * 3x(x) > network layer 
+             * 4x > transport layer 
+             * 7x(x) > session, presentation and application layer
+             */
+
+            listOfStegoMethods.Add(31, "IP (Type of service)");
+            listOfStegoMethods.Add(32, "IP (Identification)");
+            listOfStegoMethods.Add(33, "IP (Flags)");
 
             return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
         }

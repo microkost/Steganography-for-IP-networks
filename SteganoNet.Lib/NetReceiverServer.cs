@@ -87,8 +87,9 @@ namespace SteganoNetLib
             //call method from stego library
             //get answer packet and send it NetReply?
 
-            //solve how to work with list of methods... multiple things in one packet
 
+            //somehow distinguish order of arrival packets (port number rise only?)
+            //solve how to work with list of methods... multiple things in one packet List<int> according to GetListOfStegoMethods
             return;
         }
         private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
