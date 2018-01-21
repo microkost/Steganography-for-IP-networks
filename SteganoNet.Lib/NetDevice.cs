@@ -13,45 +13,42 @@ namespace SteganoNetLib
         public static PacketDevice GetSelectedDevice(IpV4Address ipOfInterface)
         {           
             string tmpIp = ipOfInterface.ToString(); //nessesary for lookup method below
-
-            int deviceIndex = 0, i = 0; //for device ID
-            bool exit = false;
-
+                 
             foreach (LivePacketDevice lpd in allDevices)
-            {
-                if (exit)
-                    break;
-
+            {                
                 foreach (DeviceAddress nonparsed in lpd.Addresses)
-                {
-                    string tmp = nonparsed.ToString();
-                    string[] words = tmp.Split(' ');
+                {                    
+                    string[] words = nonparsed.ToString().Split(' ');
 
                     if (String.Equals(words[2], tmpIp)) //should be more effective by filtering IPv6 out
                     {
-                        deviceIndex = i;
-                        exit = true;
-                        break;
-                    }
-                    else
-                    {
-                        i++;
+                        return lpd; //return device with requested IP
                     }
                 }
             }
 
-            if (allDevices.Count <= i)
-            {
-                deviceIndex = 0; //TODO better! It is confusing when is any problem in code...
-            }
-
-            return NetDevice.allDevices[deviceIndex];            
+            return null; //can be easily tested
+            //return NetDevice.allDevices[0]; //working but very tricky
         }
 
         //L2
         //NetStandard
 
         //L3
+        public static List<Tuple<string, string>> GetIPv4addressesAndDescriptionLocal() //pair of strings ipv4 and description for UI
+        {
+            List<Tuple<string, string>> result = new List<Tuple<string, string>>();
+            foreach(string ipv4add in GetIPv4addressesLocal()) //get list of local IPv4 addresses from other method
+            {
+                PacketDevice pd = GetSelectedDevice(new IpV4Address(ipv4add));
+                if(pd == null)
+                    continue; //test //TODO ternary...
+
+                result.Add(new Tuple<string, string>(ipv4add, pd.Description));
+            }
+            return result;
+        }
+
         public static List<string> GetIPv4addressesLocal() //return available list of IP addresses
         {
             List<String> result = new List<String>(); //TODO should be List<IpV4Address>

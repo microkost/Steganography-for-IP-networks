@@ -41,30 +41,40 @@ namespace SteganoNetLib
             selectedDevice = NetDevice.GetSelectedDevice(IpOfListeningInterface); //take the selected adapter
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
-            {                
-                //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout
-                //SettextBoxDebug(String.Format("Listening on {0} {1}...", serverIP, selectedDevice.Description));
+            {
+                //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
+                System.Console.WriteLine(((String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description))));
 
-                string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
-                communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
-                //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
-                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
+                //tmp disabled
 
-                Packet packet; // Retrieve the packets
-                do
+                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
+                //communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
+                                                //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
+                                                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
+
+                do // Retrieve the packets
                 {
                     //SettextBoxDebug("Listening...");
-                    PacketCommunicatorReceiveResult result = communicator.ReceivePacket(out packet);
+                    PacketCommunicatorReceiveResult result = communicator.ReceivePacket(out Packet packet);
+
+                    if(packet is null) 
+                    {
+                        //System.Console.WriteLine(" error in received packed (if received), ending listening.");
+                        continue;
+                        //return;
+                    }
+
                     switch (result)
                     {
                         case PacketCommunicatorReceiveResult.Timeout: // Timeout elapsed
-                            //continue;
+                                                                      //continue;
                         case PacketCommunicatorReceiveResult.Ok:
-                            {
-                                //SettextBoxDebug(">Processing...");
-                                if (packet.IsValid && packet.IpV4 != null) //only IPv4 (yet?)
+                            {                                
+                                if (packet.IsValid && packet.IpV4 != null)//only IPv4 (yet?)
+                                { 
                                     ProcessIncomingV4Packet(packet);
-                                //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
+                                    //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
+                                }
                                 break;
                             }
                         default:
@@ -75,13 +85,15 @@ namespace SteganoNetLib
                 //SettextBoxDebug(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
                 string secret = GetSecretMessage(StegoPackets); //process result of steganography
                 //SettextBoxDebug(String.Format("Secret in this session: {0}\n", secret));
-                //StegoPackets.Clear();                
+                StegoPackets.Clear();
+                
                 return;
             }
         }
 
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
+            System.Console.WriteLine("  processing...");
             //parse packet to layers
             //recognize and check method (initialize of connection px.)
             //call method from stego library
@@ -93,7 +105,7 @@ namespace SteganoNetLib
             return;
         }
         private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
-        {
+        {            
             return "NotImplementedException";
         }
 

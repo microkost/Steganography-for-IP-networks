@@ -30,6 +30,7 @@ namespace SteganoNetLib
              * 3x(x) > network layer 
              * 4x > transport layer 
              * 7x(x) > session, presentation and application layer
+             * 8x > other methods like time channel
              */
 
             listOfStegoMethods.Add(31, "IP (Type of service)");

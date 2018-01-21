@@ -24,7 +24,7 @@ namespace SteganoNet.UI.Console
 
             if(SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //just to be obvious...
             {
-                System.Console.WriteLine("Some nessesary libraries (like PcapDotNet or WinPcap) are not installed!");
+                System.Console.WriteLine("Nessesary library WinPcap is not installed or PcapDotNet is not present.");
                 System.Console.WriteLine("Press any key to exit... ");
                 System.Console.ReadKey();
                 return;
@@ -33,8 +33,9 @@ namespace SteganoNet.UI.Console
             if (args.Length == 0 || args == null) //no user parametrized input = run configuration WIZARD
             {
                 System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n");
-                //TODO y/n etc...
-                System.Console.Write(" Is this device (s)erver or (c)lient? (s/c) ");
+                //TODO WIZARD y/n etc... string ipSource = ConsoleTools.SelectInterface();
+
+                System.Console.Write("\tIs this device (s)erver or (c)lient? (s/c) ");
                 role = System.Console.ReadLine();
                 System.Console.WriteLine("");                    
                 //...
@@ -56,18 +57,18 @@ namespace SteganoNet.UI.Console
             Dictionary<int, string> stegoMethods = NetSteganography.GetListOfStegoMethods();
 
             //config local
-            List<String> ipv4localadd = NetDevice.GetIPv4addressesLocal();
+            string ipSource = ConsoleTools.SelectInterface();
             //ushort port = 11000;
 
             //config remote
             string ipremote = "192.168.1.150";
             ushort portremote = 11001;
-
+           
             if (String.Equals("s", role)) //its server
             {
-                NetReceiverServer rs = new NetReceiverServer(ipv4localadd.First());
+                NetReceiverServer rs = new NetReceiverServer(ipSource);
                 //rs.Secret = secretMessage; //client!
-                rs.StegoMethod = stegoMethods[0]; //needs to know because of reply
+                rs.StegoMethod = stegoMethods[31]; //needs to know because of reply
                 rs.IpDestinationInput = ipremote;
                 rs.PortDestination = portremote;
 
@@ -77,7 +78,7 @@ namespace SteganoNet.UI.Console
                 //receiverServerThread.IsBackground = true;
                 string receivedString = rs.GetSecretMessage();
                 secretMessage = DataOperationsCrypto.ReadCrypto(receivedString);
-                receiverServerThread.Join();
+                //receiverServerThread.Join();
 
                 //todo now: finish dependency check => WinPcap
 
@@ -89,7 +90,7 @@ namespace SteganoNet.UI.Console
 
                 //solve how to run multiple instances of console in one time
             }
-            if (String.Equals("c", role)) //its client
+            else if (String.Equals("c", role)) //its client
             {
                 NetSenderClient sc = new NetSenderClient();
 
@@ -99,8 +100,8 @@ namespace SteganoNet.UI.Console
                 System.Console.WriteLine("Sorry, I didnt understand your commands. Start again...");
             }
             
-            System.Console.WriteLine("That's all! Thank you for using Steganography for IP networks tool.");
-            System.Console.ReadKey();
+            System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool.");
+            System.Console.ReadKey();            
         }
     }
 

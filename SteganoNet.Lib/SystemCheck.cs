@@ -1,43 +1,68 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SteganoNet.Lib
 {
     public static class SystemCheck //cannot have dependecies to anything from PcapDotNet!
     {
-        public static bool AreSystemPrerequisitiesDone()
+        public static bool AreSystemPrerequisitiesDone() //testing availability of used libraries and dependencies on Windows
         {
-            //testing availability of used libraries (needs to be in "view" layer because of dependencies of others
-            //http://www.dependencywalker.com for debug
-
+            bool isEverythingOK = false;
+            System.Reflection.AssemblyName testAssembly;
             //string AssemblyDirectory = Path.GetDirectoryName(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path)); //source https://stackoverflow.com/questions/52797/how-do-i-get-the-path-of-the-assembly-the-code-is-in
             string AssemblyDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
             try
             {
-                //If WinPCap is installed then the following registry key should exist:
-                //HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinPcapInst
+                bool winPcapFound = false;
+                string registry_key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+                using (Microsoft.Win32.RegistryKey key = Registry.LocalMachine.OpenSubKey(registry_key))
+                {
+                    foreach (string subkey_name in key.GetSubKeyNames())
+                    {
+                        //If WinPCap is installed then the following registry key should exist: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinPcapInst
+                        if (subkey_name.StartsWith("WinPcap")) //"WinPcapInst" to be specific...
+                        {
+                            winPcapFound = true;
+                        }
+                    }
+                }
 
-                //dotnetwinpcap.dll or WinPcap.dll
-                System.Reflection.AssemblyName testAssembly1 = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "WinPcap.dll");
-                //System.Console.WriteLine("Yes, the WinPcap.dll is installed on computer.");
+                if (winPcapFound == true)
+                {
+                    isEverythingOK = true;
+                }
+                else
+                {
+                    throw new KeyNotFoundException();
+                }
 
-                //FileNotFoundException: Could not load file or assembly 'PcapDotNet.Core.dll' or one of its dependencies. The specified module could not be found.
-                System.Reflection.AssemblyName testAssembly2 = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "PcapDotNet.Core.dll");
-                //System.Console.WriteLine("Yes, the file PcapDotNet.Core.dll is in assembly.");
-
-                //PcapDotNet.Base.dll
-                //PcapDotNet.Core.Extensions.dll
-                //PcapDotNet.Packets.dll
-
-                return true;
+            }
+            catch (KeyNotFoundException)
+            {
+                System.Console.WriteLine(" The WinPcap is not installed on this computer.");
+                return false;
+            }
+            try
+            {
+                testAssembly = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "PcapDotNet.Core.dll");
+                //testAssembly = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "PcapDotNet.Base.dll");
+                //testAssembly = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "PcapDotNet.Core.Extensions.dll");
+                //testAssembly = System.Reflection.AssemblyName.GetAssemblyName(AssemblyDirectory + "PcapDotNet.Packets.dll");                
             }
             catch (System.IO.FileNotFoundException)
             {
-                //System.Console.WriteLine("The file cannot be found.");
-                //should be divided to try-catch for every library to provide some valuable info which dll is actually missing
+                System.Console.WriteLine(" The PcapDotNet.*.dll cannot be found at " + AssemblyDirectory);
+                return false;
+            }
+
+            if (isEverythingOK == true)
+            {
+                return true;
+            }
+            else
+            {
                 return false;
             }
         }
