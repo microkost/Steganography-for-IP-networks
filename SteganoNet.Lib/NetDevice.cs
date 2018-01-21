@@ -31,8 +31,7 @@ namespace SteganoNetLib
             //return NetDevice.allDevices[0]; //working but very tricky
         }
 
-        //L2
-        //NetStandard
+        //L2        
 
         //L3
         public static List<Tuple<string, string>> GetIPv4addressesAndDescriptionLocal() //pair of strings ipv4 and description for UI
@@ -76,6 +75,9 @@ namespace SteganoNetLib
             return result;
         }
 
+        //L4
+
+        //L7
 
     }
 }

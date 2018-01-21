@@ -3,7 +3,7 @@
 
 ## Usage
 * IPv4 only
-* tested on Ethernet (wired) networks
+* should have problems on wireless networks
 * Use in LAN or have reachable IP address to let it work properly (NAT principe).
 
 ## Prerequisites
@@ -11,6 +11,7 @@
 * Install library from Nuget to downloaded project by typing to 
 ```Install-Package PcapDotNet```
 * Because of these libraries is project x86 platform only.
+* your network driver have to be able run in promicscious mode (try WinPcap to prove)
 
 ## Disclaimer
 Do not use this software to criminal activity!

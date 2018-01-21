@@ -24,6 +24,10 @@ namespace SteganoNetLib
         MacAddress MacAddressSource { get; set; }
         MacAddress MacAddressDestination { get; set; }
 
+        //control
+        Queue<string> messages { get; set; }
+        //bool terminate { get; set; }
+
         //methods
         string GetSecretMessage(); //no access to Packets obj because of referencies... GetSecretMessage(List<Tuple<Packet, String>> MessageIncluded)
     }    

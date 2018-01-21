@@ -18,6 +18,7 @@ namespace SteganoNetLib
         public ushort PortSource { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public MacAddress MacAddressSource { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public MacAddress MacAddressDestination { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public Queue<string> messages { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
         {

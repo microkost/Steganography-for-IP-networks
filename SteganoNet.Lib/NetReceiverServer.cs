@@ -10,7 +10,8 @@ namespace SteganoNetLib
     public class NetReceiverServer : INetNode
     {
         public string StegoMethod { get; set; }
-        public string Secret { get; set; }
+        public string Secret { get; set; } //non binary transfered information
+        public Queue<string> messages { get; set; } //txt for UI
         public string IpSourceInput { get; set; }
         public string IpDestinationInput { get; set; }        
         public ushort PortSource { get; set; } //PortListening //obviously not used
@@ -23,7 +24,7 @@ namespace SteganoNetLib
         private IpV4Address IpOfRemoteHost { get; set; }
         private PacketDevice selectedDevice = null;
         private List<Tuple<Packet, String>> StegoPackets; //contains steganography to process
-        public volatile bool terminate = false; //ends listening
+        public volatile bool terminate = false; //ends listening        
 
 
         public NetReceiverServer(string ipOfListeningInterface, ushort portOfListening = 0)
@@ -31,7 +32,10 @@ namespace SteganoNetLib
             this.IpOfListeningInterface = new IpV4Address(ipOfListeningInterface);
             this.PortSource = portOfListening;
             MacAddressSource = NetStandard.GetMacAddress(IpOfListeningInterface);
-            MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //should be later changed in case of LAN communication
+            MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //TODO should be later changed in case of LAN communication
+
+            StegoPackets = new List<Tuple<Packet, String>>();
+            messages = new Queue<string>();
         }
         
         public void Listening() //thread listening method
@@ -43,25 +47,21 @@ namespace SteganoNetLib
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
-                System.Console.WriteLine(((String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description))));
-
-                //tmp disabled
-
-                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
-                //communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
+                messages.Enqueue(String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description));                
+                
+                string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
+                communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
                                                 //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
                                                 //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
 
                 do // Retrieve the packets
                 {
-                    //SettextBoxDebug("Listening...");
                     PacketCommunicatorReceiveResult result = communicator.ReceivePacket(out Packet packet);
 
                     if(packet is null) 
                     {
-                        //System.Console.WriteLine(" error in received packed (if received), ending listening.");
+                        //System.Console.WriteLine(" error in received packed (if received).");
                         continue;
-                        //return;
                     }
 
                     switch (result)
@@ -93,12 +93,13 @@ namespace SteganoNetLib
 
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
-            System.Console.WriteLine("  processing...");
+            messages.Enqueue("\tprocessing...");
             //parse packet to layers
             //recognize and check method (initialize of connection px.)
             //call method from stego library
             //get answer packet and send it NetReply?
 
+            //StegoPackets.Add(new Tuple<Packet, string>(null, "string"));
 
             //somehow distinguish order of arrival packets (port number rise only?)
             //solve how to work with list of methods... multiple things in one packet List<int> according to GetListOfStegoMethods

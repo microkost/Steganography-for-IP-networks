@@ -22,7 +22,7 @@ namespace SteganoNet.UI.Console
             System.Console.WriteLine("Welcome in Steganography for IP networks tool.");
             string role = "s"; //server or client
 
-            if(SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //just to be obvious...
+            if(SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //just to be obvious
             {
                 System.Console.WriteLine("Nessesary library WinPcap is not installed or PcapDotNet is not present.");
                 System.Console.WriteLine("Press any key to exit... ");
@@ -63,7 +63,7 @@ namespace SteganoNet.UI.Console
             //config remote
             string ipremote = "192.168.1.150";
             ushort portremote = 11001;
-           
+            
             if (String.Equals("s", role)) //its server
             {
                 NetReceiverServer rs = new NetReceiverServer(ipSource);
@@ -76,11 +76,12 @@ namespace SteganoNet.UI.Console
                 receiverServerThread.Name = "ListeningAndReceivingThread";
                 receiverServerThread.Start();
                 //receiverServerThread.IsBackground = true;
-                string receivedString = rs.GetSecretMessage();
-                secretMessage = DataOperationsCrypto.ReadCrypto(receivedString);
-                //receiverServerThread.Join();
+                
 
-                //todo now: finish dependency check => WinPcap
+                //Thread thread = new Thread(delegate () { ConsoleTools.writeInfo(rs); });                
+                Thread writer = new Thread(new ParameterizedThreadStart(ConsoleTools.writeInfo));
+                writer.Start(rs);
+                writer.IsBackground = true;
 
                 //solve receiving debug info from thread - events?
                 //stop listening
@@ -89,6 +90,29 @@ namespace SteganoNet.UI.Console
                 //offer new run
 
                 //solve how to run multiple instances of console in one time
+
+                bool terminate = false;
+                do
+                {
+                    System.Console.WriteLine("Is message received? (y/n) ");
+                    string stopListening = System.Console.ReadLine();
+                    if (String.Equals(stopListening, "y"))
+                    {
+                        string receivedString = rs.GetSecretMessage();
+                        secretMessage = DataOperationsCrypto.ReadCrypto(receivedString);
+                        terminate = true;
+                        receiverServerThread.Abort();
+                    }
+                }
+                while (terminate);
+
+
+
+                //Do you want to 
+
+
+                writer.Join();
+
             }
             else if (String.Equals("c", role)) //its client
             {

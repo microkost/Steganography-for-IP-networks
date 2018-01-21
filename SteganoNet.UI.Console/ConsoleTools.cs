@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using SteganoNetLib;
+using System.Threading;
 
 namespace SteganoNet.UI.Console
 {
@@ -25,10 +26,26 @@ namespace SteganoNet.UI.Console
             }
             catch //System.ArgumentOutOfRangeException:
             {
-                if (ipv4localadd.Count <= 0)                    
+                if (ipv4localadd.Count <= 0)
                     return null; //"0.0.0.0"; //TODO tricky!
                 else
                     return ipv4localadd[0].Item1;
+            }
+        }
+
+        public static void writeInfo(object nn) //printing output from console
+        {
+            INetNode mm = (INetNode)(nn); //retype //TODO more than hope = try-catch
+            for (;;)
+            {
+                try
+                {
+                    System.Console.WriteLine("\t>{0}", mm.messages.Dequeue());
+                }
+                catch
+                {
+                    Thread.Sleep(1000);
+                }
             }
         }
     }

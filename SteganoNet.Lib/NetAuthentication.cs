@@ -31,9 +31,9 @@ namespace SteganoNetLib
 
         public static bool ChapAuthenticate(string messageReceived, string messageLocal, string secret) //NetSenderClient and vice versa
         {
-            //compute: messageLocal + secret == messageReceived + secret
+            //compute: messageLocal + secret == messageReceived
 
-            if (DataOperations.CalculateHash(messageLocal + secret) == DataOperations.CalculateHash(messageReceived + secret))
+            if (DataOperations.CalculateHash(messageLocal + secret) == DataOperations.CalculateHash(messageReceived))
                 return true;
             else
                 return false;
