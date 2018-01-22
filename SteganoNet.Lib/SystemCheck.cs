@@ -41,7 +41,7 @@ namespace SteganoNet.Lib
             }
             catch (KeyNotFoundException)
             {
-                System.Console.WriteLine(" The WinPcap is not installed on this computer.");
+                System.Console.WriteLine("\tThe WinPcap is not installed on this computer.");
                 return false;
             }
             try
@@ -53,7 +53,7 @@ namespace SteganoNet.Lib
             }
             catch (System.IO.FileNotFoundException)
             {
-                System.Console.WriteLine(" The PcapDotNet.*.dll cannot be found at " + AssemblyDirectory);
+                System.Console.WriteLine("\tThe PcapDotNet.*.dll cannot be found at " + AssemblyDirectory);
                 return false;
             }
 

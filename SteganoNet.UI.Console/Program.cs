@@ -84,10 +84,13 @@ namespace SteganoNet.UI.Console
                 writer.IsBackground = true;
 
                 //solve receiving debug info from thread - events?
+                //google how to keep focus on first thread and just print new info...
+
                 //stop listening
                 //run rs.GetSecretMessage(null)
                 //stop thread
                 //offer new run
+
 
                 //solve how to run multiple instances of console in one time
 
