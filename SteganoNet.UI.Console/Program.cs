@@ -76,12 +76,16 @@ namespace SteganoNet.UI.Console
                 receiverServerThread.Name = "ListeningAndReceivingThread";
                 receiverServerThread.Start();
                 //receiverServerThread.IsBackground = true;
-                
+                                
+                //Thread writer = new Thread(new ParameterizedThreadStart(ConsoleTools.writeInfo));
+                //writer.Start(rs);
+                //writer.IsBackground = true;
 
-                //Thread thread = new Thread(delegate () { ConsoleTools.writeInfo(rs); });                
-                Thread writer = new Thread(new ParameterizedThreadStart(ConsoleTools.writeInfo));
-                writer.Start(rs);
-                writer.IsBackground = true;
+                System.Console.WriteLine("Press ESC to stop");
+                while (!(System.Console.KeyAvailable && System.Console.ReadKey(true).Key == ConsoleKey.Escape))
+                {
+                    ConsoleTools.writeInfo(rs);
+                }
 
                 //solve receiving debug info from thread - events?
                 //google how to keep focus on first thread and just print new info...
@@ -112,9 +116,7 @@ namespace SteganoNet.UI.Console
 
 
                 //Do you want to 
-
-
-                writer.Join();
+                //writer.Join();
 
             }
             else if (String.Equals("c", role)) //its client
