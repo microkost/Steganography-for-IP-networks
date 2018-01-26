@@ -36,10 +36,11 @@ namespace SteganoNetLib
 
             StegoPackets = new List<Tuple<Packet, String>>();
             messages = new Queue<string>();
+            messages.Enqueue("\tServer created...");
         }
         
         public void Listening() //thread listening method
-        {
+        {            
             //TODO checkSettings() //check values in properties...
 
             selectedDevice = NetDevice.GetSelectedDevice(IpOfListeningInterface); //take the selected adapter
@@ -49,8 +50,8 @@ namespace SteganoNetLib
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
                 messages.Enqueue(String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description));                
                 
-                string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
-                communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
+                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
+                //communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
                                                 //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
                                                 //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
 

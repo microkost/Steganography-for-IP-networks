@@ -33,7 +33,7 @@ namespace SteganoNet.UI.Console
             }
         }
 
-        public static void writeInfo(object nn) //printing output from console
+        public static void writeInfoConsole(object nn) //printing output from console
         {
             INetNode mm = (INetNode)(nn); //retype //TODO more than hope = try-catch
             for (;;)
@@ -44,7 +44,8 @@ namespace SteganoNet.UI.Console
                 }
                 catch
                 {
-                    Thread.Sleep(1000);
+                    //System.Console.WriteLine("\t>");
+                    Thread.Sleep(100);
                 }
             }
         }
