@@ -17,7 +17,7 @@ namespace SteganoNet.UI.Console
                 System.Console.WriteLine(String.Format("\t{0}. {1}: {2}", interfaceCounter + 1, ip.Item1, ip.Item2));
                 interfaceCounter++;
             }
-            System.Console.Write("\tWhich interface do you want to use? ");
+            System.Console.Write("\tWhich interface number do you want to use? ");
             Int32.TryParse(System.Console.ReadLine(), out interfaceCounter);
 
             try
@@ -27,7 +27,7 @@ namespace SteganoNet.UI.Console
             catch //System.ArgumentOutOfRangeException:
             {
                 if (ipv4localadd.Count <= 0)
-                    return null; //"0.0.0.0"; //TODO tricky!
+                    return null; //"0.0.0.0";
                 else
                     return ipv4localadd[0].Item1;
             }
@@ -35,9 +35,7 @@ namespace SteganoNet.UI.Console
 
         public static void writeInfoConsole(object nn) //printing output from console
         {
-            INetNode mm = (INetNode)(nn); //retype //TODO more than hope = try-catch
-            for (;;)
-            {
+            INetNode mm = (INetNode)(nn); //retype //TODO more than hope = try-catch            
                 try
                 {
                     System.Console.WriteLine("\t>{0}", mm.messages.Dequeue());
@@ -46,8 +44,7 @@ namespace SteganoNet.UI.Console
                 {
                     //System.Console.WriteLine("\t>");
                     Thread.Sleep(100);
-                }
-            }
+                }            
         }
     }
 }

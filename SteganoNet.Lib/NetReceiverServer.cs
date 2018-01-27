@@ -36,7 +36,7 @@ namespace SteganoNetLib
 
             StegoPackets = new List<Tuple<Packet, String>>();
             messages = new Queue<string>();
-            messages.Enqueue("\tServer created...");
+            messages.Enqueue("Server created...");
         }
         
         public void Listening() //thread listening method
@@ -94,7 +94,7 @@ namespace SteganoNetLib
 
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
-            messages.Enqueue("\tprocessing...");
+            messages.Enqueue("processing...");
             //parse packet to layers
             //recognize and check method (initialize of connection px.)
             //call method from stego library

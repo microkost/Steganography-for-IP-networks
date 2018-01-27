@@ -5,8 +5,7 @@ using System.Linq;
 using System.Threading;
 
 namespace SteganoNet.UI.Console
-{
-    public delegate void ThreadStart();
+{   
     class Program
     {
         static void Main(string[] args)
@@ -66,101 +65,42 @@ namespace SteganoNet.UI.Console
 
             if (String.Equals("s", role)) //its server
             {
+                //prepare server
                 NetReceiverServer rs = new NetReceiverServer(ipSource);
                 //rs.Secret = secretMessage; //client!
                 rs.StegoMethod = stegoMethods[31]; //needs to know because of reply
                 rs.IpDestinationInput = ipremote;
                 rs.PortDestination = portremote;
 
-                Thread receiverServerThread = new Thread(rs.Listening);
+                //TODO offer run of another client
+                System.Console.WriteLine("\nDo you want to run client on same device? (y/n) n");
+
+                //prepare thread for server
+                ThreadStart threadDelegate = new ThreadStart(rs.Listening);
+                Thread receiverServerThread = new Thread(threadDelegate);
+                //Thread receiverServerThread = new Thread(rs.Listening);
                 receiverServerThread.Name = "ListeningAndReceivingThread";
                 receiverServerThread.Start();
                 receiverServerThread.IsBackground = true;
 
-                //writer as separate thread
-                //Thread writer = new Thread(new ParameterizedThreadStart(ConsoleTools.writeInfo));
-                //writer.Start(rs);
-                //writer.IsBackground = true;
-
-                /* not work?
-                System.Console.WriteLine("Press ESC to stop");
-                while (!(System.Console.KeyAvailable && System.Console.ReadKey(true).Key == ConsoleKey.Escape))
-                {
-                    ConsoleTools.writeInfo(rs); //receiving debug info from rs thread
-                }
-                */
-
-                //c# access class property when is running in thread
-                System.Console.WriteLine("\nPress any key to end listening.");
-                Thread writer = new Thread(new ParameterizedThreadStart(ConsoleTools.writeInfoConsole));
-                writer.Start(rs);
-                while (!System.Console.KeyAvailable)
-                {
-                    //ConsoleTools.writeInfoConsole(rs);
-                    //c# access propery HERE
-                    writer.Abort();
-
-                    //receiverServerThread.messages .BeginInvoke();
-
-                    /*
-                    if (rs.messages.Count < 0) //loop
-                    {                        
-                        rs.messages.Dequeue();
-                    }
-                    */
-                }
-
-                /*
-                ConsoleKeyInfo cki;
-                System.Console.WriteLine("\nPress a key to display; press the 'x' key to quit.");
+                //server activity output
+                System.Console.WriteLine("\nShowing server running information. Press ESC to stop when message is received.");
                 do
-                {                  
-                    while (System.Console.KeyAvailable == true)
+                {
+                    while (!System.Console.KeyAvailable)
                     {
-                        ConsoleTools.writeInfoConsole(rs); //receiving debug info from rs thread
-
-                        //if (rs.messages.Count < 0)
-                        //   rs.messages.Dequeue();
-
+                        ConsoleTools.writeInfoConsole(rs);
                     }
-                    cki = System.Console.ReadKey(true);
-                    System.Console.WriteLine("You pressed the '{0}' key.", cki.Key);
-                } while (cki.Key != ConsoleKey.X);
-                */
-
+                } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape);
+                
                 rs.terminate = true;
                 receiverServerThread.Abort(); //stop server thread
+                receiverServerThread.Join();
 
                 messageEncrypted = rs.GetSecretMessage();
                 messageReadable = DataOperationsCrypto.ReadCrypto(messageEncrypted); //mock
 
-                System.Console.WriteLine(String.Format("Received secret message is: {0}", messageReadable));
-
-                //offer new run
-
-                //solve how to run multiple instances of console in one time
-
-                /*
-                bool terminate = false;
-                do
-                {
-                    System.Console.WriteLine("Is message received? (y/n) ");
-                    string stopListening = System.Console.ReadLine();
-                    if (String.Equals(stopListening, "y"))
-                    {
-                        string receivedString = rs.GetSecretMessage();
-                        messageReadable = DataOperationsCrypto.ReadCrypto(receivedString);
-                        terminate = true;
-                        receiverServerThread.Abort();
-                    }
-                }
-                while (terminate);
-                */
-
-
-                //Do you want to 
-                //writer.Join();
-
+                System.Console.WriteLine(String.Format("Received secret message is: {0}", messageReadable));                
             }
             else if (String.Equals("c", role)) //its client
             {
@@ -174,7 +114,6 @@ namespace SteganoNet.UI.Console
 
             System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool.");
             System.Console.ReadKey();
-            System.Console.ReadKey(); //wtf
         }
     }
 
