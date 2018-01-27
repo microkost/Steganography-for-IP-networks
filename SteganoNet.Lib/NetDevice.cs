@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace SteganoNetLib
 {
-    public static class NetDevice
+    public static class NetDevice //class with service methods for THIS local hardware device
     {
         //general
         public static IList<LivePacketDevice> allDevices = LivePacketDevice.AllLocalMachine; //list of available devices               

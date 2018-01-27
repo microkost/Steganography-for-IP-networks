@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.Console", "St
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Lib", "SteganoNet.Lib\SteganoNet.Lib.csproj", "{69B9B5AB-0918-4F12-8B28-8AA350ABE800}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.WinForms", "SteganoNet.UI.WinForms\SteganoNet.UI.WinForms.csproj", "{842DB534-8D1A-4394-A14D-D956E79C64B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.WinForms.old", "SteganoNet.UI.WinForms\SteganoNet.UI.WinForms.old.csproj", "{842DB534-8D1A-4394-A14D-D956E79C64B5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5508D41E-D97B-4811-A1C1-2F12FAFD2BA7}"
 	ProjectSection(SolutionItems) = preProject

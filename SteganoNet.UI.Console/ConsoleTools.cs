@@ -42,7 +42,7 @@ namespace SteganoNet.UI.Console
                 }
                 catch
                 {
-                    //System.Console.WriteLine("\t>");
+                    //System.Console.WriteLine("\t> ");
                     Thread.Sleep(100);
                 }            
         }

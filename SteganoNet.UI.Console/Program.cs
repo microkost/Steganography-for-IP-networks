@@ -1,29 +1,34 @@
 ﻿using SteganoNetLib;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 namespace SteganoNet.UI.Console
-{   
-    class Program
+{
+    public class Program
     {
-        static void Main(string[] args)
+        static void Main(string[] args) //static removed
         {
-            //select role
-            //select interface
-            //select running port
+            //method flow:
+            //check sw dependencies
+            //recognize mode (parametres / wizard)
+            //select role (server / client)
+            //select network interface
+            //choose network parametres
             //choose steganographic method
+            //add instance of client or server (debug and testing purposes)
             //run
+            //view immediate info
             //stop
             //analyze results
 
             System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
             string role = "s"; //server or client
+            System.Diagnostics.Process secondWindow = null; //if needed
 
             if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //just to be obvious
             {
-                System.Console.WriteLine("Nessesary library WinPcap is not installed or PcapDotNet is not present.");
+                System.Console.WriteLine("Nessesary library WinPcap is not installed or PcapDotNet is not present. Check it please and restart.");
                 System.Console.WriteLine("Press any key to exit... ");
                 System.Console.ReadKey();
                 return;
@@ -41,11 +46,12 @@ namespace SteganoNet.UI.Console
             }
             else //skip the wizard
             {
+                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n");
                 role = "s"; //DEBUG TMP
+                System.Console.WriteLine("Received settings: ");
                 foreach (string arg in args)
                 {
-                    System.Console.WriteLine("Received settings: ");
-                    System.Console.Write("arg: %s ", arg);
+                    System.Console.WriteLine(String.Format("\targ: {0}", arg));
                     //TODO PARSING parametres
                 }
             }
@@ -72,8 +78,14 @@ namespace SteganoNet.UI.Console
                 rs.IpDestinationInput = ipremote;
                 rs.PortDestination = portremote;
 
-                //TODO offer run of another client
-                System.Console.WriteLine("\nDo you want to run client on same device? (y/n) n");
+                //offers running client
+                System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
+                string runIt = System.Console.ReadLine();
+                if (runIt.StartsWith("y") || runIt.StartsWith("Y"))
+                {
+                    string arguments = "superCoolIP SomeOtherAlreadyProvidedSettingsToMakeItFaster";
+                    secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
+                }
 
                 //prepare thread for server
                 ThreadStart threadDelegate = new ThreadStart(rs.Listening);
@@ -92,7 +104,7 @@ namespace SteganoNet.UI.Console
                         ConsoleTools.writeInfoConsole(rs);
                     }
                 } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape);
-                
+
                 rs.terminate = true;
                 receiverServerThread.Abort(); //stop server thread
                 receiverServerThread.Join();
@@ -100,19 +112,32 @@ namespace SteganoNet.UI.Console
                 messageEncrypted = rs.GetSecretMessage();
                 messageReadable = DataOperationsCrypto.ReadCrypto(messageEncrypted); //mock
 
-                System.Console.WriteLine(String.Format("Received secret message is: {0}", messageReadable));                
+                System.Console.WriteLine(String.Format("Received secret message is: {0}", messageReadable));
             }
             else if (String.Equals("c", role)) //its client
             {
                 NetSenderClient sc = new NetSenderClient();
 
             }
-            else
+            else //catch
             {
-                System.Console.WriteLine("Sorry, I didnt understand your commands. Start again...");
+                System.Console.WriteLine("\nSorry, I didnt understand your commands. Start again...");
             }
 
-            System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool.");
+            try //handling opened console windows
+            {
+                if (secondWindow != null)
+                {
+                    System.Console.WriteLine("\nWaiting for end of second window. Please close it manually.");
+                }
+                secondWindow.WaitForExit(); //correct ending of opened window
+            }
+            catch (NullReferenceException)
+            {
+                //System.Console.WriteLine("No another window opened...");
+            }
+
+            System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool. Press any key to exit...");
             System.Console.ReadKey();
         }
     }
