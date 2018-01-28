@@ -74,7 +74,7 @@ namespace SteganoNet.UI.Console
                 //prepare server
                 NetReceiverServer rs = new NetReceiverServer(ipSource);
                 //rs.Secret = secretMessage; //client!
-                rs.StegoMethod = stegoMethods[31]; //needs to know because of reply
+                rs.StegoUsedMethodIds = new List<int>() { 301, 302 }; //needs to know because of reply                
                 rs.IpDestinationInput = ipremote;
                 rs.PortDestination = portremote;
 

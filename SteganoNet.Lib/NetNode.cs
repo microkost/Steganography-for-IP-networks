@@ -11,8 +11,8 @@ namespace SteganoNetLib
         //maybe should be removed for simplicity, not that huge ammout of shared code...
 
         //steganography parametres
-        string StegoMethod { get; set; }
-        string Secret { get; set; }
+        List<int> StegoUsedMethodIds { get; set; }
+        string Secret { get; set; } //server dont need it actually...        
 
         //network parametres
         string IpSourceInput { get; set; } //not IpV4Address from PcapDotNet (references grow)

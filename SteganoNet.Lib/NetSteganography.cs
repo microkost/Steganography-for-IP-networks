@@ -3,41 +3,60 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PcapDotNet.Packets.IpV4;
 
 namespace SteganoNetLib
 {
     public class NetSteganography //not static
     {
-        private readonly Dictionary<int, string> listOfStegoMethods;
+        //private readonly Dictionary<int, string> listOfStegoMethods;
 
+        /*
         public NetSteganography(List<int> listOfMethodIndexes)
         {
              listOfStegoMethods = NetSteganography.GetListOfStegoMethods();
         }
+        */
 
         public static Dictionary<int, string> GetListOfStegoMethods()
         {
-            //TODO https://stackoverflow.com/questions/27631137/tuple-vs-dictionary-differences //<Tuple<Packet, String>
-            Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>();
-
-            //previously public static List<String> listOfStegoMethods = new List<String>() { "ICMP using identifier and sequence number", "TCP using sequence number and urgent field", "IP", "ISN + IP ID", "DNS using ID" }; //List of methods used in code and GUI, index of method is important!
-
             /* 
              * Logic of ID integers:
-             * 0-9 > debug & developer
-             * 1x > physical layer
-             * 2x > data-link layer 
-             * 3x(x) > network layer 
-             * 4x > transport layer 
-             * 7x(x) > session, presentation and application layer
-             * 8x > other methods like time channel
+             * 0xx > debug & developer
+             * 1xx > physical layer
+             * 2xx > data-link layer
+             * 3xx > network layer 
+             * 4xx > transport layer 
+             * 7xx > session, presentation and application layer
+             * 8xx > other methods like time channel
              */
 
-            listOfStegoMethods.Add(31, "IP (Type of service)");
-            listOfStegoMethods.Add(32, "IP (Identification)");
-            listOfStegoMethods.Add(33, "IP (Flags)");
+            Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>();
+            listOfStegoMethods.Add(301, "IP (Type of service)");
+            listOfStegoMethods.Add(302, "IP (Identification)");
+            listOfStegoMethods.Add(303, "IP (Flags)");
+            listOfStegoMethods.Add(320, "ICMP ()");
+
 
             return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
+        }
+
+        public static List<int> GetListMethodIds(int startValue, int endValue, List<int> source) //returns ids of methods from certain range when source specified
+        {   
+            if(source == null)
+            {
+                source = GetListOfStegoMethods().Keys.ToList(); //TODO test
+            }
+
+            IEnumerable<int> listOfIpMethods = from num in source where num >= startValue && num <= endValue select num;
+            return listOfIpMethods.ToList();
+        }
+
+        public static string getContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds)
+        {
+            //public vs internal            
+            //throw new NotImplementedException();
+            return "hello NotImplementedException";
         }
     }
 

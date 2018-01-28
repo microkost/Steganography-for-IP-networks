@@ -10,7 +10,8 @@ namespace SteganoNetLib
 {
     public class NetSenderClient : INetNode
     {
-        public string StegoMethod { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        //public string StegoMethod { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public List<int> StegoUsedMethodIds { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string Secret { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string IpSourceInput { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string IpDestinationInput { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -19,6 +20,7 @@ namespace SteganoNetLib
         public MacAddress MacAddressSource { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public MacAddress MacAddressDestination { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public Queue<string> messages { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        
 
         private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
         {

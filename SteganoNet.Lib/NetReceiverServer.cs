@@ -4,16 +4,22 @@ using PcapDotNet.Packets;
 using PcapDotNet.Packets.Ethernet;
 using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Core;
+using PcapDotNet.Packets.Icmp;
+using PcapDotNet.Packets.Transport;
+using PcapDotNet.Packets.Dns;
+using System.Linq;
+using System.Text;
 
 namespace SteganoNetLib
 {
     public class NetReceiverServer : INetNode
     {
-        public string StegoMethod { get; set; }
-        public string Secret { get; set; } //non binary transfered information
-        public Queue<string> messages { get; set; } //txt for UI
+        //public string StegoMethod { get; set; } //reimplement needed
+        public List<int> StegoUsedMethodIds { get; set; }
+        public string Secret { get; set; } //non binary transfered information //NOT NESSESARY for server
+        public Queue<string> messages { get; set; } //txt info for UI pickuped by another thread
         public string IpSourceInput { get; set; }
-        public string IpDestinationInput { get; set; }        
+        public string IpDestinationInput { get; set; }
         public ushort PortSource { get; set; } //PortListening //obviously not used
         public ushort PortDestination { get; set; } //PortOfRemoteHost
         public MacAddress MacAddressSource { get; set; }
@@ -38,41 +44,45 @@ namespace SteganoNetLib
             messages = new Queue<string>();
             messages.Enqueue("Server created...");
         }
-        
+
         public void Listening() //thread listening method
-        {            
-            //TODO checkSettings() //check values in properties...
+        {
+            if (!AreServerPrerequisitiesDone()) //check values in properties //TODO finalize implementation!
+            {
+                messages.Enqueue("Server is not ready to start, check initialization values...");
+                return;
+            }
 
             selectedDevice = NetDevice.GetSelectedDevice(IpOfListeningInterface); //take the selected adapter
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
-                messages.Enqueue(String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description));                
-                
+                messages.Enqueue(String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description));
+
                 //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
                 //communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
-                                                //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
-                                                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
+                //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
+                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
 
                 do // Retrieve the packets
                 {
                     PacketCommunicatorReceiveResult result = communicator.ReceivePacket(out Packet packet);
 
-                    if(packet is null) 
+                    if (packet is null)
                     {
-                        //System.Console.WriteLine(" error in received packed (if received).");
+                        //messages.Enqueue("\terror in received packed (if received).");
                         continue;
                     }
 
                     switch (result)
                     {
                         case PacketCommunicatorReceiveResult.Timeout: // Timeout elapsed
-                                                                      //continue;
+                            continue;
                         case PacketCommunicatorReceiveResult.Ok:
-                            {                                
-                                if (packet.IsValid && packet.IpV4 != null)//only IPv4 (yet?)
-                                { 
+                            {
+                                if (packet.IsValid && packet.IpV4 != null && packet.IpV4.IsValid) //only IPv4
+                                {
                                     ProcessIncomingV4Packet(packet);
                                     //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
                                 }
@@ -83,31 +93,104 @@ namespace SteganoNetLib
                     }
                 } while (!terminate);
 
-                //SettextBoxDebug(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
-                string secret = GetSecretMessage(StegoPackets); //process result of steganography
-                //SettextBoxDebug(String.Format("Secret in this session: {0}\n", secret));
-                StegoPackets.Clear();
-                
+                messages.Enqueue(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
+                //messages.Enqueue(String.Format("Secret in this session: {0}\n", GetSecretMessage(StegoPackets))); //result of steganography
+                //StegoPackets.Clear();                
                 return;
             }
         }
 
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
-            messages.Enqueue("processing...");
             //parse packet to layers
             //recognize and check method (initialize of connection px.)
             //call method from stego library
             //get answer packet and send it NetReply?
-
-            //StegoPackets.Add(new Tuple<Packet, string>(null, "string"));
-
             //somehow distinguish order of arrival packets (port number rise only?)
             //solve how to work with list of methods... multiple things in one packet List<int> according to GetListOfStegoMethods
+
+            messages.Enqueue("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+
+            //TODO recognize seting connection! + ending... //rember source... 
+
+            IpV4Datagram ip = packet.Ethernet.IpV4; //validity and not nullable tested in Listening()
+
+            //parsing layers for processing
+            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid) ? (IcmpIdentifiedDatagram)ip.Icmp : null;
+            TcpDatagram tcp = ip.Tcp; //TODO needs try catch solution..?
+            UdpDatagram udp = ip.Udp;
+            DnsDatagram dns = udp.Dns;
+
+            //TODO switch or not if-else-if-else
+            //TODO implement list of used methods not just one...
+
+            //StegoMethodIds contain numbered list of uncolissioning 
+
+            //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží
+            //casy bez breaků...
+            //jen rozpoznat, co se má na casy zavolat a které metody mají běžet spolu
+
+            List<int> listOfStegoMethodsIds = NetSteganography.GetListOfStegoMethods().Keys.ToList(); //all
+            StringBuilder builder = new StringBuilder();
+
+            //IP methods
+            List<int> ipSelectionIds = NetSteganography.GetListMethodIds(300, 399, listOfStegoMethodsIds);
+            if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
+            {
+                messages.Enqueue("IP...");
+                builder.Append(NetSteganography.getContent3Network(ip, StegoUsedMethodIds));                
+            }
+
+            /*
+            //ICMP methods
+            else if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
+            {
+                //if stego methods starts 3xx
+
+                messages.Enqueue("ICMP...");
+            }
+
+            //TCP methods
+            else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
+            {
+                messages.Enqueue("TCP...");
+            }
+
+            //wtf
+            else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
+            {
+                messages.Enqueue("ISN+IP...");
+                StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
+            }           
+
+            //DNS methods
+            else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
+            {
+                messages.Enqueue("DNS...");
+            }
+            */
+
+            //
+            StegoPackets.Add(new Tuple<Packet, string>(packet, "string"));
+
             return;
         }
+
+        public bool AreServerPrerequisitiesDone()
+        {
+            //actual method list contains keys from database if they are fits
+            if (StegoUsedMethodIds.Intersect(NetSteganography.GetListOfStegoMethods().Keys).Any() == false)
+            {
+                return false;
+            }
+
+            //ip, ports, ...
+
+            return true;
+        }
+
         private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
-        {            
+        {
             return "NotImplementedException";
         }
 
