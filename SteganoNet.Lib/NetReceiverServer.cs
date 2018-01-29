@@ -137,6 +137,7 @@ namespace SteganoNetLib
                 messages.Enqueue("IP...");
                 builder.Append(NetSteganography.getContent3Network(ip, StegoUsedMethodIds));                
                 //if added async processing then add in return value also timestamp or smth how to assembly messages back in order!
+                //reply packet async if needed
             }
 
             /*
