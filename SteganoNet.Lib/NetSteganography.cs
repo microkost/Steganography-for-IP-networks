@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using PcapDotNet.Packets.IpV4;
 
 namespace SteganoNetLib
 {
-    public class NetSteganography //not static
+    public static class NetSteganography //not static
     {
         //private readonly Dictionary<int, string> listOfStegoMethods;
 
@@ -52,12 +49,20 @@ namespace SteganoNetLib
             return listOfIpMethods.ToList();
         }
 
+        //ip layer methods
         public static string getContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds)
         {
             //public vs internal            
             //throw new NotImplementedException();
+            //NetReceiverServer.addInfoMessage("getContent3Network called");
             return "hello NotImplementedException";
         }
+
+        //tcp layer methods
+
+        //udp layer methods - skipped by assigment
+
+        //application layer methods
     }
 
 

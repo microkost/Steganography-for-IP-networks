@@ -82,7 +82,8 @@ namespace SteganoNetLib
                         case PacketCommunicatorReceiveResult.Ok:
                             {
                                 if (packet.IsValid && packet.IpV4 != null && packet.IpV4.IsValid) //only IPv4
-                                {
+                                //    if (packet.IsValid && packet.IpV4 != null) //only IPv4
+                                    {
                                     ProcessIncomingV4Packet(packet);
                                     //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
                                 }
@@ -122,14 +123,10 @@ namespace SteganoNetLib
             DnsDatagram dns = udp.Dns;
 
             //TODO switch or not if-else-if-else
-            //TODO implement list of used methods not just one...
+            //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží + casy bez breaků...            
+            //TODO How to handle answers?
 
-            //StegoMethodIds contain numbered list of uncolissioning 
-
-            //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží
-            //casy bez breaků...
-            //jen rozpoznat, co se má na casy zavolat a které metody mají běžet spolu
-
+            //StegoMethodIds contain numbered list of uncolissioning methods which can be used simultaneously
             List<int> listOfStegoMethodsIds = NetSteganography.GetListOfStegoMethods().Keys.ToList(); //all
             StringBuilder builder = new StringBuilder();
 
@@ -139,6 +136,7 @@ namespace SteganoNetLib
             {
                 messages.Enqueue("IP...");
                 builder.Append(NetSteganography.getContent3Network(ip, StegoUsedMethodIds));                
+                //if added async processing then add in return value also timestamp or smth how to assembly messages back in order!
             }
 
             /*
@@ -156,7 +154,7 @@ namespace SteganoNetLib
                 messages.Enqueue("TCP...");
             }
 
-            //wtf
+            //wtf //its IP method...
             else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
             {
                 messages.Enqueue("ISN+IP...");
@@ -197,6 +195,12 @@ namespace SteganoNetLib
         public string GetSecretMessage()
         {
             return GetSecretMessage(this.StegoPackets);
+        }
+
+        internal void addInfoMessage(string txt)
+        {
+            messages.Enqueue(txt);
+            return;
         }
 
     }

@@ -36,24 +36,28 @@ namespace SteganoNet.UI.Console
 
             if (args.Length == 0 || args == null) //no user parametrized input = run configuration WIZARD
             {
-                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) y");
-                //TODO WIZARD y/n etc... string ipSource = ConsoleTools.SelectInterface();
+                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) y"); //ha-ha             
+                System.Console.WriteLine("\tUse IPv4 or IPv6? (4/6) 4"); //hardcoded
 
-                System.Console.Write("\tIs this device (s)erver or (c)lient? (s/c) ");
+                System.Console.Write("\tIs this device (s)erver-receiver or (c)lient-sender? (s/c) ");
                 role = System.Console.ReadLine();
                 System.Console.WriteLine("");
-                //...
+
+                //TODO WIZARD y/n etc... string ipSource = ConsoleTools.SelectInterface();
+                //first arg is IP version, then role etc...
+
             }
             else //skip the wizard
             {
-                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n");
-                role = "s"; //DEBUG TMP
+                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n\nUsing following parametres as settings: ");
+                
                 System.Console.WriteLine("Received settings: ");
                 foreach (string arg in args)
                 {
                     System.Console.WriteLine(String.Format("\targ: {0}", arg));
                     //TODO PARSING parametres
                 }
+                role = "s"; //DEBUG TMP
             }
 
             //config general
@@ -83,7 +87,7 @@ namespace SteganoNet.UI.Console
                 string runIt = System.Console.ReadLine();
                 if (runIt.StartsWith("y") || runIt.StartsWith("Y"))
                 {
-                    string arguments = "superCoolIP SomeOtherAlreadyProvidedSettingsToMakeItFaster";
+                    string arguments = "superCoolIP SomeOtherAlreadyProvidedSettingsToMakeItFaster itsClient!";
                     secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
                 }
 
@@ -107,11 +111,12 @@ namespace SteganoNet.UI.Console
 
                 rs.terminate = true;
                 receiverServerThread.Abort(); //stop server thread
-                receiverServerThread.Join();
+                receiverServerThread.Join(); //needed?
 
                 messageEncrypted = rs.GetSecretMessage();
                 messageReadable = DataOperationsCrypto.ReadCrypto(messageEncrypted); //mock
 
+                System.Console.WriteLine("");
                 System.Console.WriteLine(String.Format("Received secret message is: {0}", messageReadable));
             }
             else if (String.Equals("c", role)) //its client
