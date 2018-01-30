@@ -18,7 +18,7 @@ namespace SteganoNetLib
         public static Dictionary<int, string> GetListOfStegoMethods()
         {
             /* 
-             * Logic of ID integers:
+             * Logic of ID integers: (do not use xx0, keep them like group name)
              * 0xx > debug & developer
              * 1xx > physical layer
              * 2xx > data-link layer
@@ -32,8 +32,14 @@ namespace SteganoNetLib
             listOfStegoMethods.Add(301, "IP (Type of service)");
             listOfStegoMethods.Add(302, "IP (Identification)");
             listOfStegoMethods.Add(303, "IP (Flags)");
-            listOfStegoMethods.Add(320, "ICMP ()");
+            listOfStegoMethods.Add(341, "ICMP ()");
 
+            //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
+            //IP method X - offset number like TTL lower, smth constant is under or value is unmasked... IF allowed!
+            //IP method 2 - maximum method (method 1 + usage of flags + fragment offset + 
+            //ip method 3 - transparent - count TTL and use some value under as rest...
+            //IP method 4 - TypeOfService fild - extrely lame way but... Usage high bits 6 + 7 is "OK"...
+            //IP method 5  - 
 
             return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
         }
@@ -52,12 +58,33 @@ namespace SteganoNetLib
         //ip layer methods
         public static string getContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rsForInfoMessages = null)
         {
-            //public vs internal            
-            //throw new NotImplementedException();
+            //public vs internal?
+            List<string> LocalMethodMessages = new List<string>();
+            //if(ip == null){retrun null}
+
+            foreach(int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                LocalMethodMessages.Add("3IP: method " + methodId);
+                switch (methodId)
+                {
+                    case 301:
+                        //td
+                        break;
+                    case 302:
+                        //td
+                        break;                    
+                }
+            }          
+
             if(rsForInfoMessages != null)
             { 
-                rsForInfoMessages.AddInfoMessage("getContent3Network called");
+                foreach(string localMessageToGlobal in LocalMethodMessages)
+                {
+                    rsForInfoMessages.AddInfoMessage(localMessageToGlobal);
+                }
+                
             }
+
             return "hello NotImplementedException";
         }
 
