@@ -50,11 +50,14 @@ namespace SteganoNetLib
         }
 
         //ip layer methods
-        public static string getContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds)
+        public static string getContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rsForInfoMessages = null)
         {
             //public vs internal            
             //throw new NotImplementedException();
-            //NetReceiverServer.addInfoMessage("getContent3Network called");
+            if(rsForInfoMessages != null)
+            { 
+                rsForInfoMessages.AddInfoMessage("getContent3Network called");
+            }
             return "hello NotImplementedException";
         }
 

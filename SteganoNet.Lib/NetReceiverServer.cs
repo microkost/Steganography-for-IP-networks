@@ -137,6 +137,7 @@ namespace SteganoNetLib
                 messages.Enqueue("IP...");
                 builder.Append(NetSteganography.getContent3Network(ip, StegoUsedMethodIds));                
                 //if added async processing then add in return value also timestamp or smth how to assembly messages back in order!
+                //send packet / layer to reply method in NetStandard to reply according to RFC... (should be async?)
             }
 
             /*
@@ -176,7 +177,7 @@ namespace SteganoNetLib
 
         public bool AreServerPrerequisitiesDone()
         {
-            //actual method list contains keys from database if they are fits
+            //do actual method list contains keys from database?
             if (StegoUsedMethodIds.Intersect(NetSteganography.GetListOfStegoMethods().Keys).Any() == false)
             {
                 return false;
@@ -187,19 +188,19 @@ namespace SteganoNetLib
             return true;
         }
 
-        private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
+        private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded) //private internal method
         {
             return "NotImplementedException";
         }
 
-        public string GetSecretMessage()
+        public string GetSecretMessage() //public no-references interface...
         {
             return GetSecretMessage(this.StegoPackets);
         }
 
-        internal void addInfoMessage(string txt)
+        internal void AddInfoMessage(string txt) //add something to output from everywhere else...
         {
-            messages.Enqueue(txt);
+            this.messages.Enqueue(txt);
             return;
         }
 
