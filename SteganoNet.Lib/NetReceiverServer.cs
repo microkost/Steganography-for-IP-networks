@@ -135,7 +135,7 @@ namespace SteganoNetLib
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
                 messages.Enqueue("IP...");
-                builder.Append(NetSteganography.getContent3Network(ip, StegoUsedMethodIds));                
+                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds));                
                 //pure IP is not responding to requests
                 //if added async processing then add in return value also timestamp or smth how to assembly messages back in order!
                 //send packet or layer to reply method in NetStandard to reply according to RFC... (should be async?)
@@ -169,6 +169,8 @@ namespace SteganoNetLib
                 messages.Enqueue("DNS...");
             }
             */
+
+
 
             //
             StegoPackets.Add(new Tuple<Packet, string>(packet, "string"));

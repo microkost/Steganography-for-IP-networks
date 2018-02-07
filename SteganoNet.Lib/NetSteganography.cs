@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using PcapDotNet.Packets;
+using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.IpV4;
 
 namespace SteganoNetLib
@@ -32,7 +35,8 @@ namespace SteganoNetLib
             listOfStegoMethods.Add(301, "IP (Type of service)");
             listOfStegoMethods.Add(302, "IP (Identification)");
             listOfStegoMethods.Add(303, "IP (Flags)");
-            listOfStegoMethods.Add(341, "ICMP ()");
+            listOfStegoMethods.Add(331, "ICMP (Identifier)");
+            listOfStegoMethods.Add(332, "ICMP (Sequence number)");
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
             //IP method X - offset number like TTL lower, smth constant is under or value is unmasked... IF allowed!
@@ -45,8 +49,8 @@ namespace SteganoNetLib
         }
 
         public static List<int> GetListMethodIds(int startValue, int endValue, List<int> source) //returns ids of methods from certain range when source specified
-        {   
-            if(source == null)
+        {
+            if (source == null)
             {
                 source = GetListOfStegoMethods().Keys.ToList(); //TODO test
             }
@@ -56,44 +60,88 @@ namespace SteganoNetLib
         }
 
         //ip layer methods
-        public static string getContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rsForInfoMessages = null)
+        public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rsForInfoMessages = null)
         {
-            //public vs internal?
             List<string> LocalMethodMessages = new List<string>();
-            //if(ip == null){retrun null}
+            List<string> BlocksOfSecret = new List<string>();
 
-            foreach(int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            if (ip == null) { return null; } //extra protection
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
                 LocalMethodMessages.Add("3IP: method " + methodId);
                 switch (methodId)
                 {
-                    case 301:
-                        //td
-                        break;
-                    case 302:
-                        //td
-                        break;                    
-                }
-            }          
+                    case 301: //IP (Type of service)
+                        {
+                            string binvalue = Convert.ToString(ip.TypeOfService, 2);
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                    case 302: //IP (Identification)
+                        {
+                            string binvalue = Convert.ToString(ip.Identification, 2);
+                            //TODO, only in first packet!
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                    case 331: //ICMP (Identifier)
+                        {
+                            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
+                            if (icmp.IsValid != true)
+                                continue;
 
-            if(rsForInfoMessages != null)
-            { 
-                foreach(string localMessageToGlobal in LocalMethodMessages)
+                            string binvalue = Convert.ToString(icmp.Identifier, 2);
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+
+                            break;
+                        }
+                    case 332: //ICMP (Sequence number)
+                        {
+                            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
+                            if (icmp.IsValid != true)
+                                continue;
+
+                            //todo
+
+                            break;
+                        }
+                }
+            }
+
+
+            if (rsForInfoMessages != null) //providint user friendly debug output to console
+            {
+                foreach (string localMessageToGlobal in LocalMethodMessages)
                 {
                     rsForInfoMessages.AddInfoMessage(localMessageToGlobal);
                 }
-                
+
             }
 
-            return "hello NotImplementedException";
+            if (BlocksOfSecret.Count <= 0) //providing value output
+            {
+                return string.Join("", BlocksOfSecret.ToArray());
+            }
+            else
+            {
+                return "error"; //null
+            }
         }
+
 
         //tcp layer methods
 
         //udp layer methods - skipped by assigment
 
         //application layer methods
+
+        public static bool Reply3Network(Packet packet)
+        {
+
+            return false;
+        }
+
+
     }
-
-
 }

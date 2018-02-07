@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
+using PcapDotNet.Packets;
 
 namespace SteganoNetLib
 {
@@ -109,6 +110,12 @@ namespace SteganoNetLib
             string address = result.ToString();
             IpV4Address ipv4address = new IpV4Address(address);
             return ipv4address;
+        }
+
+        public static IpV4Datagram ReplyToIcmp(Packet packet)
+        {
+
+            return null;
         }
 
         //---------L4------------------------------------------------------------------------------------------------------------
