@@ -10,14 +10,14 @@ namespace SteganoNet.UI.Console
         public static string SelectInterface()
         {
             List<Tuple<string, string>> ipv4localadd = NetDevice.GetIPv4addressesAndDescriptionLocal();
-            System.Console.WriteLine("Available interfaces as source: ");
+            System.Console.WriteLine("\tAvailable interfaces as source: ");
             int interfaceCounter = 0;
             foreach (Tuple<string, string> ip in ipv4localadd)
             {
-                System.Console.WriteLine(String.Format("\t{0}. {1}: {2}", interfaceCounter + 1, ip.Item1, ip.Item2));
+                System.Console.WriteLine(String.Format("\t\t{0}. {1}: {2}", interfaceCounter + 1, ip.Item1, ip.Item2));
                 interfaceCounter++;
             }
-            System.Console.Write("\tWhich interface number do you want to use? ");
+            System.Console.Write("\t\tWhich interface number do you want to use? ");
             Int32.TryParse(System.Console.ReadLine(), out interfaceCounter);
 
             try
@@ -33,7 +33,7 @@ namespace SteganoNet.UI.Console
             }
         }
 
-        public static void writeInfoConsole(object nn) //printing output from console
+        public static void WriteInfoConsole(object nn) //printing output from console
         {
             INetNode mm = (INetNode)(nn); //retype //TODO more than hope = try-catch            
                 try
@@ -45,6 +45,17 @@ namespace SteganoNet.UI.Console
                     //System.Console.WriteLine("\t> ");
                     Thread.Sleep(100);
                 }            
+        }
+
+        internal static List<int> SelectStegoMethods()
+        {
+            Dictionary<int, string> allmethods = NetSteganography.GetListOfStegoMethods();
+            System.Console.WriteLine("\tSelect suitable steganoghraphy methods: ");
+            System.Console.WriteLine("\t\t301, 302");
+
+            //TODO selector
+
+            return new List<int>() { 301, 302 };
         }
     }
 }

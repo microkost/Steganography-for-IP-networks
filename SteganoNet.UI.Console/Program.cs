@@ -1,6 +1,7 @@
 ﻿using SteganoNetLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace SteganoNet.UI.Console
@@ -22,11 +23,7 @@ namespace SteganoNet.UI.Console
             //stop
             //analyze results
 
-            System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n"); //some more epic entrance http://patorjk.com/software/taag/#p=display&f=Crawford2&t=Stegano-IP
-
-            string role = "s"; //server or client
-            System.Diagnostics.Process secondWindow = null; //if needed
-
+            System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n"); //some more epic entrance http://patorjk.com/software/taag/#p=display&f=Crawford2&t=Stegano-IP                      
             if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //just to be obvious
             {
                 System.Console.WriteLine("Nessesary library WinPcap is not installed or PcapDotNet is not present. Check it please and restart.");
@@ -35,7 +32,22 @@ namespace SteganoNet.UI.Console
                 return;
             }
 
-            if (args.Length == 0 || args == null) //no user parametrized input = run configuration WIZARD
+            //config global
+            string role = "s"; //server or client
+            string messageReadable = ""; //filled by client or server after receiving
+            string messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
+            System.Diagnostics.Process secondWindow = null; //testing solution on same computer
+            List<int> stegoMethods = new List<int>();
+
+            //config local            
+            string ipSource = "0.0.0.0";
+            ushort portSource = NetStandard.GetAvailablePort(11000);
+
+            //config remote
+            string ipremote = "0.0.0.0"; //TODO ASK USED
+            ushort portRemote = NetStandard.GetAvailablePort(11011);
+
+            if (args.Length == 0 || args == null) //no user parametrized input = configuration WIZARD
             {
                 System.Console.WriteLine("Do you want to run configuration wizard? (y/n) y"); //ha-ha             
                 System.Console.WriteLine("\tUse IPv4 or IPv6? (4/6) 4"); //hardcoded
@@ -44,14 +56,65 @@ namespace SteganoNet.UI.Console
                 role = System.Console.ReadLine();
                 System.Console.WriteLine("");
 
-                //TODO WIZARD y/n etc... string ipSource = ConsoleTools.SelectInterface();
-                //first arg is IP version, then role etc...
+                //local IP
+                ipSource = ConsoleTools.SelectInterface(); //interactive
+                System.Console.WriteLine("");
 
+                //local port
+                System.Console.Write(String.Format("\tEnter source port: should it be {0}? (y/number) ", portSource));
+                string portSourceNotParsed = System.Console.ReadLine();
+                if (!portSourceNotParsed.StartsWith("y")) //not default answer
+                {
+                    if (!ushort.TryParse(portSourceNotParsed.ToString(), out ushort parsed))
+                    {
+                        portSource = NetStandard.GetAvailablePort(48000);
+                    }
+                    else
+                    {
+                        portSource = parsed;
+                    }
+                    System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portSource));
+                }                
+
+                //remote IP address
+                String[] ipBytes = ipSource.Split('.'); uint byte1 = Convert.ToUInt32(ipBytes[0]); uint byte2 = Convert.ToUInt32(ipBytes[1]); uint byte3 = Convert.ToUInt32(ipBytes[2]);
+                uint byte4 = Convert.ToUInt32(ipBytes[3]) + 1;
+                ipremote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
+                System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}? (y/ip address) ", ipremote));
+                string ipremoteNotParsed = System.Console.ReadLine();
+                if (!ipremoteNotParsed.StartsWith("y")) //not default answer
+                {
+                    if (System.Net.IPAddress.TryParse(ipremoteNotParsed.ToString(), out System.Net.IPAddress parsed))
+                    {
+                        ipremote = parsed.ToString();
+                    }
+                    System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipremote));
+                }                
+
+                //remote port
+                System.Console.Write(String.Format("\tEnter remote port: should it be {0}? (y/number) ", portRemote));
+                string portRemoteNotParsed = System.Console.ReadLine();
+                if (!portRemoteNotParsed.StartsWith("y")) //not default answer
+                {
+                    if (!ushort.TryParse(portRemoteNotParsed.ToString(), out ushort parsed))
+                    {
+                        portRemote = NetStandard.GetAvailablePort(48000);
+                    }
+                    else
+                    {
+                        portRemote = parsed;
+                    }
+                    System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote));
+                }
+                System.Console.WriteLine("");                
+
+                stegoMethods = ConsoleTools.SelectStegoMethods(); //which methods are used (interactive)                
+                System.Console.WriteLine("");
             }
-            else //skip the wizard
+            else //skip the wizard, source from parametres
             {
                 System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n\nUsing following parametres as settings: ");
-                
+
                 System.Console.WriteLine("Received settings: ");
                 foreach (string arg in args)
                 {
@@ -61,27 +124,13 @@ namespace SteganoNet.UI.Console
                 role = "s"; //DEBUG TMP
             }
 
-            //config general            
-            Dictionary<int, string> stegoMethods = NetSteganography.GetListOfStegoMethods();
-            string messageReadable = ""; //"VŠB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
-            string messageEncrypted = ""; //DataOperationsCrypto.DoCrypto(secretMessage); //mock
-
-            //config local
-            string ipSource = ConsoleTools.SelectInterface();
-            //ushort port = 11000;
-
-            //config remote
-            string ipremote = "192.168.1.150";
-            ushort portremote = 11001;
-
             if (String.Equals("s", role)) //its server
             {
                 //prepare server
-                NetReceiverServer rs = new NetReceiverServer(ipSource);
-                //rs.Secret = secretMessage; //client!
-                rs.StegoUsedMethodIds = new List<int>() { 301, 302 };
+                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
+                rs.StegoUsedMethodIds = stegoMethods;
                 rs.IpDestinationInput = ipremote;
-                rs.PortDestination = portremote;
+                rs.PortDestination = portRemote;
 
                 //offers running client
                 System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
@@ -96,9 +145,9 @@ namespace SteganoNet.UI.Console
                 ThreadStart threadDelegate = new ThreadStart(rs.Listening);
                 Thread receiverServerThread = new Thread(threadDelegate);
                 //Thread receiverServerThread = new Thread(rs.Listening);
-                receiverServerThread.Name = "ListeningAndReceivingThread";
-                receiverServerThread.Start();
+                receiverServerThread.Name = "ListeningThread";
                 receiverServerThread.IsBackground = true;
+                receiverServerThread.Start();
 
                 //server activity output
                 System.Console.WriteLine("\nShowing server running information. Press ESC to stop when message is received.");
@@ -106,7 +155,7 @@ namespace SteganoNet.UI.Console
                 {
                     while (!System.Console.KeyAvailable)
                     {
-                        ConsoleTools.writeInfoConsole(rs);
+                        ConsoleTools.WriteInfoConsole(rs);
                     }
                 } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape);
 
@@ -122,18 +171,21 @@ namespace SteganoNet.UI.Console
             }
             else if (String.Equals("c", role)) //its client
             {
-                messageReadable = "VŠB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
-                messageReadable = "VŠB - Technical University of Ostrava has long tradition in high quality engineering.";
+                //prepare client
+                messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
+                messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
                 messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //mock
 
-                NetSenderClient sc = new NetSenderClient();
-                //prepare server                
+                NetSenderClient sc = new NetSenderClient(ipSource, portSource);
                 sc.Secret = messageEncrypted; //client!
-                sc.StegoUsedMethodIds = new List<int>() { 301, 302 };
+                sc.StegoUsedMethodIds = stegoMethods;
                 sc.IpDestinationInput = ipremote;
-                sc.PortDestination = portremote;
+                sc.PortDestination = portRemote;
 
-                
+                //TODO offers run server
+                System.Console.Write("\nDo you want to run client on same device for testing? (y/n) n");
+
+
 
             }
             else //catch

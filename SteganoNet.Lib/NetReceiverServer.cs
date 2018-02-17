@@ -121,9 +121,8 @@ namespace SteganoNetLib
             DnsDatagram dns = udp.Dns;
 
             //TODO recognize seting connection + ending...
-            //NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //use list of used IDs as secret!
+            NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //use list of used IDs as secret!
             //remember source! Do not run this method for non steganography sources!
-
 
             //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží + casy bez breaků...
             //TODO How to handle answers?

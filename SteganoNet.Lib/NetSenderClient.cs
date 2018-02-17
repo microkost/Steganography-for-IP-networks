@@ -20,7 +20,11 @@ namespace SteganoNetLib
         public MacAddress MacAddressSource { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public MacAddress MacAddressDestination { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public Queue<string> messages { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        
+
+        public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom = 0)
+        {
+
+        }
 
         private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded)
         {
@@ -31,5 +35,6 @@ namespace SteganoNetLib
             //return GetSecretMessage(this.StegoPackets);
             return "NotImplementedException";
         }
+
     }
 }
