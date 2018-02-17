@@ -31,12 +31,14 @@ namespace SteganoNetLib
              * 8xx > other methods like time channel
              */
 
-            Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>();
-            listOfStegoMethods.Add(301, "IP (Type of service)");
-            listOfStegoMethods.Add(302, "IP (Identification)");
-            listOfStegoMethods.Add(303, "IP (Flags)");
-            listOfStegoMethods.Add(331, "ICMP (Identifier)");
-            listOfStegoMethods.Add(332, "ICMP (Sequence number)");
+            Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
+            {
+                { 301, "IP (Type of service)" },
+                { 302, "IP (Identification)" },
+                { 303, "IP (Flags)" },
+                { 331, "ICMP (Identifier)" },
+                { 332, "ICMP (Sequence number)" }
+            };
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
             //IP method X - offset number like TTL lower, smth constant is under or value is unmasked... IF allowed!
@@ -110,18 +112,17 @@ namespace SteganoNetLib
             }
 
 
-            if (rsForInfoMessages != null) //providint user friendly debug output to console
+            if (rsForInfoMessages != null) //providint user friendly debug output
             {
                 foreach (string localMessageToGlobal in LocalMethodMessages)
                 {
                     rsForInfoMessages.AddInfoMessage(localMessageToGlobal);
                 }
+            }            
 
-            }
-
-            if (BlocksOfSecret.Count <= 0) //providing value output
+            if (BlocksOfSecret.Count != 0) //providing value output
             {
-                return string.Join("", BlocksOfSecret.ToArray());
+                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
             }
             else
             {
@@ -138,7 +139,7 @@ namespace SteganoNetLib
 
         public static bool Reply3Network(Packet packet)
         {
-
+            //TODO, should call NetStandard!
             return false;
         }
 

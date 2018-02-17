@@ -26,11 +26,12 @@ namespace SteganoNetLib
         public MacAddress MacAddressDestination { get; set; }
 
         //internal 
+        private PacketDevice selectedDevice = null;
+        public volatile bool terminate = false; //ends listening        
         private IpV4Address IpOfListeningInterface { get; set; }
         private IpV4Address IpOfRemoteHost { get; set; }
-        private PacketDevice selectedDevice = null;
-        private List<Tuple<Packet, String>> StegoPackets; //contains steganography to process
-        public volatile bool terminate = false; //ends listening        
+        private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
+        private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)
 
 
         public NetReceiverServer(string ipOfListeningInterface, ushort portOfListening = 0)
@@ -40,7 +41,8 @@ namespace SteganoNetLib
             MacAddressSource = NetStandard.GetMacAddress(IpOfListeningInterface);
             MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //TODO should be later changed in case of LAN communication
 
-            StegoPackets = new List<Tuple<Packet, String>>();
+            StegoPackets = new List<Tuple<Packet, List<int>>>();
+            StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             messages = new Queue<string>();
             messages.Enqueue("Server created...");
         }
@@ -81,12 +83,12 @@ namespace SteganoNetLib
                             continue;
                         case PacketCommunicatorReceiveResult.Ok:
                             {
-                                if (packet.IsValid && packet.IpV4 != null && packet.IpV4.IsValid) //only IPv4
-                                //    if (packet.IsValid && packet.IpV4 != null) //only IPv4
-                                    {
-                                    ProcessIncomingV4Packet(packet);
+                                if (packet.IsValid && packet.IpV4 != null && packet.IpV4.IsValid)
+                                {
+                                    ProcessIncomingV4Packet(packet); //only IPv4
                                     //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
                                 }
+                                //if (packet.IsValid && packet.IpV6 != null && packet.IpV6.IsValid)                                
                                 break;
                             }
                         default:
@@ -104,26 +106,26 @@ namespace SteganoNetLib
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
             //parse packet to layers
-            //recognize and check method (initialize of connection px.)
-            //call method from stego library
-            //get answer packet and send it NetReply?
-            //somehow distinguish order of arrival packets (port number rise only?)
-            //solve how to work with list of methods... multiple things in one packet List<int> according to GetListOfStegoMethods
+            //recognize and check method (initialize of connection etc...)
+            //call proper parsing method from stego library
+            //get answer packet and send it
 
             messages.Enqueue("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
-
-            //TODO recognize seting connection! + ending... //rember source... 
 
             IpV4Datagram ip = packet.Ethernet.IpV4; //validity and not nullable tested in Listening()
 
             //parsing layers for processing
             IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid) ? (IcmpIdentifiedDatagram)ip.Icmp : null;
-            TcpDatagram tcp = ip.Tcp; //TODO needs try catch solution..?
+            TcpDatagram tcp = ip.Tcp; //TODO needs try catch solution?
             UdpDatagram udp = ip.Udp;
             DnsDatagram dns = udp.Dns;
 
-            //TODO switch or not if-else-if-else
-            //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží + casy bez breaků...            
+            //TODO recognize seting connection + ending...
+            //NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //use list of used IDs as secret!
+            //remember source! Do not run this method for non steganography sources!
+
+
+            //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží + casy bez breaků...
             //TODO How to handle answers?
 
             //StegoMethodIds contain numbered list of uncolissioning methods which can be used simultaneously
@@ -135,14 +137,14 @@ namespace SteganoNetLib
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
                 messages.Enqueue("IP...");
-                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds));                
+                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds)); //TODO clever to send ipSelectionIds only
                 //pure IP is not responding to requests
                 //if added async processing then add in return value also timestamp or smth how to assembly messages back in order!
                 //send packet or layer to reply method in NetStandard to reply according to RFC... (should be async?)
             }
 
             /*
-            //ICMP methods
+            //ICMP methods //is part of IP, or separate? => replies
             else if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
             {
                 //if stego methods starts 3xx
@@ -171,16 +173,15 @@ namespace SteganoNetLib
             */
 
 
-
-            //
-            StegoPackets.Add(new Tuple<Packet, string>(packet, "string"));
+            StegoBinary.Add(builder); //storing just binary messages
+            StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
 
             return;
         }
 
         public bool AreServerPrerequisitiesDone()
         {
-            //do actual method list contains keys from database?
+            //do actual method list contains keys from "database"?
             if (StegoUsedMethodIds.Intersect(NetSteganography.GetListOfStegoMethods().Keys).Any() == false)
             {
                 return false;
@@ -191,14 +192,38 @@ namespace SteganoNetLib
             return true;
         }
 
-        private string GetSecretMessage(List<Tuple<Packet, string>> MessageIncluded) //private internal method
-        {
-            return "NotImplementedException";
-        }
-
         public string GetSecretMessage() //public no-references interface...
         {
-            return GetSecretMessage(this.StegoPackets);
+            //return GetSecretMessage(this.StegoPackets);
+            return GetSecretMessage(this.StegoBinary);
+        }
+
+        private string GetSecretMessage(List<StringBuilder> stegoBinary) //private internal method, source list of binary strings (lighter)
+        {
+            if (stegoBinary.Count == 0) //nothing to show
+            {
+                return "error: no packets captured => no message contained";
+            }
+
+            //TODO if (stegoBinary.Count > XXX) //if message is too big
+
+            StringBuilder sb = new StringBuilder();
+            stegoBinary.ForEach(item => sb.Append(item)); //convert many strings to one
+            return DataOperations.BinaryNumber2stringASCII(sb.ToString());
+        }
+
+        private string GetSecretMessage(List<Tuple<Packet, List<int>>> MessageIncluded) //private internal method, source list of packets
+        {
+            if (MessageIncluded.Count == 0) //nothing to show
+            {
+                return "error: no packets captured => no message contained";
+            }
+
+            //if List<int> is same as local
+            //call GetSecretMessageBinary(ProcessIncomingV4Packet(MessageIncluded.Item0)).Binary 
+            throw new NotImplementedException();
+
+            //return "Not Implemented Exception";
         }
 
         internal void AddInfoMessage(string txt) //add something to output from everywhere else...

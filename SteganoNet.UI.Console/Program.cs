@@ -11,18 +11,19 @@ namespace SteganoNet.UI.Console
         {
             //method flow:
             //check sw dependencies
-            //recognize mode (parametres / wizard)
+            //recognize mode (parametres / wizard), if wizard then:
             //select role (server / client)
             //select network interface
             //choose network parametres
             //choose steganographic method
-            //add instance of client or server (debug and testing purposes)
+            //add instance of client or server (debug and testing purposes), end if
             //run
             //view immediate info
             //stop
             //analyze results
 
-            System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
+            System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n"); //some more epic entrance http://patorjk.com/software/taag/#p=display&f=Crawford2&t=Stegano-IP
+
             string role = "s"; //server or client
             System.Diagnostics.Process secondWindow = null; //if needed
 
@@ -60,10 +61,10 @@ namespace SteganoNet.UI.Console
                 role = "s"; //DEBUG TMP
             }
 
-            //config general
+            //config general            
+            Dictionary<int, string> stegoMethods = NetSteganography.GetListOfStegoMethods();
             string messageReadable = ""; //"VŠB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
             string messageEncrypted = ""; //DataOperationsCrypto.DoCrypto(secretMessage); //mock
-            Dictionary<int, string> stegoMethods = NetSteganography.GetListOfStegoMethods();
 
             //config local
             string ipSource = ConsoleTools.SelectInterface();
@@ -78,7 +79,7 @@ namespace SteganoNet.UI.Console
                 //prepare server
                 NetReceiverServer rs = new NetReceiverServer(ipSource);
                 //rs.Secret = secretMessage; //client!
-                rs.StegoUsedMethodIds = new List<int>() { 301, 302 }; //needs to know because of reply                
+                rs.StegoUsedMethodIds = new List<int>() { 301, 302 };
                 rs.IpDestinationInput = ipremote;
                 rs.PortDestination = portremote;
 
@@ -121,7 +122,18 @@ namespace SteganoNet.UI.Console
             }
             else if (String.Equals("c", role)) //its client
             {
+                messageReadable = "VŠB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
+                messageReadable = "VŠB - Technical University of Ostrava has long tradition in high quality engineering.";
+                messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //mock
+
                 NetSenderClient sc = new NetSenderClient();
+                //prepare server                
+                sc.Secret = messageEncrypted; //client!
+                sc.StegoUsedMethodIds = new List<int>() { 301, 302 };
+                sc.IpDestinationInput = ipremote;
+                sc.PortDestination = portremote;
+
+                
 
             }
             else //catch

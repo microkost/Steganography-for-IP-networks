@@ -9,15 +9,16 @@ namespace SteganoNetLib
     public static class DataOperationsCrypto
     {
         /*
-         Readme: list of methods
-          default = cleartext
-          0 = cleartext
-          1 = ?
+         * Readme: list of methods
+         *      default = cleartext
+         *      0 = cleartext
+         *      1 = ?
+         *      
          */
 
-        public static string DoCrypto(string clearTextInput, int method = 0) //very mock
+        public static string DoCrypto(string clearTextInput, int method = 0)
         {
-            //NOT IN USE, just theoretical upgrade solution
+            //real cryptography not in use - mock version in use to have easy upgrade solution
 
             string secretTextOutput = "";
             if (method == 0)
@@ -33,9 +34,9 @@ namespace SteganoNetLib
             return secretTextOutput;
         }
 
-        public static string ReadCrypto(string cipherInput, int method = 0) //very mock
+        public static string ReadCrypto(string cipherInput, int method = 0)
         {
-            //NOT IN USE, just theoretical upgrade solution
+            //real cryptography not in use - mock version in use to have easy upgrade solution
 
             string clearTextOutput = "";
             if (method == 0)
