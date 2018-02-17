@@ -172,12 +172,14 @@ namespace SteganoNet.UI.Console
             else if (String.Equals("c", role)) //its client
             {
                 //prepare client
-                messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
+                //messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
                 messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
+                //System.Console.Write(String.Format("\tEnter secret message: (like {0})", messageReadable));
+                //messageReadable = System.Console.ReadLine();
                 messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //mock
 
                 NetSenderClient sc = new NetSenderClient(ipSource, portSource);
-                sc.Secret = messageEncrypted; //client!
+                sc.Secret = messageEncrypted;
                 sc.StegoUsedMethodIds = stegoMethods;
                 sc.IpDestinationInput = ipremote;
                 sc.PortDestination = portRemote;

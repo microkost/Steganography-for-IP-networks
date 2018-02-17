@@ -7,18 +7,15 @@ namespace SteganoNetLib
 {
     public interface INetNode
     {
-        //contains common properties for common roles like Receiver or Sender
-        //maybe should be removed for simplicity, not that huge ammout of shared code...
+        //contains common properties for common roles like Receiver or Sender        
 
         //steganography parametres
         List<int> StegoUsedMethodIds { get; set; }
-        string Secret { get; set; } //server dont need it actually...        
+        //string Secret { get; set; } //server dont need it actually...        
 
         //network parametres
-        string IpSourceInput { get; set; } //not IpV4Address from PcapDotNet (references grow)
-        //IpV4Address SourceIP { get; set; } //internal format
-        string IpDestinationInput { get; set; } //server not need it 
-        //IpV4Address DestinationIP { get; set; } //internal format
+        string IpSourceInput { get; set; } //not IpV4Address from PcapDotNet (reference izolation)        
+        string IpDestinationInput { get; set; } //server not need it         
         ushort PortDestination { get; set; }
         ushort PortSource { get; set; }
         MacAddress MacAddressSource { get; set; }
@@ -29,6 +26,6 @@ namespace SteganoNetLib
         //bool terminate { get; set; }
 
         //methods
-        string GetSecretMessage(); //no access to Packets obj because of referencies... GetSecretMessage(List<Tuple<Packet, String>> MessageIncluded)
+        //string GetSecretMessage(); //no access to Packets because of referencies, izolation of UI
     }    
 }

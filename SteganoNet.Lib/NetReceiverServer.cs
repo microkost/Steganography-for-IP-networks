@@ -14,10 +14,12 @@ namespace SteganoNetLib
 {
     public class NetReceiverServer : INetNode
     {
-        //public string StegoMethod { get; set; } //reimplement needed
+        //steganography parametres
         public List<int> StegoUsedMethodIds { get; set; }
-        public string Secret { get; set; } //non binary transfered information //NOT NESSESARY for server
+        //public string Secret { get; set; } //non binary transfered information //NOT NESSESARY for server
         public Queue<string> messages { get; set; } //txt info for UI pickuped by another thread
+
+        //network parametres
         public string IpSourceInput { get; set; }
         public string IpDestinationInput { get; set; }
         public ushort PortSource { get; set; } //PortListening //obviously not used
@@ -36,18 +38,20 @@ namespace SteganoNetLib
 
         public NetReceiverServer(string ipOfListeningInterface, ushort portOfListening = 0)
         {
+            //network ctor
             this.IpOfListeningInterface = new IpV4Address(ipOfListeningInterface);
             this.PortSource = portOfListening;
             MacAddressSource = NetStandard.GetMacAddress(IpOfListeningInterface);
-            MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //TODO should be later changed in case of LAN communication
+            MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //use gateway mac
 
+            //bussiness ctor
             StegoPackets = new List<Tuple<Packet, List<int>>>();
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             messages = new Queue<string>();
             messages.Enqueue("Server created...");
         }
 
-        public void Listening() //thread listening method
+        public void Listening() //thread looped method
         {
             if (!AreServerPrerequisitiesDone()) //check values in properties //TODO finalize implementation!
             {
