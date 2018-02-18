@@ -27,7 +27,7 @@ namespace SteganoNetLib
 
         //internal 
         private PacketDevice selectedDevice = null;
-        //public volatile bool terminate = false; //ends speaking, wrong way, keep it close!        
+        public volatile bool terminate = false; //ends endless speaking
         private IpV4Address IpOfInterface { get; set; }
         private IpV4Address IpOfRemoteHost { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
@@ -50,8 +50,42 @@ namespace SteganoNetLib
 
         public void Speaking() //thread main method
         {
-            //todo
-        }        
+            if (!AreServerPrerequisitiesDone()) //check values in properties
+            {
+                messages.Enqueue("Client is not ready to start, check initialization values...");
+                return;
+            }
 
+            selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
+
+            using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+            {
+                messages.Enqueue(String.Format("Sending prepared on {0} = {1}...", IpOfInterface, selectedDevice.Description));
+
+                do // Retrieve the packets
+                {
+                    //get layers //edit content //based on MethodsIds
+                }
+                while (!terminate);
+
+            }
+        }
+
+        public bool AreServerPrerequisitiesDone()
+        {
+            //do actual method list contains keys from "database"?
+            if (StegoUsedMethodIds.Intersect(NetSteganography.GetListOfStegoMethods().Keys).Any() == false)
+                return false;
+
+            if (Secret == null) //when there is no secret to transffer (wrong initialization)
+                return false;
+
+            if (Secret.Length == 0) //message to transfer has zero lenght
+                return false;
+
+            //TODO ip, ports, ...
+
+            return true;
+        }
     }
 }

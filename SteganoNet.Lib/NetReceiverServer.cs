@@ -190,7 +190,7 @@ namespace SteganoNetLib
                 return false;
             }
 
-            //ip, ports, ...
+            //TODO ip, ports, ...
 
             return true;
         }

@@ -26,6 +26,7 @@ namespace SteganoNetLib
         //bool terminate { get; set; }
 
         //methods
+        bool AreServerPrerequisitiesDone(); //checking if properties are not null before start
         //string GetSecretMessage(); //no access to Packets because of referencies, izolation of UI
     }    
 }
