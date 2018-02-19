@@ -72,12 +72,13 @@ namespace SteganoNetLib
                 AddInfoMessage(String.Format("Sending prepared on {0} = {1}...", IpOfInterface, selectedDevice.Description));
 
                 do
-                {
-                    //basic packet
-                    EthernetLayer ethernetLayer = NetStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination);
+                {                    
+                    List<Layer> layers = new List<Layer>(); //list of used layers
+                    layers.Add(NetStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination)); //L2
+
+                    //creating implicit layers
                     IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost);
-                    IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
-                    //PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
+                    IcmpEchoLayer icmpLayer = new IcmpEchoLayer();                    
                     
                     //IP methods                    
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
@@ -86,11 +87,16 @@ namespace SteganoNetLib
                         AddInfoMessage("Making IP layer");
                         Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, ipSelectionIds, SecretInBin, this);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
-                        SecretInBin = ipStego.Item2; //save rest of unsended bites                                                                                              
+                        SecretInBin = ipStego.Item2; //save rest of unsended bites
+                        layers.Add(ipV4Layer); //mark layer as done                        
                     }
-
+                    
                     //build packet and send
                     //TODO implement sending, implement method SetContent3Network
+
+                    PacketBuilder builder = new PacketBuilder(layers);
+                    Packet packet = builder.Build(DateTime.Now);
+                    communicator.SendPacket(packet);
 
                     AddInfoMessage(String.Format("{0} bits left to send", SecretInBin.Count()));
                 }

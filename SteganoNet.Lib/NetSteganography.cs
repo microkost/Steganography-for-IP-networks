@@ -130,10 +130,10 @@ namespace SteganoNetLib
 
             //TODO implement
 
-            string insertedtext = "";
-            
+            //string insertedtext = "";           
+            //return new Tuple<IpV4Layer, string>(ip, insertedtext);
 
-            return new Tuple<IpV4Layer, string>(ip, insertedtext);
+            return new Tuple<IpV4Layer, string>(ip, secret);
         }
 
         //tcp layer methods

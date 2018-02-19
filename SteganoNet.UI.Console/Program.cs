@@ -60,7 +60,7 @@ namespace SteganoNet.UI.Console
                 ipSource = ConsoleTools.SelectInterface(); //interactive
                 System.Console.WriteLine("");
 
-                //local port
+                //local port                
                 System.Console.Write(String.Format("\tEnter source port: should it be {0}? (y/number) ", portSource));
                 string portSourceNotParsed = System.Console.ReadLine();
                 if (!portSourceNotParsed.StartsWith("y")) //not default answer
@@ -74,11 +74,11 @@ namespace SteganoNet.UI.Console
                         portSource = parsed;
                     }
                     System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portSource));
-                }                
+                }                                
 
                 //remote IP address
                 String[] ipBytes = ipSource.Split('.'); uint byte1 = Convert.ToUInt32(ipBytes[0]); uint byte2 = Convert.ToUInt32(ipBytes[1]); uint byte3 = Convert.ToUInt32(ipBytes[2]);
-                uint byte4 = Convert.ToUInt32(ipBytes[3]) + 1;
+                uint byte4 = Convert.ToUInt32(ipBytes[3]) + 0;
                 ipremote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
                 System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}? (y/ip address) ", ipremote));
                 string ipremoteNotParsed = System.Console.ReadLine();
@@ -122,6 +122,11 @@ namespace SteganoNet.UI.Console
                     //TODO PARSING parametres
                 }
                 role = "s"; //DEBUG TMP
+
+                var parsedArgs = args.Select(s => s.Split(new[] { ':' }, 1)).ToDictionary(s => s[0], s => s[1]);
+                string p1 = parsedArgs["role"];
+                System.Console.WriteLine(String.Format("\targ-parse: {0}", p1));
+
             }
 
             if (String.Equals("s", role)) //its server
@@ -136,8 +141,8 @@ namespace SteganoNet.UI.Console
                 System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
                 string runIt = System.Console.ReadLine();
                 if (runIt.StartsWith("y") || runIt.StartsWith("Y"))
-                {
-                    string arguments = "superCoolIP SomeOtherAlreadyProvidedSettingsToMakeItFaster itsClient!";
+                {                                      
+                    string arguments = "-role client -ip \"192.168.1.216\" -port 11011 -ipremote \"192.168.1.216\" -portremote 11001";
                     secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
                 }
 
