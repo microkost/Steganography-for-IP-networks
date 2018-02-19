@@ -145,12 +145,6 @@ namespace SteganoNetLib
             return 0;
         }
 
-        public static IpV4Datagram ReplyToIcmp(Packet packet)
-        {
-
-            return null;
-        }
-
         //---------L4------------------------------------------------------------------------------------------------------------
 
         public static UdpLayer GetUdpLayer(ushort sourcePort, ushort destinationPort)

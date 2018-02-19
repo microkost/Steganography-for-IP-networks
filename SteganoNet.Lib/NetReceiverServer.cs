@@ -15,8 +15,8 @@ namespace SteganoNetLib
     public class NetReceiverServer : INetNode
     {
         //steganography parametres
-        public List<int> StegoUsedMethodIds { get; set; }
-        //public string Secret { get; set; } //non binary transfered information //NOT NESSESARY for server
+        public volatile bool terminate = false; //ends listening
+        public List<int> StegoUsedMethodIds { get; set; }                
         public Queue<string> messages { get; set; } //txt info for UI pickuped by another thread
 
         //network parametres
@@ -27,9 +27,8 @@ namespace SteganoNetLib
         public MacAddress MacAddressSource { get; set; }
         public MacAddress MacAddressDestination { get; set; }
 
-        //internal 
-        private PacketDevice selectedDevice = null;
-        public volatile bool terminate = false; //ends listening        
+        //internal         
+        private PacketDevice selectedDevice = null;        
         private IpV4Address IpOfListeningInterface { get; set; }
         private IpV4Address IpOfRemoteHost { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
@@ -53,7 +52,7 @@ namespace SteganoNetLib
 
         public void Listening() //thread looped method
         {
-            if (!AreServerPrerequisitiesDone()) //check values in properties //TODO finalize implementation!
+            if (!ArePrerequisitiesDone()) //check values in properties //TODO finalize implementation!
             {
                 messages.Enqueue("Server is not ready to start, check initialization values...");
                 return;
@@ -71,13 +70,14 @@ namespace SteganoNetLib
                 //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
                 //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
 
+                //TODO convert secret to binary
+
                 do // Retrieve the packets
                 {
                     PacketCommunicatorReceiveResult result = communicator.ReceivePacket(out Packet packet);
 
                     if (packet is null)
                     {
-                        //messages.Enqueue("\terror in received packed (if received).");
                         continue;
                     }
 
@@ -100,8 +100,8 @@ namespace SteganoNetLib
                     }
                 } while (!terminate);
 
-                messages.Enqueue(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
-                //messages.Enqueue(String.Format("Secret in this session: {0}\n", GetSecretMessage(StegoPackets))); //result of steganography
+                AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
+                //AddInfoMessagee(String.Format("Secret in this session: {0}\n", GetSecretMessage(StegoPackets))); //result of steganography
                 //StegoPackets.Clear();                
                 return;
             }
@@ -114,7 +114,7 @@ namespace SteganoNetLib
             //call proper parsing method from stego library
             //get answer packet and send it
 
-            messages.Enqueue("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+            AddInfoMessage("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
 
             IpV4Datagram ip = packet.Ethernet.IpV4; //validity and not nullable tested in Listening()
 
@@ -132,15 +132,16 @@ namespace SteganoNetLib
             //TODO How to handle answers?
 
             //StegoMethodIds contain numbered list of uncolissioning methods which can be used simultaneously
-            List<int> listOfStegoMethodsIds = NetSteganography.GetListOfStegoMethods().Keys.ToList(); //all
+            //List<int> listOfStegoMethodsIds = NetSteganography.GetListStegoMethodsIdAndKey().Keys.ToList(); //all
             StringBuilder builder = new StringBuilder();
 
             //IP methods
-            List<int> ipSelectionIds = NetSteganography.GetListMethodIds(300, 399, listOfStegoMethodsIds);
+            List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
-                messages.Enqueue("IP...");
-                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds)); //TODO clever to send ipSelectionIds only
+                AddInfoMessage("IP...");
+                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO clever to send ipSelectionIds only
+                //send instance ot RS
                 //pure IP is not responding to requests
                 //if added async processing then add in return value also timestamp or smth how to assembly messages back in order!
                 //send packet or layer to reply method in NetStandard to reply according to RFC... (should be async?)
@@ -182,10 +183,10 @@ namespace SteganoNetLib
             return;
         }
 
-        public bool AreServerPrerequisitiesDone()
+        public bool ArePrerequisitiesDone()
         {
             //do actual method list contains keys from "database"?
-            if (StegoUsedMethodIds.Intersect(NetSteganography.GetListOfStegoMethods().Keys).Any() == false)
+            if (StegoUsedMethodIds.Intersect(NetSteganography.GetListStegoMethodsIdAndKey().Keys).Any() == false)
             {
                 return false;
             }
@@ -228,7 +229,7 @@ namespace SteganoNetLib
 
             //return "Not Implemented Exception";
         }
-
+        
         internal void AddInfoMessage(string txt) //add something to output from everywhere else...
         {
             this.messages.Enqueue(txt);

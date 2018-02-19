@@ -179,7 +179,7 @@ namespace SteganoNet.UI.Console
                 messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //mock
 
                 NetSenderClient sc = new NetSenderClient(ipSource, portSource);
-                sc.Secret = messageEncrypted;
+                sc.SecretReadable = messageEncrypted;
                 sc.StegoUsedMethodIds = stegoMethods;
                 sc.IpDestinationInput = ipremote;
                 sc.PortDestination = portRemote;

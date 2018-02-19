@@ -10,8 +10,7 @@ namespace SteganoNetLib
         //contains common properties for common roles like Receiver or Sender        
 
         //steganography parametres
-        List<int> StegoUsedMethodIds { get; set; }
-        //string Secret { get; set; } //server dont need it actually...        
+        List<int> StegoUsedMethodIds { get; set; }                
 
         //network parametres
         string IpSourceInput { get; set; } //not IpV4Address from PcapDotNet (reference izolation)        
@@ -26,7 +25,9 @@ namespace SteganoNetLib
         //bool terminate { get; set; }
 
         //methods
-        bool AreServerPrerequisitiesDone(); //checking if properties are not null before start
+        bool ArePrerequisitiesDone(); //checking if properties are not null before start
+        //void AddInfoMessage(string txt); ////add something to output from everywhere else... Is internal method!
+
         //string GetSecretMessage(); //no access to Packets because of referencies, izolation of UI
-    }    
+    }
 }

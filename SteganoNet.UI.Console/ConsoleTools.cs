@@ -49,7 +49,7 @@ namespace SteganoNet.UI.Console
 
         internal static List<int> SelectStegoMethods()
         {
-            Dictionary<int, string> allmethods = NetSteganography.GetListOfStegoMethods();
+            Dictionary<int, string> allmethods = NetSteganography.GetListStegoMethodsIdAndKey();
             System.Console.WriteLine("\tSelect suitable steganoghraphy methods: ");
             System.Console.WriteLine("\t\t301, 302");
 

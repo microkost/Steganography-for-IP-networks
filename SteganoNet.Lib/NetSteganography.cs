@@ -9,16 +9,11 @@ namespace SteganoNetLib
 {
     public static class NetSteganography //not static
     {
-        //private readonly Dictionary<int, string> listOfStegoMethods;
-
-        /*
-        public NetSteganography(List<int> listOfMethodIndexes)
-        {
-             listOfStegoMethods = NetSteganography.GetListOfStegoMethods();
-        }
-        */
-
-        public static Dictionary<int, string> GetListOfStegoMethods()
+        //magic numbers dialer
+        public const int IpRangeStart = 300;
+        public const int IpRangeEnd = 399;
+        
+        public static Dictionary<int, string> GetListStegoMethodsIdAndKey() //service method
         {
             /* 
              * Logic of ID integers: (do not use xx0, keep them like group name)
@@ -50,28 +45,33 @@ namespace SteganoNetLib
             return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
         }
 
-        public static List<int> GetListMethodIds(int startValue, int endValue, List<int> source) //returns ids of methods from certain range when source specified
+        //service method
+        public static List<int> GetListMethodsId(int startValue, int endValue, Dictionary<int, string> stegoMethodsIdAndKey) //returns ids of methods from certain range when source specified
         {
+            List<int> source = stegoMethodsIdAndKey.Keys.ToList(); //separate ids from dictionary
+
             if (source == null)
             {
-                source = GetListOfStegoMethods().Keys.ToList(); //TODO test
+                source = GetListStegoMethodsIdAndKey().Keys.ToList(); //TODO test, is dangerous when no list in GetListStegoMethodsIdAndKey
             }
 
             IEnumerable<int> listOfIpMethods = from num in source where num >= startValue && num <= endValue select num;
             return listOfIpMethods.ToList();
         }
 
+        //---------------------------------------------------------------------------------------------------------------------
+
         //ip layer methods
-        public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rsForInfoMessages = null)
+        public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rs = null)
         {
-            List<string> LocalMethodMessages = new List<string>();
+            //List<string> LocalMethodMessages = new List<string>();
             List<string> BlocksOfSecret = new List<string>();
 
             if (ip == null) { return null; } //extra protection
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
-                LocalMethodMessages.Add("3IP: method " + methodId);
+                rs.AddInfoMessage("3IP: method " + methodId);
                 switch (methodId)
                 {
                     case 301: //IP (Type of service)
@@ -109,15 +109,6 @@ namespace SteganoNetLib
                             break;
                         }
                 }
-            }
-
-
-            if (rsForInfoMessages != null) //providint user friendly debug output
-            {
-                foreach (string localMessageToGlobal in LocalMethodMessages)
-                {
-                    rsForInfoMessages.AddInfoMessage(localMessageToGlobal);
-                }
             }            
 
             if (BlocksOfSecret.Count != 0) //providing value output
@@ -130,19 +121,25 @@ namespace SteganoNetLib
             }
         }
 
+        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
+        {
+            if (ip == null)
+                return null;
+            
+            sc.AddInfoMessage("SetContent3Network UNIMPLEMENTED!");
+
+            //TODO implement
+
+            string insertedtext = "";
+            
+
+            return new Tuple<IpV4Layer, string>(ip, insertedtext);
+        }
 
         //tcp layer methods
 
         //udp layer methods - skipped by assigment
 
         //application layer methods
-
-        public static bool Reply3Network(Packet packet)
-        {
-            //TODO, should call NetStandard!
-            return false;
-        }
-
-
     }
 }
