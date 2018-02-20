@@ -48,13 +48,6 @@ namespace SteganoNetLib
             //StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             messages = new Queue<string>();
             AddInfoMessage("Client created...");
-
-            if (SecretReadable != null || SecretReadable.Length != 0)
-            {
-                SecretInBin = DataOperations.StringASCII2BinaryNumber(SecretReadable); //results tested in ArePrerequisitiesDone()
-                //string max lenght: Can go a lot bigger than 100,000,000 characters, instantly given System.OutOfMemoryException at 1,000,000,000 characters.
-            }
-
         }
 
         public void Speaking() //thread main method
@@ -65,6 +58,9 @@ namespace SteganoNetLib
                 return;
             }
 
+            SecretInBin = DataOperations.StringASCII2BinaryNumber(SecretReadable); //results tested in ArePrerequisitiesDone()
+                                                                                   //string max lenght: Can go a lot bigger than 100,000,000 characters, instantly given System.OutOfMemoryException at 1,000,000,000 characters.
+
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -72,14 +68,14 @@ namespace SteganoNetLib
                 AddInfoMessage(String.Format("Sending prepared on {0} = {1}...", IpOfInterface, selectedDevice.Description));
 
                 do
-                {                    
+                {
                     List<Layer> layers = new List<Layer>(); //list of used layers
                     layers.Add(NetStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination)); //L2
 
                     //creating implicit layers
                     IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost);
-                    IcmpEchoLayer icmpLayer = new IcmpEchoLayer();                    
-                    
+                    IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
+
                     //IP methods                    
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
@@ -90,7 +86,7 @@ namespace SteganoNetLib
                         SecretInBin = ipStego.Item2; //save rest of unsended bites
                         layers.Add(ipV4Layer); //mark layer as done                        
                     }
-                    
+
                     //build packet and send
                     //TODO implement sending, implement method SetContent3Network
 
@@ -118,7 +114,7 @@ namespace SteganoNetLib
             {
                 AddInfoMessage("Secret in readable form is not available, wrong initialization");
                 return false;
-            }            
+            }
 
             if (SecretInBin == null)
             {

@@ -13,18 +13,18 @@ namespace SteganoNet.UI.Console
             //method flow:
             //check sw dependencies
             //recognize mode (parametres / wizard), if wizard then:
-            //select role (server / client)
-            //select network interface
-            //choose network parametres
-            //choose steganographic method
-            //add instance of client or server (debug and testing purposes), end if
+            //*select role (server / client)
+            //*select network interface
+            //*choose network parametres
+            //*choose steganographic method
+            //*add instance of client or server (debug and testing purposes), end if
             //run
             //view immediate info
             //stop
             //analyze results
 
-            System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n"); //some more epic entrance http://patorjk.com/software/taag/#p=display&f=Crawford2&t=Stegano-IP                      
-            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //just to be obvious
+            System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
+            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //can run?
             {
                 System.Console.WriteLine("Nessesary library WinPcap is not installed or PcapDotNet is not present. Check it please and restart.");
                 System.Console.WriteLine("Press any key to exit... ");
@@ -32,25 +32,24 @@ namespace SteganoNet.UI.Console
                 return;
             }
 
-            //config global
+            //config global (pre-initialization)
             string role = "s"; //server or client
-            string messageReadable = ""; //filled by client or server after receiving
-            string messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
-            System.Diagnostics.Process secondWindow = null; //testing solution on same computer
+            string messageReadable = ""; //filled by client later
+            string messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);            
             List<int> stegoMethods = new List<int>();
+            System.Diagnostics.Process secondWindow = null; //testing solution on same computer
+            string runSame = "n"; //user answer for same device
 
-            //config local            
+            //network values (pre-initialization)
             string ipSource = "0.0.0.0";
             ushort portSource = NetStandard.GetAvailablePort(11000);
-
-            //config remote
-            string ipremote = "0.0.0.0"; //TODO ASK USED
+            string ipRemote = "0.0.0.0";
             ushort portRemote = NetStandard.GetAvailablePort(11011);
 
             if (args.Length == 0 || args == null) //no user parametrized input = configuration WIZARD
             {
                 System.Console.WriteLine("Do you want to run configuration wizard? (y/n) y"); //ha-ha             
-                System.Console.WriteLine("\tUse IPv4 or IPv6? (4/6) 4"); //hardcoded
+                System.Console.WriteLine("\tUse IPv4 or IPv6? (4/6) 4"); //ha-ha
 
                 System.Console.Write("\tIs this device (s)erver-receiver or (c)lient-sender? (s/c) ");
                 role = System.Console.ReadLine();
@@ -61,9 +60,13 @@ namespace SteganoNet.UI.Console
                 System.Console.WriteLine("");
 
                 //local port                
-                System.Console.Write(String.Format("\tEnter source port: should it be {0}? (y/number) ", portSource));
+                System.Console.Write(String.Format("\tEnter source port: should it be {0}? (y or enter / number) ", portSource));
                 string portSourceNotParsed = System.Console.ReadLine();
-                if (!portSourceNotParsed.StartsWith("y")) //not default answer
+                if (portSourceNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(portSourceNotParsed)) //not default answer
+                {
+                    System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portSource)); //without change
+                }
+                else
                 {
                     if (!ushort.TryParse(portSourceNotParsed.ToString(), out ushort parsed))
                     {
@@ -74,27 +77,35 @@ namespace SteganoNet.UI.Console
                         portSource = parsed;
                     }
                     System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portSource));
-                }                                
+                }
 
                 //remote IP address
                 String[] ipBytes = ipSource.Split('.'); uint byte1 = Convert.ToUInt32(ipBytes[0]); uint byte2 = Convert.ToUInt32(ipBytes[1]); uint byte3 = Convert.ToUInt32(ipBytes[2]);
                 uint byte4 = Convert.ToUInt32(ipBytes[3]) + 0;
-                ipremote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
-                System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}? (y/ip address) ", ipremote));
+                ipRemote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
+                System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}?  (y or enter / ip address) ", ipRemote));
                 string ipremoteNotParsed = System.Console.ReadLine();
-                if (!ipremoteNotParsed.StartsWith("y")) //not default answer
+                if (ipremoteNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(ipremoteNotParsed)) //not default answer
+                {
+                    System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipRemote)); //without change
+                }
+                else
                 {
                     if (System.Net.IPAddress.TryParse(ipremoteNotParsed.ToString(), out System.Net.IPAddress parsed))
                     {
-                        ipremote = parsed.ToString();
+                        ipRemote = parsed.ToString();
                     }
-                    System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipremote));
-                }                
+                    System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipRemote));
+                }
 
                 //remote port
-                System.Console.Write(String.Format("\tEnter remote port: should it be {0}? (y/number) ", portRemote));
+                System.Console.Write(String.Format("\tEnter remote port: should it be {0}? (y or enter / number) ", portRemote));
                 string portRemoteNotParsed = System.Console.ReadLine();
-                if (!portRemoteNotParsed.StartsWith("y")) //not default answer
+                if (portRemoteNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(portRemoteNotParsed)) //not default answer
+                {
+                    System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote)); //without change
+                }
+                else
                 {
                     if (!ushort.TryParse(portRemoteNotParsed.ToString(), out ushort parsed))
                     {
@@ -106,27 +117,83 @@ namespace SteganoNet.UI.Console
                     }
                     System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote));
                 }
-                System.Console.WriteLine("");                
+                System.Console.WriteLine("");
 
                 stegoMethods = ConsoleTools.SelectStegoMethods(); //which methods are used (interactive)                
-                System.Console.WriteLine("");
+                //System.Console.WriteLine("");
             }
             else //skip the wizard, source from parametres
             {
-                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n\nUsing following parametres as settings: ");
+                System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n\n\nUsing following parametres as settings: ");
+                /*
+                 * VALID PARAMS: (separator is space)
+                 * -role client 
+                 * -ip 192.168.1.216 
+                 * -port 11011 
+                 * -ipremote 192.168.1.216
+                 * -portremote 11001;
+                 * -methods: TODO!
+                 * -runsame: n
+                 */
+                
+                for (int i = 0; i < args.Length; i++)
+                {                    
+                    switch (args[i])
+                    {                        
+                        case "-role":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                role = args[i].Substring(0, 1).ToLower(); //first char only
+                                break;
+                            }
 
-                System.Console.WriteLine("Received settings: ");
-                foreach (string arg in args)
-                {
-                    System.Console.WriteLine(String.Format("\targ: {0}", arg));
-                    //TODO PARSING parametres
-                }
-                role = "s"; //DEBUG TMP
-
-                var parsedArgs = args.Select(s => s.Split(new[] { ':' }, 1)).ToDictionary(s => s[0], s => s[1]);
-                string p1 = parsedArgs["role"];
-                System.Console.WriteLine(String.Format("\targ-parse: {0}", p1));
-
+                        case "-ip":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                ipSource = args[i];
+                                break;
+                            }
+                        case "-port":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                ushort.TryParse(args[i].ToString(), out ushort parsed); //parsing
+                                portSource = parsed;
+                                break;
+                            }
+                        case "-ipremote":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                ipRemote = args[i];
+                                break;
+                            }
+                        case "-portremote":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                ushort.TryParse(args[i].ToString(), out ushort parsed); //parsing
+                                portRemote = parsed;
+                                break;
+                            }
+                        case "-methods":
+                            {
+                                i++;
+                                //TODO reasemble list
+                                break;
+                            }
+                        case "-runsame":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                runSame = args[i].Substring(0, 1).ToLower(); //first char only
+                                break;
+                            }
+                    }
+                    System.Console.WriteLine(String.Format("\t{0} value: {1}", args[i-1], args[i]));
+                }                
             }
 
             if (String.Equals("s", role)) //its server
@@ -134,15 +201,15 @@ namespace SteganoNet.UI.Console
                 //prepare server
                 NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
                 rs.StegoUsedMethodIds = stegoMethods;
-                rs.IpDestinationInput = ipremote;
+                rs.IpDestinationInput = ipRemote;
                 rs.PortDestination = portRemote;
 
                 //offers running client
                 System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
-                string runIt = System.Console.ReadLine();
-                if (runIt.StartsWith("y") || runIt.StartsWith("Y"))
-                {                                      
-                    string arguments = "-role client -ip \"192.168.1.216\" -port 11011 -ipremote \"192.168.1.216\" -portremote 11001";
+                runSame = System.Console.ReadLine();
+                if (runSame.StartsWith("y") || runSame.StartsWith("Y"))
+                {
+                    string arguments = String.Format("-role client -ip {0} -port {1} -ipremote {2} -portremote {3} -methods {4} -runsame {5}", ipRemote, portRemote, ipSource, portSource, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n"); //inverted settings
                     secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
                 }
 
@@ -186,7 +253,7 @@ namespace SteganoNet.UI.Console
                 NetSenderClient sc = new NetSenderClient(ipSource, portSource);
                 sc.SecretReadable = messageEncrypted;
                 sc.StegoUsedMethodIds = stegoMethods;
-                sc.IpDestinationInput = ipremote;
+                sc.IpDestinationInput = ipRemote;
                 sc.PortDestination = portRemote;
 
                 //TODO offers run server
