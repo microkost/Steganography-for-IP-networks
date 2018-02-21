@@ -14,14 +14,14 @@ namespace SteganoNetLib
     public class NetSenderClient : INetNode
     {
         //steganography parametres
-        public volatile bool terminate = false; //ends endless speaking
+        public volatile bool Terminate = false; //ends endless speaking
         public List<int> StegoUsedMethodIds { get; set; }
-        public string SecretReadable { get; set; }
-        public Queue<string> messages { get; set; }
+        public string SecretMessage { get; set; }
+        public Queue<string> Messages { get; set; }
 
         //network parametres
-        public string IpSourceInput { get; set; } //converted to IpOfInterface in ctor
-        public string IpDestinationInput { get; set; } //converted to IpOfRemoteHost in ctor
+        public string IpSourceString { get; set; } //converted to IpOfInterface in ctor
+        public string IpDestinationString { get; set; } //converted to IpOfRemoteHost in ctor
         public ushort PortDestination { get; set; }
         public ushort PortSource { get; set; }
         public MacAddress MacAddressSource { get; set; }
@@ -32,8 +32,7 @@ namespace SteganoNetLib
         private IpV4Address IpOfInterface { get; set; } //isolation of referencies
         private IpV4Address IpOfRemoteHost { get; set; } //isolation of referencies
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
-        //private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)
-        private string SecretInBin { get; set; }
+        //private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)        
 
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom = 0)
@@ -44,9 +43,8 @@ namespace SteganoNetLib
             MacAddressSource = NetStandard.GetMacAddress(IpOfInterface);
             MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //use gateway mac
 
-            //bussiness ctor
-            //StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
-            messages = new Queue<string>();
+            //bussiness ctor            
+            Messages = new Queue<string>();
             AddInfoMessage("Client created...");
         }
 
@@ -57,11 +55,9 @@ namespace SteganoNetLib
                 AddInfoMessage("Client is not ready to start, check initialization values...");
                 return;
             }
-
-            SecretInBin = DataOperations.StringASCII2BinaryNumber(SecretReadable); //results tested in ArePrerequisitiesDone()
-                                                                                   //string max lenght: Can go a lot bigger than 100,000,000 characters, instantly given System.OutOfMemoryException at 1,000,000,000 characters.
-
+            
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
+            MacAddressDestination = NetStandard.GetMacAddress(IpOfRemoteHost); //put there correct
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
@@ -81,11 +77,17 @@ namespace SteganoNetLib
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
                         AddInfoMessage("Making IP layer");
-                        Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, ipSelectionIds, SecretInBin, this);
+                        Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, ipSelectionIds, SecretMessage, this);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
-                        SecretInBin = ipStego.Item2; //save rest of unsended bites
+                        SecretMessage = ipStego.Item2; //save rest of unsended bites
                         layers.Add(ipV4Layer); //mark layer as done                        
                     }
+
+                    if(layers.Count < 3)
+                    {
+                        layers.Add(icmpLayer); //TODO make it better!
+                    }
+
 
                     //build packet and send
                     //TODO implement sending, implement method SetContent3Network
@@ -94,9 +96,15 @@ namespace SteganoNetLib
                     Packet packet = builder.Build(DateTime.Now);
                     communicator.SendPacket(packet);
 
-                    AddInfoMessage(String.Format("{0} bits left to send", SecretInBin.Count()));
+                    AddInfoMessage(String.Format("{0} bits left to send", SecretMessage.Count()));
+                    try
+                    {
+                        SecretMessage = SecretMessage.Substring(0, SecretMessage.Length - 1);
+                    }
+                    catch
+                    { Terminate = true; }
                 }
-                while (!terminate); // || SecretInBin == 0
+                while (!Terminate || SecretMessage.Length != 0);
 
             }
         }
@@ -110,15 +118,9 @@ namespace SteganoNetLib
                 return false;
             }
 
-            if (SecretReadable == null || SecretReadable.Length == 0) //when there is no secret to transffer (wrong initialization)
+            if (SecretMessage == null || SecretMessage.Length == 0) //when there is no secret to transffer (wrong initialization)
             {
                 AddInfoMessage("Secret in readable form is not available, wrong initialization");
-                return false;
-            }
-
-            if (SecretInBin == null)
-            {
-                AddInfoMessage("Secret wasn't properly transfered from readable to binary form");
                 return false;
             }
 
@@ -127,9 +129,9 @@ namespace SteganoNetLib
             return true;
         }
 
-        internal void AddInfoMessage(string txt) //add something to output from everywhere else...
+        public void AddInfoMessage(string txt) //add something to output from everywhere else...
         {
-            this.messages.Enqueue(txt);
+            this.Messages.Enqueue(txt);
             return;
         }
 

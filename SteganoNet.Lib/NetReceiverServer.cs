@@ -15,13 +15,13 @@ namespace SteganoNetLib
     public class NetReceiverServer : INetNode
     {
         //steganography parametres
-        public volatile bool terminate = false; //ends listening
+        public volatile bool Terminate = false; //ends listening        
         public List<int> StegoUsedMethodIds { get; set; }                
-        public Queue<string> messages { get; set; } //txt info for UI pickuped by another thread
+        public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
 
         //network parametres
-        public string IpSourceInput { get; set; }
-        public string IpDestinationInput { get; set; }
+        public string IpSourceString { get; set; }
+        public string IpDestinationString { get; set; }
         public ushort PortSource { get; set; } //PortListening //obviously not used
         public ushort PortDestination { get; set; } //PortOfRemoteHost
         public MacAddress MacAddressSource { get; set; }
@@ -32,8 +32,7 @@ namespace SteganoNetLib
         private IpV4Address IpOfListeningInterface { get; set; }
         private IpV4Address IpOfRemoteHost { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
-        private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)
-
+        private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)                
 
         public NetReceiverServer(string ipOfListeningInterface, ushort portOfListening = 0)
         {
@@ -46,15 +45,15 @@ namespace SteganoNetLib
             //bussiness ctor
             StegoPackets = new List<Tuple<Packet, List<int>>>();
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
-            messages = new Queue<string>();
-            messages.Enqueue("Server created...");
+            Messages = new Queue<string>();
+            Messages.Enqueue("Server created...");
         }
 
         public void Listening() //thread looped method
         {
             if (!ArePrerequisitiesDone()) //check values in properties //TODO finalize implementation!
             {
-                messages.Enqueue("Server is not ready to start, check initialization values...");
+                Messages.Enqueue("Server is not ready to start, check initialization values...");
                 return;
             }
 
@@ -63,7 +62,7 @@ namespace SteganoNetLib
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
-                messages.Enqueue(String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description));
+                Messages.Enqueue(String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description));
 
                 //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
                 //communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
@@ -98,7 +97,7 @@ namespace SteganoNetLib
                         default:
                             throw new InvalidOperationException("The result " + result + " should never be reached here");
                     }
-                } while (!terminate);
+                } while (!Terminate);
 
                 AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
                 //AddInfoMessagee(String.Format("Secret in this session: {0}\n", GetSecretMessage(StegoPackets))); //result of steganography
@@ -230,9 +229,9 @@ namespace SteganoNetLib
             //return "Not Implemented Exception";
         }
         
-        internal void AddInfoMessage(string txt) //add something to output from everywhere else...
+        public void AddInfoMessage(string txt) //add something to output from everywhere else...
         {
-            this.messages.Enqueue(txt);
+            this.Messages.Enqueue(txt);
             return;
         }
 

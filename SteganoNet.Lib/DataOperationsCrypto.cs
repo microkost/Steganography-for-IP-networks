@@ -14,6 +14,7 @@ namespace SteganoNetLib
          *      0 = cleartext
          *      1 = ?
          *      
+         *      use smth from https://github.com/microkost/cryptography-exercise
          */
 
         public static string DoCrypto(string clearTextInput, int method = 0)
@@ -51,6 +52,5 @@ namespace SteganoNetLib
 
             return clearTextOutput;
         }
-
     }
 }

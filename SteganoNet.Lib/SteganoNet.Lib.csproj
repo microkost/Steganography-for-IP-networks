@@ -75,7 +75,7 @@
     <Compile Include="NetAuthentication.cs" />
     <Compile Include="NetDevice.cs" />
     <Compile Include="NetSenderClient.cs" />
-    <Compile Include="NetNode.cs" />
+    <Compile Include="INetNode.cs" />
     <Compile Include="NetReceiverServer.cs" />
     <Compile Include="NetStandard.cs" />
     <Compile Include="NetSteganography.cs" />

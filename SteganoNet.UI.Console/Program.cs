@@ -34,11 +34,11 @@ namespace SteganoNet.UI.Console
 
             //config global (pre-initialization)
             string role = "s"; //server or client
-            string messageReadable = ""; //filled by client later
-            string messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);            
+            string messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering."; //only for user layer! Never pass to client...
+            string messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //send this
             List<int> stegoMethods = new List<int>();
             System.Diagnostics.Process secondWindow = null; //testing solution on same computer
-            string runSame = "n"; //user answer for same device
+            string runSame = "y"; //user answer for same device
 
             //network values (pre-initialization)
             string ipSource = "0.0.0.0";
@@ -119,27 +119,28 @@ namespace SteganoNet.UI.Console
                 }
                 System.Console.WriteLine("");
 
-                stegoMethods = ConsoleTools.SelectStegoMethods(); //which methods are used (interactive)                
-                //System.Console.WriteLine("");
+                stegoMethods = ConsoleTools.SelectStegoMethods(); //which methods are used (interactive)                                
             }
             else //skip the wizard, source from parametres
             {
                 System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n\n\nUsing following parametres as settings: ");
+
                 /*
                  * VALID PARAMS: (separator is space)
-                 * -role client 
+                 * -role c
                  * -ip 192.168.1.216 
-                 * -port 11011 
+                 * -port 11011
                  * -ipremote 192.168.1.216
-                 * -portremote 11001;
-                 * -methods: TODO!
+                 * -portremote 11001
+                 * -methods: 301,302
                  * -runsame: n
+                 * -message: ""
                  */
-                
+
                 for (int i = 0; i < args.Length; i++)
-                {                    
+                {
                     switch (args[i])
-                    {                        
+                    {
                         case "-role":
                             {
                                 i++;
@@ -181,7 +182,8 @@ namespace SteganoNet.UI.Console
                         case "-methods":
                             {
                                 i++;
-                                //TODO reasemble list
+                                int[] nums = Array.ConvertAll(args[i].Split(','), int.Parse);
+                                stegoMethods = nums.ToList();
                                 break;
                             }
                         case "-runsame":
@@ -191,27 +193,40 @@ namespace SteganoNet.UI.Console
                                 runSame = args[i].Substring(0, 1).ToLower(); //first char only
                                 break;
                             }
+                        case "-message":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                messageReadable = args[i];
+                                messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);                                
+                                break;
+                            }
                     }
-                    System.Console.WriteLine(String.Format("\t{0} value: {1}", args[i-1], args[i]));
-                }                
+                    System.Console.WriteLine(String.Format("\t{0} value: {1}", args[i - 1], args[i])); //show what arrived, not what is in variables
+                }
+            }
+
+            //offers running another window with client or server
+            if (!runSame.StartsWith("n")) //runSame is difeerent than n (asking for first time)
+            {
+                System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
+                runSame = System.Console.ReadLine();
+                if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
+                {
+                    messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
+                    string roleToRun = (role.StartsWith("c")) ? "s" : "c";
+                    string arguments = String.Format("-role {0} -ip {1} -port {2} -ipremote {3} -portremote {4} -methods {5} -runsame {6} -message \"{7}\"", roleToRun, ipRemote, portRemote, ipSource, portSource, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n", messageReadable); //inverted settings
+                    secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
+                }
             }
 
             if (String.Equals("s", role)) //its server
             {
                 //prepare server
                 NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
-                rs.StegoUsedMethodIds = stegoMethods;
-                rs.IpDestinationInput = ipRemote;
+                rs.IpDestinationString = ipRemote;
                 rs.PortDestination = portRemote;
-
-                //offers running client
-                System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
-                runSame = System.Console.ReadLine();
-                if (runSame.StartsWith("y") || runSame.StartsWith("Y"))
-                {
-                    string arguments = String.Format("-role client -ip {0} -port {1} -ipremote {2} -portremote {3} -methods {4} -runsame {5}", ipRemote, portRemote, ipSource, portSource, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n"); //inverted settings
-                    secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
-                }
+                rs.StegoUsedMethodIds = stegoMethods;                
 
                 //prepare thread for server
                 ThreadStart threadDelegate = new ThreadStart(rs.Listening);
@@ -231,7 +246,7 @@ namespace SteganoNet.UI.Console
                     }
                 } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape);
 
-                rs.terminate = true;
+                rs.Terminate = true;
                 receiverServerThread.Abort(); //stop server thread
                 receiverServerThread.Join(); //needed?
 
@@ -245,22 +260,39 @@ namespace SteganoNet.UI.Console
             {
                 //prepare client
                 //messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
-                messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
+                //messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
                 //System.Console.Write(String.Format("\tEnter secret message: (like {0})", messageReadable));
                 //messageReadable = System.Console.ReadLine();
                 messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //mock
 
                 NetSenderClient sc = new NetSenderClient(ipSource, portSource);
-                sc.SecretReadable = messageEncrypted;
+                sc.SecretMessage = messageEncrypted; //never pass messageReadable!
                 sc.StegoUsedMethodIds = stegoMethods;
-                sc.IpDestinationInput = ipRemote;
+                sc.IpDestinationString = ipRemote;
                 sc.PortDestination = portRemote;
 
-                //TODO offers run server
-                System.Console.Write("\nDo you want to run client on same device for testing? (y/n) n");
 
+                //prepare thread for server
+                ThreadStart threadDelegate = new ThreadStart(sc.Speaking);
+                Thread senderClientThread = new Thread(threadDelegate);
+                //Thread senderClientThread = new Thread(rs.Listening);
+                senderClientThread.Name = "SpeakingThread";
+                senderClientThread.IsBackground = true;
+                senderClientThread.Start();
 
+                //server activity output
+                System.Console.WriteLine("\nShowing client running information. Press ESC to stop when message is received.");
+                do
+                {
+                    while (!System.Console.KeyAvailable)
+                    {
+                        ConsoleTools.WriteInfoConsole(sc);
+                    }
+                } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape);
 
+                sc.Terminate = true;
+                senderClientThread.Abort(); //stop client thread
+                senderClientThread.Join(); //needed?
             }
             else //catch
             {
