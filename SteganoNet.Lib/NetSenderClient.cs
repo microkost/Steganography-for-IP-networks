@@ -35,13 +35,15 @@ namespace SteganoNetLib
         //private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)        
 
 
-        public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom = 0)
+        public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
         {
             //network ctor
             this.IpOfInterface = new IpV4Address(ipOfSendingInterface);
             this.PortSource = portSendFrom;
-            MacAddressSource = NetStandard.GetMacAddress(IpOfInterface);
-            MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //use gateway mac
+            this.IpOfRemoteHost = new IpV4Address(ipOfReceivingInterface);
+            this.PortDestination = portSendTo;                      
+            this.MacAddressSource = NetStandard.GetMacAddress(IpOfInterface);
+            this.MacAddressDestination = NetStandard.GetMacAddress(IpOfRemoteHost);
 
             //bussiness ctor            
             Messages = new Queue<string>();
@@ -50,14 +52,14 @@ namespace SteganoNetLib
 
         public void Speaking() //thread main method
         {
+
             if (!ArePrerequisitiesDone()) //check values in properties
             {
                 AddInfoMessage("Client is not ready to start, check initialization values...");
                 return;
             }
-            
+
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
-            MacAddressDestination = NetStandard.GetMacAddress(IpOfRemoteHost); //put there correct
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
@@ -114,19 +116,33 @@ namespace SteganoNetLib
             //do actual method list contains keys from "database"?
             if (StegoUsedMethodIds.Intersect(NetSteganography.GetListStegoMethodsIdAndKey().Keys).Any() == false)
             {
-                AddInfoMessage("Provided keys are not in list of valid keys");
+                AddInfoMessage("Error! Provided keys are not in list of valid keys.");
                 return false;
             }
 
             if (SecretMessage == null || SecretMessage.Length == 0) //when there is no secret to transffer (wrong initialization)
             {
-                AddInfoMessage("Secret in readable form is not available, wrong initialization");
+                AddInfoMessage("Error! Secret is not available, wrong initialization.");
                 return false;
             }
 
-            //TODO ip, ports, ...
+            if(MacAddressSource.Equals("{00:00:00:00:00:00}") || MacAddressDestination.Equals("{00:00:00:00:00:00}"))
+            {
+                AddInfoMessage("Warning! Mac addresses contains suscpicious values.");
+            }
 
-            return true;
+            if (IpOfRemoteHost == null || IpOfInterface == null)
+            {
+                AddInfoMessage("Error! IP addresses are not wrongly initialized.");
+                return false;
+            }
+
+            if (PortDestination == 0 || PortSource == 0)
+            {
+                AddInfoMessage("Warning! Ports are set to 0, network issue expected.");
+            }
+
+                return true;
         }
 
         public void AddInfoMessage(string txt) //add something to output from everywhere else...

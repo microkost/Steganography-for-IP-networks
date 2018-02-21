@@ -265,12 +265,9 @@ namespace SteganoNet.UI.Console
                 //messageReadable = System.Console.ReadLine();
                 messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //mock
 
-                NetSenderClient sc = new NetSenderClient(ipSource, portSource);
+                NetSenderClient sc = new NetSenderClient(ipSource, portSource, ipRemote, portRemote);
                 sc.SecretMessage = messageEncrypted; //never pass messageReadable!
                 sc.StegoUsedMethodIds = stegoMethods;
-                sc.IpDestinationString = ipRemote;
-                sc.PortDestination = portRemote;
-
 
                 //prepare thread for server
                 ThreadStart threadDelegate = new ThreadStart(sc.Speaking);
