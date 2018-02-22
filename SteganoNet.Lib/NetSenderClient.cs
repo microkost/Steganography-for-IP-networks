@@ -20,12 +20,12 @@ namespace SteganoNetLib
         public Queue<string> Messages { get; set; }
 
         //network parametres
-        public string IpSourceString { get; set; } //converted to IpOfInterface in ctor
-        public string IpDestinationString { get; set; } //converted to IpOfRemoteHost in ctor
-        public ushort PortDestination { get; set; }
-        public ushort PortSource { get; set; }
-        public MacAddress MacAddressSource { get; set; }
-        public MacAddress MacAddressDestination { get; set; }
+        public string IpLocalString { get; set; } //converted to IpOfInterface in ctor
+        public string IpRemoteString { get; set; } //converted to IpOfRemoteHost in ctor
+        public ushort PortRemote { get; set; }
+        public ushort PortLocal { get; set; }
+        public MacAddress MacAddressLocal { get; set; }
+        public MacAddress MacAddressRemote { get; set; }
 
         //internal 
         private PacketDevice selectedDevice = null;
@@ -39,11 +39,11 @@ namespace SteganoNetLib
         {
             //network ctor
             this.IpOfInterface = new IpV4Address(ipOfSendingInterface);
-            this.PortSource = portSendFrom;
+            this.PortLocal = portSendFrom;
             this.IpOfRemoteHost = new IpV4Address(ipOfReceivingInterface);
-            this.PortDestination = portSendTo;                      
-            this.MacAddressSource = NetStandard.GetMacAddress(IpOfInterface);
-            this.MacAddressDestination = NetStandard.GetMacAddress(IpOfRemoteHost);
+            this.PortRemote = portSendTo;                      
+            this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpOfInterface);
+            this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpOfRemoteHost);
 
             //bussiness ctor            
             Messages = new Queue<string>();
@@ -68,7 +68,7 @@ namespace SteganoNetLib
                 do
                 {
                     List<Layer> layers = new List<Layer>(); //list of used layers
-                    layers.Add(NetStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination)); //L2
+                    layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
 
                     //creating implicit layers
                     IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost);
@@ -126,7 +126,7 @@ namespace SteganoNetLib
                 return false;
             }
 
-            if(MacAddressSource.Equals("{00:00:00:00:00:00}") || MacAddressDestination.Equals("{00:00:00:00:00:00}"))
+            if(MacAddressLocal.Equals("{00:00:00:00:00:00}") || MacAddressRemote.Equals("{00:00:00:00:00:00}"))
             {
                 AddInfoMessage("Warning! Mac addresses contains suscpicious values.");
             }
@@ -137,7 +137,7 @@ namespace SteganoNetLib
                 return false;
             }
 
-            if (PortDestination == 0 || PortSource == 0)
+            if (PortRemote == 0 || PortLocal == 0)
             {
                 AddInfoMessage("Warning! Ports are set to 0, network issue expected.");
             }

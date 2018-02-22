@@ -12,11 +12,11 @@ using System.Collections.Generic;
 namespace SteganoNetLib
 {
     public static class NetStandard
-    {        
+    {
+        //class is separated by ISO-OSI RM model layers
+
         //---------L2------------------------------------------------------------------------------------------------------------
 
-        //[DllImport("iphlpapi.dll", ExactSpelling = true)]
-        //private static extern int SendARP(int DestIP, int SrcIP, byte[] pMacAddr, ref uint PhyAddrLen);
         public static EthernetLayer GetEthernetLayer(MacAddress MacAddressSource, MacAddress MacAddressDestination)
         {
             EthernetLayer ethernetVrstva = new EthernetLayer();
@@ -25,37 +25,45 @@ namespace SteganoNetLib
             ethernetVrstva.EtherType = EthernetType.None; //Will be filled automatically.                            
             return ethernetVrstva;
         }
-        public static MacAddress GetMacAddress(IpV4Address ipAddress) //because destination mac address needs to be requested from network
+        public static MacAddress GetMacAddressFromArp(IpV4Address ipAddressInterface) //when mac address is not known locally
         {
-            if (ipAddress == null || ipAddress.ToString().Length == 0 || ipAddress.Equals("0.0.0.0")) //in case of input problem or unknown
-            {
-                ipAddress = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip
-            }
+            //name GetMacAddress should be rather expected in NetDevice class
 
-            MacAddress macAddress;
-            try
+            if (ipAddressInterface == null || ipAddressInterface.ToString().Length == 0 || ipAddressInterface.ToString().Equals("0.0.0.0")) //in case of input problem or unknown
             {
-                //source: https://stephenhaunts.com/2014/01/06/getting-the-mac-address-for-a-machine-on-the-network/
+                ipAddressInterface = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip                
+            }            
+
+            try //source: https://stephenhaunts.com/2014/01/06/getting-the-mac-address-for-a-machine-on-the-network/
+            {  
                 byte[] macAddr = new byte[6];
                 uint macAddrLen = (uint)macAddr.Length;
-                int intAddress = BitConverter.ToInt32(IPAddress.Parse(ipAddress.ToString()).GetAddressBytes(), 0);
-                string[] str = new string[(int)macAddrLen];
+                string[] str = new string[(int)macAddrLen]; //bit too classic C but working...
 
+                if (SendARP(StringIPToInt(ipAddressInterface.ToString()), 0, macAddr, ref macAddrLen) != 0)
+                {
+                    //if requested MAC is not found, ask for MAC address of system default gateway
+                    if (SendARP(StringIPToInt(GetDefaultGateway().ToString()), 0, macAddr, ref macAddrLen) != 0)
+                    {
+                        //if still not valid then return smth universal
+                        return NetDevice.GetRandomMacAddress();
+                    }                       
+                }
                 for (int i = 0; i < macAddrLen; i++)
                 {
                     str[i] = macAddr[i].ToString("x2");
                 }
 
-                macAddress = new MacAddress(string.Join(":", str).ToUpper()); //get L2 destination address for inserted IP address                
+                return new MacAddress(string.Join(":", str).ToUpper()); //get L2 destination address for inserted IP address                
             }
             catch
             {
-                macAddress = new MacAddress("02:02:02:02:02:02"); //TODO should be less suspicious
+                return NetDevice.GetRandomMacAddress();
             }
-
-            return macAddress;
         }
 
+        [DllImport("iphlpapi.dll", ExactSpelling = true)] //used by SendARP() + GetMacAddress()
+        private static extern int SendARP(int DestIP, int SrcIP, byte[] pMacAddr, ref uint PhyAddrLen); //used by GetMacAddress
 
         //---------L3------------------------------------------------------------------------------------------------------------
         public static IpV4Layer GetIpV4Layer(IpV4Address SourceIP, IpV4Address DestinationIP)
@@ -76,7 +84,6 @@ namespace SteganoNetLib
             if (carryingLayer == IpV4Protocol.Udp)
                 ipv4Vrstva.Protocol = IpV4Protocol.Udp;
             */
-
             return ipv4Vrstva;
         }
 
@@ -98,8 +105,7 @@ namespace SteganoNetLib
                     if (!gateways.Any())
                         continue;
 
-                    var gateway =
-                        gateways.FirstOrDefault(g => g.Address.AddressFamily.ToString() == "InterNetwork");
+                    var gateway = gateways.FirstOrDefault(g => g.Address.AddressFamily.ToString() == "InterNetwork");
                     if (gateway == null)
                         continue;
 
@@ -113,7 +119,7 @@ namespace SteganoNetLib
             return ipv4address;
         }
 
-        
+
         //checks for used ports and retrieves the first free port <returns>the free port or 0 if it did not find a free port</returns>
         public static ushort GetAvailablePort(ushort startingPort)
         {
@@ -143,6 +149,28 @@ namespace SteganoNetLib
                     return i;
 
             return 0;
+        }
+
+        public static int StringIPToInt(string IPString)
+        {
+            //source https://www.codeproject.com/Messages/1194102/iphlpapi-dll-and-sendarp.aspx
+
+            string[] _splitString = IPString.Split(new char[] { '.' });
+            int IpAddInInt = 0;
+            if (_splitString.Length < 4)
+            {
+                throw new ArgumentException("Please pass in a valid IP in dotted-quad notation!", "IPString");
+            }
+            else
+            {
+                IpAddInInt += (int)(int.Parse(_splitString[3]) * Math.Pow(256, 0));
+                IpAddInInt += (int)(int.Parse(_splitString[2]) * Math.Pow(256, 1));
+                IpAddInInt += (int)(int.Parse(_splitString[1]) * Math.Pow(256, 2));
+                IpAddInInt += (int)(int.Parse(_splitString[0]) * Math.Pow(256, 3));
+            }
+
+            IpAddInInt = (int)(((IpAddInInt & 0x000000ff) << 24) + ((IpAddInInt & 0x0000ff00) << 8) + ((IpAddInInt & 0x00ff0000) >> 8) + ((IpAddInInt & 0xff000000) >> 24));
+            return IpAddInInt;
         }
 
         //---------L4------------------------------------------------------------------------------------------------------------

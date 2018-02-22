@@ -20,30 +20,32 @@ namespace SteganoNetLib
         public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
 
         //network parametres
-        public string IpSourceString { get; set; }
-        public string IpDestinationString { get; set; }
-        public ushort PortSource { get; set; } //PortListening //obviously not used
-        public ushort PortDestination { get; set; } //PortOfRemoteHost
-        public MacAddress MacAddressSource { get; set; }
-        public MacAddress MacAddressDestination { get; set; }
+        public string IpLocalString { get; set; }
+        public string IpRemoteString { get; set; }
+        public ushort PortLocal { get; set; } //PortListening //obviously not used
+        public ushort PortRemote { get; set; } //PortOfRemoteHost
+        public MacAddress MacAddressLocal { get; set; }
+        public MacAddress MacAddressRemote { get; set; }
 
         //internal         
         private PacketDevice selectedDevice = null;        
-        private IpV4Address IpOfListeningInterface { get; set; }
-        private IpV4Address IpOfRemoteHost { get; set; }
+        private IpV4Address IpLocalListening { get; set; }
+        private IpV4Address IpRemoteSpeaker { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)                
 
-        public NetReceiverServer(string ipOfListeningInterface, ushort portOfListening = 0)
+        public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString, ushort portRemote)
         {
             //network ctor
-            this.IpOfListeningInterface = new IpV4Address(ipOfListeningInterface);
-            this.PortSource = portOfListening;
-            MacAddressSource = NetStandard.GetMacAddress(IpOfListeningInterface);
-            MacAddressDestination = NetStandard.GetMacAddress(new IpV4Address("0.0.0.0")); //use gateway mac
+            this.IpLocalListening = new IpV4Address(ipLocalListening);
+            this.IpRemoteSpeaker = new IpV4Address(ipRemoteString);
+            this.PortLocal = portLocal;
+            this.PortRemote = portRemote;
+            this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpLocalListening);
+            this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpRemoteSpeaker); //use gateway mac
 
             //bussiness ctor
-            StegoPackets = new List<Tuple<Packet, List<int>>>();
+            StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
             Messages.Enqueue("Server created...");
@@ -57,12 +59,12 @@ namespace SteganoNetLib
                 return;
             }
 
-            selectedDevice = NetDevice.GetSelectedDevice(IpOfListeningInterface); //take the selected adapter
+            selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
-                Messages.Enqueue(String.Format("Listening on {0} = {1}...", IpOfListeningInterface, selectedDevice.Description));
+                Messages.Enqueue(String.Format("Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
 
                 //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
                 //communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter

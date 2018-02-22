@@ -1,4 +1,5 @@
 ﻿using PcapDotNet.Core;
+using PcapDotNet.Packets.Ethernet;
 using PcapDotNet.Packets.IpV4;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,13 @@ namespace SteganoNetLib
         }
 
         //L2        
+        public static MacAddress GetRandomMacAddress() //used when ARP request fails
+        {
+            //should be extended 
+            //* read computer manufacturer https://social.msdn.microsoft.com/Forums/vstudio/en-US/4c8e8287-3898-4990-a81b-98f6432514b1/how-to-get-system-manufacturer-name-using-c?forum=csharpgeneral
+            //* get some random mac http://www.gcstech.net/macvendor/index.php?node=vensea&list
+            return new MacAddress("84:2B:2B:23:8C:AB");
+        }
 
         //L3
         public static List<Tuple<string, string>> GetIPv4addressesAndDescriptionLocal() //pair of strings ipv4 and description for UI

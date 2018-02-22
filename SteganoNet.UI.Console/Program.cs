@@ -1,7 +1,9 @@
 ﻿using SteganoNetLib;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 
 namespace SteganoNet.UI.Console
@@ -52,7 +54,7 @@ namespace SteganoNet.UI.Console
                 System.Console.WriteLine("\tUse IPv4 or IPv6? (4/6) 4"); //ha-ha
 
                 System.Console.Write("\tIs this device (s)erver-receiver or (c)lient-sender? (s/c) ");
-                role = System.Console.ReadLine();
+                role = System.Console.ReadLine().ToLower();
                 System.Console.WriteLine("");
 
                 //local IP
@@ -223,9 +225,7 @@ namespace SteganoNet.UI.Console
             if (String.Equals("s", role)) //its server
             {
                 //prepare server
-                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
-                rs.IpDestinationString = ipRemote;
-                rs.PortDestination = portRemote;
+                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote);
                 rs.StegoUsedMethodIds = stegoMethods;                
 
                 //prepare thread for server
@@ -261,18 +261,18 @@ namespace SteganoNet.UI.Console
                 //prepare client
                 //messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
                 //messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
+
                 //System.Console.Write(String.Format("\tEnter secret message: (like {0})", messageReadable));
                 //messageReadable = System.Console.ReadLine();
-                messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //mock
+                messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
 
                 NetSenderClient sc = new NetSenderClient(ipSource, portSource, ipRemote, portRemote);
-                sc.SecretMessage = messageEncrypted; //never pass messageReadable!
+                sc.SecretMessage = messageEncrypted; //never pass in messageReadable! It works, but from principe...
                 sc.StegoUsedMethodIds = stegoMethods;
 
-                //prepare thread for server
+                //prepare thread for client
                 ThreadStart threadDelegate = new ThreadStart(sc.Speaking);
                 Thread senderClientThread = new Thread(threadDelegate);
-                //Thread senderClientThread = new Thread(rs.Listening);
                 senderClientThread.Name = "SpeakingThread";
                 senderClientThread.IsBackground = true;
                 senderClientThread.Start();
@@ -308,6 +308,10 @@ namespace SteganoNet.UI.Console
             {
                 //System.Console.WriteLine("No another window opened...");
             }
+
+            //making executable command (WIN+R) and copy-paste
+            System.Console.Write(String.Format("\nRun same scenario again with command: \n{0} ", Assembly.GetExecutingAssembly().CodeBase/*, Path.GetFileName(Assembly.GetExecutingAssembly().CodeBase)*/));
+            System.Console.WriteLine(String.Format("-role {0} -ip {1} -port {2} -ipremote {3} -portremote {4} -methods {5} -runsame {6} -message \"{7}\"", role, ipSource, portSource, ipRemote, portRemote, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n", "sample"));
 
             System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool. Press any key to exit...");
             System.Console.ReadKey();
