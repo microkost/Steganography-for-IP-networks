@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
-using System.Runtime.InteropServices; //console
+//using System.Runtime.InteropServices; //console
 using System.Threading;
 using SteganoNetLib;
+using System.Data;
+using System.Linq;
 
 /***************************************************************************
  * 
@@ -16,15 +18,22 @@ namespace SteganographyFramework
     {
         private Thread serverThread;
         private Thread clientThread;
-
-        NetReceiverServer listener; //for thread
-        NetSenderClient speaker; //for thread
+        public NetReceiverServer listener; //for thread
+        public NetSenderClient speaker; //for thread
+        public delegate void writeInfoToTextBoxDelegate(INetNode nn); //delegate type 
+        public writeInfoToTextBoxDelegate writeInfoToTextBox; //delegate object
 
         private bool isServer = true; //which role has app now
         private bool isServerListening = false;
         private bool isClientSpeaking = false;
+
         public MainWindow()
         {
+            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false)
+            {
+                throw new Exception("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap");
+            }
+
             InitializeComponent();
 
             try
@@ -39,7 +48,7 @@ namespace SteganographyFramework
 
             try
             {
-                comboBoxMethod.SelectedIndex = 0; //debug developer settings
+                listBoxMethod.SelectedIndex = 0; //debug developer settings
             }
             catch
             {
@@ -53,7 +62,7 @@ namespace SteganographyFramework
             InitialProcedure();
             try
             {
-                comboBoxMethod.SelectedIndex = comboBoxMethod.FindStringExact(method);
+                listBoxMethod.SelectedIndex = listBoxMethod.FindStringExact(method);
             }
             catch
             {
@@ -77,54 +86,42 @@ namespace SteganographyFramework
 
             checkBoxServer.Checked = isServer;
 
-            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false)
-            {
-                throw new Exception("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap");
-            }
-
             List<String> IPv4addresses = NetDevice.GetIPv4addressesLocal();
-            //IPv4addresses.Add("127.0.0.1"); //add localhost //TODO                       
 
             foreach (string ipa in IPv4addresses) //print out
             {
-                textBoxDebug.Text += String.Format("IPv4 {0}\r\n", ipa);
+                textBoxDebug.AppendText(String.Format("Available IPv4: {0}\r\n", ipa));
             }
             textBoxDebug.Text += "----------------------------------------\r\n";
-
 
             //IP addresses server      
             //comboBoxServerAddress.DataSource = Dns.GetHostEntry(Dns.GetHostName()).AddressList; //pure from system
             BindingSource bs_servers = new BindingSource();
             bs_servers.DataSource = IPv4addresses;
             comboBoxServerAddress.DataSource = bs_servers;
-            comboBoxServerAddress.SelectedIndex = 0;
+            comboBoxServerAddress.SelectedIndex = bs_servers.Count - 1; //try-catch
 
             //IP addresses client
             //comboBoxClientAddress.DataSource = Dns.GetHostEntry(Dns.GetHostName()).AddressList; //pure from system
             BindingSource bs_clients = new BindingSource();
             bs_clients.DataSource = IPv4addresses;
             comboBoxClientAddress.DataSource = bs_clients;
-            comboBoxClientAddress.SelectedIndex = 0;
+            comboBoxClientAddress.SelectedIndex = bs_clients.Count - 1; //try-catch
 
-            //TMP TMP until combobox will be able to change and save value!
+            //TMP until combobox will be able to change and save value
             textBoxDestination.Text = comboBoxClientAddress.SelectedValue.ToString();
 
-            //methods combobox (text is ID for method)
-            //BindingSource bs_methods = new BindingSource();
-            //bs_methods.DataSource = Lib.listOfStegoMethods;
-            //comboBoxMethod.DataSource = bs_methods;
-
             Dictionary<int, string> allmethods = NetSteganography.GetListStegoMethodsIdAndKey();
-            comboBoxMethod.DataSource = new BindingSource(allmethods, null);
-            comboBoxMethod.DisplayMember = "Value";
-            comboBoxMethod.ValueMember = "Key";
-            comboBoxMethod.SelectedIndex = 0; //default method manual predefined option
+            listBoxMethod.DataSource = new BindingSource(allmethods, null);
+            listBoxMethod.DisplayMember = "Value";
+            listBoxMethod.ValueMember = "Key";
+            listBoxMethod.SelectedIndex = 0; //default method manual predefined option
         }
 
         //console window initialization + calling
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool AllocConsole();
+        //[DllImport("kernel32.dll", SetLastError = true)]
+        //[return: MarshalAs(UnmanagedType.Bool)]
+        //static extern bool AllocConsole();
 
         private void buttonListen_Click(object sender, EventArgs e)  //LISTENING method which starting THREAD (server start)
         {
@@ -133,7 +130,9 @@ namespace SteganographyFramework
             if (isServerListening == true) //server is already listening DO DISCONNECT
             {
                 isServerListening = false;
+                //end delegate
                 buttonListen.Text = "Listen";
+                textBoxDebug.Text += "----------------------------------------\r\n";
 
                 if (serverThread != null)
                 {
@@ -142,44 +141,42 @@ namespace SteganographyFramework
 
                 //pcap_freealldevs(alldevs); //We don't need any more the device list. Free it
                 textBoxServerStatus.Text = "disconnected";
+                textBoxDebug.Text += "----------------------------------------\r\n";
             }
             else //server is NOT connected
             {
                 isServerListening = true;
                 buttonListen.Text = "Disconnect";
 
-                //listener = new Server(this);
-                //listener.serverIP = new IpV4Address(comboBoxServerAddress.Text);
-                //listener.StegoMethod = comboBoxMethod.SelectedValue.ToString();
-                //listener.DestinationPort = (ushort)numericUpDownServerPort.Value;
-
                 listener = new NetReceiverServer(comboBoxServerAddress.Text, (ushort)numericUpDownServerPort.Value, comboBoxClientAddress.Text, (ushort)numericUpDownClientPort.Value);
-                listener.StegoUsedMethodIds = new List<int>() { (int)comboBoxMethod.SelectedValue };
+                //listener.StegoUsedMethodIds = new List<int>() { (int)listBoxMethod.SelectedValue };                
+                listener.StegoUsedMethodIds = GetSelectedMethodsIds();
 
                 serverThread = new Thread(listener.Listening);
                 serverThread.Start();
 
                 textBoxServerStatus.Text = "connected";
 
-                /*
-                //needs to be in separate thread... Kills UI otherwise
-                while (listener.Terminate == false) //console print out
-                {
-                    try
-                    {
-                        textBoxDebug.Text += listener.Messages.Dequeue(); //show lastest message                   
-                    }
-                    catch
-                    {
-                        System.Threading.Thread.Sleep(100);
-                    }
-                }
-                */
+                writeInfoToTextBox = new writeInfoToTextBoxDelegate(WriteInfoDebug);
+                Invoke(writeInfoToTextBox, listener);
             }
         }
+
+        private List<int> GetSelectedMethodsIds()
+        {
+            List<int> selectedIDs = new List<int>();
+            foreach (int i in listBoxMethod.SelectedIndices)
+            {
+                KeyValuePair<int, string> item = (KeyValuePair<int, string>)listBoxMethod.Items[i]; //TODO protection
+                selectedIDs.Add(item.Key);
+            }
+            textBoxDebug.AppendText(string.Join(", ", selectedIDs) + "\r\n");
+            return selectedIDs;
+        }
+
         private void buttonPlus_Click(object sender, EventArgs e) //one more window with agent
         {
-            Form MainWindow2 = new MainWindow(!isServer, comboBoxMethod.SelectedValue.ToString());
+            Form MainWindow2 = new MainWindow(!isServer, listBoxMethod.SelectedValue.ToString());
             MainWindow2.Show();
         }
 
@@ -224,14 +221,16 @@ namespace SteganographyFramework
                 buttonClient.Enabled = false;
                 groupBoxClient.Enabled = false;
             }
-
         }
         private void buttonSteganogr_Click(object sender, EventArgs e)
         {
             if (isClientSpeaking == true) //client is speaking DO DISCONNECT
             {
                 isClientSpeaking = false;
+                //printClientDebug.Abort();
+                //updateTextBox.EndInvoke();
                 buttonClient.Text = "Start speaking";
+                textBoxDebug.Text += "----------------------------------------\r\n";
 
                 if (clientThread != null)
                 {
@@ -244,6 +243,7 @@ namespace SteganographyFramework
             {
                 isClientSpeaking = true;
                 buttonClient.Text = "Stop speaking";
+                textBoxDebug.Text += "----------------------------------------\r\n";
 
                 //speaker = new Client(this);
                 //speaker.SourceIP = new IpV4Address(comboBoxClientAddress.Text);
@@ -255,27 +255,17 @@ namespace SteganographyFramework
 
                 speaker = new NetSenderClient(comboBoxClientAddress.Text, (ushort)numericUpDownClientPort.Value, comboBoxServerAddress.Text, (ushort)numericUpDownServerPort.Value);
                 speaker.SecretMessage = DataOperationsCrypto.DoCrypto(textBoxSecret.Text);
-                speaker.StegoUsedMethodIds = new List<int>() { (int)comboBoxMethod.SelectedValue };
+
+                //speaker.StegoUsedMethodIds = new List<int>() { (int)listBoxMethod.SelectedValue };                
+                speaker.StegoUsedMethodIds = GetSelectedMethodsIds();
 
                 clientThread = new Thread(speaker.Speaking);
                 clientThread.Start();
 
                 textBoxClientStatus.Text = "active";
 
-                /* 
-                //needs to be in separate thread... Kills UI otherwise
-                while (speaker.Terminate == false) //console print out
-                {
-                    try
-                    {
-                        textBoxDebug.Text += speaker.Messages.Dequeue(); //show lastest message                   
-                    }
-                    catch
-                    {
-                        System.Threading.Thread.Sleep(100);
-                    }
-                }
-                */
+                writeInfoToTextBox = new writeInfoToTextBoxDelegate(WriteInfoDebug); // initialize delegate object
+                Invoke(writeInfoToTextBox, speaker);
             }
         }
         private void comboBoxServerAddress_SelectedIndexChanged(object sender, EventArgs e) //autofill destination by local server IP
@@ -288,15 +278,36 @@ namespace SteganographyFramework
             if (speaker != null)
             {
                 //speaker.StegoMethod = comboBoxMethod.SelectedValue.ToString();
-                speaker.StegoUsedMethodIds = new List<int>() { (int)comboBoxMethod.SelectedValue };
+                List<int> selectedIDs = new List<int>();
+                foreach (int element in listBoxMethod.SelectedIndices)
+                {
+                    selectedIDs.Add((int)element);
+                }
+                textBoxDebug.AppendText(selectedIDs.ToArray().ToString());
+                speaker.StegoUsedMethodIds = selectedIDs;
             }
 
             if (listener != null)
             {
                 //listener.StegoMethod = comboBoxMethod.SelectedValue.ToString();
-                listener.StegoUsedMethodIds = new List<int>() { (int)comboBoxMethod.SelectedValue };
+                //listener.StegoUsedMethodIds = new List<int>() { (int)listBoxMethod.SelectedValue };                
+                listener.StegoUsedMethodIds = GetSelectedMethodsIds();
             }
+        }
 
+        public void WriteInfoDebug(INetNode mm) //printing 
+        {
+            while (!mm.AskTermination()) //console print out
+            {
+                try
+                {
+                    textBoxDebug.AppendText(mm.Messages.Dequeue() + "\r\n"); //show message inline on GUI                  
+                }
+                catch
+                {
+                    Thread.Sleep(100);
+                }
+            }
         }
     }
 }

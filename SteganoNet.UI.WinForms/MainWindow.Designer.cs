@@ -47,7 +47,6 @@
             this.buttonPlus = new System.Windows.Forms.Button();
             this.checkBoxServer = new System.Windows.Forms.CheckBox();
             this.checkBoxClient = new System.Windows.Forms.CheckBox();
-            this.comboBoxMethod = new System.Windows.Forms.ComboBox();
             this.groupBoxMethod = new System.Windows.Forms.GroupBox();
             this.buttonClient = new System.Windows.Forms.Button();
             this.textBoxSecret = new System.Windows.Forms.TextBox();
@@ -56,6 +55,8 @@
             this.label8 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.listBoxMethod = new System.Windows.Forms.ListBox();
+            this.label9 = new System.Windows.Forms.Label();
             this.groupBoxServer.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownServerPort)).BeginInit();
             this.groupBoxClient.SuspendLayout();
@@ -157,12 +158,12 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.textBoxDebug.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.textBoxDebug.CausesValidation = false;
-            this.textBoxDebug.Location = new System.Drawing.Point(556, 12);
+            this.textBoxDebug.Location = new System.Drawing.Point(559, 12);
             this.textBoxDebug.Multiline = true;
             this.textBoxDebug.Name = "textBoxDebug";
             this.textBoxDebug.ReadOnly = true;
             this.textBoxDebug.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.textBoxDebug.Size = new System.Drawing.Size(497, 306);
+            this.textBoxDebug.Size = new System.Drawing.Size(497, 381);
             this.textBoxDebug.TabIndex = 2;
             // 
             // groupBoxClient
@@ -244,7 +245,7 @@
             // 
             // buttonPlus
             // 
-            this.buttonPlus.Location = new System.Drawing.Point(236, 11);
+            this.buttonPlus.Location = new System.Drawing.Point(236, 13);
             this.buttonPlus.Name = "buttonPlus";
             this.buttonPlus.Size = new System.Drawing.Size(23, 23);
             this.buttonPlus.TabIndex = 10;
@@ -257,7 +258,7 @@
             this.checkBoxServer.AutoSize = true;
             this.checkBoxServer.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.checkBoxServer.Location = new System.Drawing.Point(199, 15);
-            this.checkBoxServer.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.checkBoxServer.Margin = new System.Windows.Forms.Padding(2);
             this.checkBoxServer.Name = "checkBoxServer";
             this.checkBoxServer.Size = new System.Drawing.Size(57, 17);
             this.checkBoxServer.TabIndex = 11;
@@ -269,7 +270,7 @@
             // 
             this.checkBoxClient.AutoSize = true;
             this.checkBoxClient.Location = new System.Drawing.Point(5, 17);
-            this.checkBoxClient.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.checkBoxClient.Margin = new System.Windows.Forms.Padding(2);
             this.checkBoxClient.Name = "checkBoxClient";
             this.checkBoxClient.Size = new System.Drawing.Size(52, 17);
             this.checkBoxClient.TabIndex = 12;
@@ -277,38 +278,28 @@
             this.checkBoxClient.UseVisualStyleBackColor = true;
             this.checkBoxClient.CheckedChanged += new System.EventHandler(this.checkBoxClient_CheckedChanged);
             // 
-            // comboBoxMethod
-            // 
-            this.comboBoxMethod.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBoxMethod.FormattingEnabled = true;
-            this.comboBoxMethod.Location = new System.Drawing.Point(4, 17);
-            this.comboBoxMethod.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.comboBoxMethod.Name = "comboBoxMethod";
-            this.comboBoxMethod.Size = new System.Drawing.Size(529, 21);
-            this.comboBoxMethod.TabIndex = 13;
-            this.comboBoxMethod.SelectedIndexChanged += new System.EventHandler(this.comboBoxMethod_SelectedIndexChanged);
-            // 
             // groupBoxMethod
             // 
+            this.groupBoxMethod.Controls.Add(this.label9);
+            this.groupBoxMethod.Controls.Add(this.listBoxMethod);
             this.groupBoxMethod.Controls.Add(this.buttonClient);
-            this.groupBoxMethod.Controls.Add(this.comboBoxMethod);
             this.groupBoxMethod.Controls.Add(this.textBoxSecret);
             this.groupBoxMethod.Controls.Add(this.label7);
             this.groupBoxMethod.Location = new System.Drawing.Point(11, 170);
-            this.groupBoxMethod.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.groupBoxMethod.Margin = new System.Windows.Forms.Padding(2);
             this.groupBoxMethod.Name = "groupBoxMethod";
-            this.groupBoxMethod.Padding = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.groupBoxMethod.Size = new System.Drawing.Size(537, 150);
+            this.groupBoxMethod.Padding = new System.Windows.Forms.Padding(2);
+            this.groupBoxMethod.Size = new System.Drawing.Size(542, 223);
             this.groupBoxMethod.TabIndex = 14;
             this.groupBoxMethod.TabStop = false;
-            this.groupBoxMethod.Text = "Method";
+            this.groupBoxMethod.Text = "Message handling";
             // 
             // buttonClient
             // 
-            this.buttonClient.Location = new System.Drawing.Point(410, 118);
-            this.buttonClient.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.buttonClient.Location = new System.Drawing.Point(276, 192);
+            this.buttonClient.Margin = new System.Windows.Forms.Padding(2);
             this.buttonClient.Name = "buttonClient";
-            this.buttonClient.Size = new System.Drawing.Size(124, 23);
+            this.buttonClient.Size = new System.Drawing.Size(259, 23);
             this.buttonClient.TabIndex = 14;
             this.buttonClient.Text = "Send";
             this.buttonClient.UseVisualStyleBackColor = true;
@@ -316,12 +307,12 @@
             // 
             // textBoxSecret
             // 
-            this.textBoxSecret.Location = new System.Drawing.Point(4, 55);
-            this.textBoxSecret.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.textBoxSecret.Location = new System.Drawing.Point(276, 31);
+            this.textBoxSecret.Margin = new System.Windows.Forms.Padding(2);
             this.textBoxSecret.Multiline = true;
             this.textBoxSecret.Name = "textBoxSecret";
             this.textBoxSecret.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.textBoxSecret.Size = new System.Drawing.Size(529, 59);
+            this.textBoxSecret.Size = new System.Drawing.Size(259, 157);
             this.textBoxSecret.TabIndex = 15;
             this.textBoxSecret.Text = "VSB - Technical University of Ostrava has long tradition in high quality engineer" +
     "ing.";
@@ -329,7 +320,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(2, 39);
+            this.label7.Location = new System.Drawing.Point(273, 16);
             this.label7.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(88, 13);
@@ -365,10 +356,10 @@
             this.groupBox1.Controls.Add(this.label5);
             this.groupBox1.Controls.Add(this.numericUpDownClientPort);
             this.groupBox1.Location = new System.Drawing.Point(287, 10);
-            this.groupBox1.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.groupBox1.Margin = new System.Windows.Forms.Padding(2);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Padding = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.groupBox1.Size = new System.Drawing.Size(262, 109);
+            this.groupBox1.Padding = new System.Windows.Forms.Padding(2);
+            this.groupBox1.Size = new System.Drawing.Size(266, 109);
             this.groupBox1.TabIndex = 15;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Client network";
@@ -387,11 +378,31 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Server network";
             // 
+            // listBoxMethod
+            // 
+            this.listBoxMethod.FormattingEnabled = true;
+            this.listBoxMethod.Location = new System.Drawing.Point(7, 31);
+            this.listBoxMethod.Name = "listBoxMethod";
+            this.listBoxMethod.ScrollAlwaysVisible = true;
+            this.listBoxMethod.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
+            this.listBoxMethod.Size = new System.Drawing.Size(255, 160);
+            this.listBoxMethod.TabIndex = 17;
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(4, 16);
+            this.label9.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(149, 13);
+            this.label9.TabIndex = 18;
+            this.label9.Text = "Available fields (multiselection)";
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1067, 329);
+            this.ClientSize = new System.Drawing.Size(1067, 398);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBoxClient);
@@ -399,7 +410,7 @@
             this.Controls.Add(this.textBoxDebug);
             this.Controls.Add(this.groupBoxServer);
             this.Name = "MainWindow";
-            this.Text = "Secret Communication Tool";
+            this.Text = "NST - Network Steganographic Tool";
             this.groupBoxServer.ResumeLayout(false);
             this.groupBoxServer.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownServerPort)).EndInit();
@@ -436,7 +447,6 @@
         private System.Windows.Forms.Button buttonPlus;
         private System.Windows.Forms.CheckBox checkBoxServer;
         private System.Windows.Forms.CheckBox checkBoxClient;
-        private System.Windows.Forms.ComboBox comboBoxMethod;
         private System.Windows.Forms.GroupBox groupBoxMethod;
         private System.Windows.Forms.Button buttonClient;
         private System.Windows.Forms.TextBox textBoxSecret;
@@ -446,6 +456,8 @@
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.TextBox textBoxDestination;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.ListBox listBoxMethod;
+        private System.Windows.Forms.Label label9;
     }
 }
 

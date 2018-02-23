@@ -48,6 +48,10 @@ namespace SteganoNetLib
             //bussiness ctor            
             Messages = new Queue<string>();
             AddInfoMessage("Client created...");
+
+            AddInfoMessage("Client test 1");
+            AddInfoMessage("Client test 2");
+            AddInfoMessage("Client test 3");
         }
 
         public void Speaking() //thread main method
@@ -151,5 +155,9 @@ namespace SteganoNetLib
             return;
         }
 
+        public bool AskTermination()
+        {
+            return this.Terminate;
+        }
     }
 }

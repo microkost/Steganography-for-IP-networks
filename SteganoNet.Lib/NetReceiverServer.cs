@@ -236,6 +236,9 @@ namespace SteganoNetLib
             this.Messages.Enqueue(txt);
             return;
         }
-
+        public bool AskTermination()
+        {
+            return this.Terminate;
+        }
     }
 }

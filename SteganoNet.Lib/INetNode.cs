@@ -20,12 +20,14 @@ namespace SteganoNetLib
         MacAddress MacAddressLocal { get; set; }
         MacAddress MacAddressRemote { get; set; }
 
-        //control
+        //controla
         Queue<string> Messages { get; set; }
         //bool Terminate { get; set; } //ends thread, doesnt work because is not property - volatile used
 
         //methods
         bool ArePrerequisitiesDone(); //checking if properties are not null before start
         void AddInfoMessage(string txt); //add something to output from everywhere else...        
+        bool AskTermination(); //used by WriteInfo methods
+
     }
 }
