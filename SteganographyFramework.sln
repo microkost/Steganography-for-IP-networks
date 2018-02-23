@@ -1,16 +1,13 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.15
+VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.WinForms", "SteganographyFramework\SteganoNet.UI.WinForms.csproj", "{842DB534-8D1A-4394-A14D-D956E79C64B5}"
 	ProjectSection(ProjectDependencies) = postProject
-		{CA73ED25-550E-4FA6-849F-741C607394C9} = {CA73ED25-550E-4FA6-849F-741C607394C9}
 		{69B9B5AB-0918-4F12-8B28-8AA350ABE800} = {69B9B5AB-0918-4F12-8B28-8AA350ABE800}
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Lib", "SteganoNetLib\SteganoNet.Lib.csproj", "{69B9B5AB-0918-4F12-8B28-8AA350ABE800}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Tests", "SteganoNet.Tests\SteganoNet.Tests.csproj", "{CA73ED25-550E-4FA6-849F-741C607394C9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,18 +44,6 @@ Global
 		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x64.Build.0 = Release|Any CPU
 		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.ActiveCfg = Release|Any CPU
 		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.Build.0 = Release|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Debug|x64.Build.0 = Debug|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Debug|x86.ActiveCfg = Debug|x86
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Debug|x86.Build.0 = Debug|x86
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|x64.ActiveCfg = Release|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|x64.Build.0 = Release|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|x86.ActiveCfg = Release|Any CPU
-		{CA73ED25-550E-4FA6-849F-741C607394C9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
