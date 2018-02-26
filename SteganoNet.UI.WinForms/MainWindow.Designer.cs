@@ -72,7 +72,7 @@
             this.groupBoxServer.Controls.Add(this.textBoxServerStatus);
             this.groupBoxServer.Controls.Add(this.label3);
             this.groupBoxServer.Controls.Add(this.buttonListen);
-            this.groupBoxServer.Location = new System.Drawing.Point(12, 99);
+            this.groupBoxServer.Location = new System.Drawing.Point(13, 328);
             this.groupBoxServer.Name = "groupBoxServer";
             this.groupBoxServer.Size = new System.Drawing.Size(261, 70);
             this.groupBoxServer.TabIndex = 1;
@@ -87,6 +87,7 @@
             this.textBoxServerStatus.Size = new System.Drawing.Size(197, 20);
             this.textBoxServerStatus.TabIndex = 8;
             this.textBoxServerStatus.Text = "not connected";
+            this.textBoxServerStatus.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // label3
             // 
@@ -105,11 +106,11 @@
             this.buttonListen.TabIndex = 0;
             this.buttonListen.Text = "Listen";
             this.buttonListen.UseVisualStyleBackColor = true;
-            this.buttonListen.Click += new System.EventHandler(this.buttonListen_Click);
+            this.buttonListen.Click += new System.EventHandler(this.ButtonListen_Click);
             // 
             // numericUpDownServerPort
             // 
-            this.numericUpDownServerPort.Location = new System.Drawing.Point(54, 54);
+            this.numericUpDownServerPort.Location = new System.Drawing.Point(54, 60);
             this.numericUpDownServerPort.Maximum = new decimal(new int[] {
             65535,
             0,
@@ -127,7 +128,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(10, 57);
+            this.label2.Location = new System.Drawing.Point(13, 62);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(40, 13);
             this.label2.TabIndex = 4;
@@ -136,7 +137,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 35);
+            this.label1.Location = new System.Drawing.Point(3, 44);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(50, 13);
             this.label1.TabIndex = 3;
@@ -146,11 +147,11 @@
             // 
             this.comboBoxServerAddress.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxServerAddress.FormattingEnabled = true;
-            this.comboBoxServerAddress.Location = new System.Drawing.Point(54, 31);
+            this.comboBoxServerAddress.Location = new System.Drawing.Point(54, 36);
             this.comboBoxServerAddress.Name = "comboBoxServerAddress";
             this.comboBoxServerAddress.Size = new System.Drawing.Size(201, 21);
             this.comboBoxServerAddress.TabIndex = 2;
-            this.comboBoxServerAddress.SelectedIndexChanged += new System.EventHandler(this.comboBoxServerAddress_SelectedIndexChanged);
+            this.comboBoxServerAddress.SelectedIndexChanged += new System.EventHandler(this.ComboBoxServerAddress_SelectedIndexChanged);
             // 
             // textBoxDebug
             // 
@@ -164,33 +165,35 @@
             this.textBoxDebug.Name = "textBoxDebug";
             this.textBoxDebug.ReadOnly = true;
             this.textBoxDebug.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.textBoxDebug.Size = new System.Drawing.Size(497, 405);
+            this.textBoxDebug.Size = new System.Drawing.Size(497, 387);
             this.textBoxDebug.TabIndex = 2;
             // 
             // groupBoxClient
             // 
             this.groupBoxClient.Controls.Add(this.textBoxClientStatus);
             this.groupBoxClient.Controls.Add(this.label4);
-            this.groupBoxClient.Location = new System.Drawing.Point(287, 124);
+            this.groupBoxClient.Controls.Add(this.buttonClient);
+            this.groupBoxClient.Location = new System.Drawing.Point(287, 328);
             this.groupBoxClient.Name = "groupBoxClient";
-            this.groupBoxClient.Size = new System.Drawing.Size(266, 45);
+            this.groupBoxClient.Size = new System.Drawing.Size(266, 70);
             this.groupBoxClient.TabIndex = 9;
             this.groupBoxClient.TabStop = false;
             this.groupBoxClient.Text = "Client";
             // 
             // textBoxClientStatus
             // 
-            this.textBoxClientStatus.Location = new System.Drawing.Point(55, 19);
+            this.textBoxClientStatus.Location = new System.Drawing.Point(55, 41);
             this.textBoxClientStatus.Name = "textBoxClientStatus";
             this.textBoxClientStatus.ReadOnly = true;
             this.textBoxClientStatus.Size = new System.Drawing.Size(204, 20);
             this.textBoxClientStatus.TabIndex = 8;
             this.textBoxClientStatus.Text = "not connected";
+            this.textBoxClientStatus.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(14, 23);
+            this.label4.Location = new System.Drawing.Point(15, 44);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(35, 13);
             this.label4.TabIndex = 7;
@@ -252,7 +255,7 @@
             this.buttonPlus.TabIndex = 10;
             this.buttonPlus.Text = "+";
             this.buttonPlus.UseVisualStyleBackColor = true;
-            this.buttonPlus.Click += new System.EventHandler(this.buttonPlus_Click);
+            this.buttonPlus.Click += new System.EventHandler(this.ButtonPlus_Click);
             // 
             // checkBoxServer
             // 
@@ -265,7 +268,7 @@
             this.checkBoxServer.TabIndex = 11;
             this.checkBoxServer.Text = "Server";
             this.checkBoxServer.UseVisualStyleBackColor = true;
-            this.checkBoxServer.CheckedChanged += new System.EventHandler(this.checkBoxServer_CheckedChanged);
+            this.checkBoxServer.CheckedChanged += new System.EventHandler(this.CheckBoxServer_CheckedChanged);
             // 
             // checkBoxClient
             // 
@@ -277,20 +280,19 @@
             this.checkBoxClient.TabIndex = 12;
             this.checkBoxClient.Text = "Client";
             this.checkBoxClient.UseVisualStyleBackColor = true;
-            this.checkBoxClient.CheckedChanged += new System.EventHandler(this.checkBoxClient_CheckedChanged);
+            this.checkBoxClient.CheckedChanged += new System.EventHandler(this.CheckBoxClient_CheckedChanged);
             // 
             // groupBoxMethod
             // 
             this.groupBoxMethod.Controls.Add(this.label9);
             this.groupBoxMethod.Controls.Add(this.listBoxMethod);
-            this.groupBoxMethod.Controls.Add(this.buttonClient);
             this.groupBoxMethod.Controls.Add(this.textBoxSecret);
             this.groupBoxMethod.Controls.Add(this.label7);
-            this.groupBoxMethod.Location = new System.Drawing.Point(12, 195);
+            this.groupBoxMethod.Location = new System.Drawing.Point(12, 124);
             this.groupBoxMethod.Margin = new System.Windows.Forms.Padding(2);
             this.groupBoxMethod.Name = "groupBoxMethod";
             this.groupBoxMethod.Padding = new System.Windows.Forms.Padding(2);
-            this.groupBoxMethod.Size = new System.Drawing.Size(542, 223);
+            this.groupBoxMethod.Size = new System.Drawing.Size(541, 199);
             this.groupBoxMethod.TabIndex = 14;
             this.groupBoxMethod.TabStop = false;
             this.groupBoxMethod.Text = "Message handling";
@@ -311,20 +313,20 @@
             this.listBoxMethod.Location = new System.Drawing.Point(7, 31);
             this.listBoxMethod.Name = "listBoxMethod";
             this.listBoxMethod.ScrollAlwaysVisible = true;
-            this.listBoxMethod.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
+            this.listBoxMethod.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
             this.listBoxMethod.Size = new System.Drawing.Size(255, 160);
             this.listBoxMethod.TabIndex = 17;
             // 
             // buttonClient
             // 
-            this.buttonClient.Location = new System.Drawing.Point(276, 192);
+            this.buttonClient.Location = new System.Drawing.Point(5, 13);
             this.buttonClient.Margin = new System.Windows.Forms.Padding(2);
             this.buttonClient.Name = "buttonClient";
-            this.buttonClient.Size = new System.Drawing.Size(259, 23);
+            this.buttonClient.Size = new System.Drawing.Size(254, 23);
             this.buttonClient.TabIndex = 14;
             this.buttonClient.Text = "Send";
             this.buttonClient.UseVisualStyleBackColor = true;
-            this.buttonClient.Click += new System.EventHandler(this.buttonSteganogr_Click);
+            this.buttonClient.Click += new System.EventHandler(this.ButtonSteganogr_Click);
             // 
             // textBoxSecret
             // 
@@ -394,20 +396,20 @@
             this.groupBox2.Controls.Add(this.checkBoxServer);
             this.groupBox2.Location = new System.Drawing.Point(12, 12);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(261, 84);
+            this.groupBox2.Size = new System.Drawing.Size(261, 107);
             this.groupBox2.TabIndex = 17;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Server network";
             // 
             // backgroundWorkerDebugPrinter
             // 
-            this.backgroundWorkerDebugPrinter.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorkerDebugPrinter_DoWork);
+            this.backgroundWorkerDebugPrinter.DoWork += new System.ComponentModel.DoWorkEventHandler(this.BackgroundWorkerDebugPrinter_DoWork);
             // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1067, 422);
+            this.ClientSize = new System.Drawing.Size(1067, 404);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBoxClient);
@@ -415,7 +417,7 @@
             this.Controls.Add(this.textBoxDebug);
             this.Controls.Add(this.groupBoxServer);
             this.Name = "MainWindow";
-            this.Text = "NST - Network Steganographic Tool";
+            this.Text = "Network Steganography Tool";
             this.groupBoxServer.ResumeLayout(false);
             this.groupBoxServer.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownServerPort)).EndInit();

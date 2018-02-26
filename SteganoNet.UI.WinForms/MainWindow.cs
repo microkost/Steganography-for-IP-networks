@@ -18,62 +18,54 @@ namespace SteganographyFramework
     public partial class MainWindow : Form
     {
         private Thread serverThread;
+        public NetReceiverServer listener; //for serverThread
         private Thread clientThread;
-        public NetReceiverServer listener; //for thread
-        public NetSenderClient speaker; //for thread
-        public delegate void writeInfoToTextBoxDelegate(INetNode nn); //delegate type 
-        public writeInfoToTextBoxDelegate writeInfoToTextBox; //delegate object
-
-        [BrowsableAttribute(false)] //debug printing
-        public bool CancellationPending { get; } //debug printing
+        public NetSenderClient speaker; //for clientThread
+        delegate void AppendDebugCallback(string text); //debug output delegate
 
         private bool isServer = true; //which role has app now
         private bool isServerListening = false;
         private bool isClientSpeaking = false;
 
-        public MainWindow()
+        public MainWindow() //ctor default generic
         {
             if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false)
             {
                 throw new Exception("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap");
             }
 
-            InitializeComponent();
+            InitializeComponent(); //gui
+            InitialProcedure(); //correct settings of gui
 
-            try
-            {
-                InitialProcedure();
-            }
-            catch
-            {
-                MessageBox.Show("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap, ", "Run problem", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
+            /*
             try
             {
                 listBoxMethod.SelectedIndex = 0; //debug developer settings
             }
-            catch
-            {
-            }
+            catch { }
+            */
         }
 
-        /*
-        public MainWindow(bool isServer, string method)
+        public MainWindow(bool isServer, string method) //ctor with role specified
         {
-            InitializeComponent();
+            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false)
+            {
+                throw new Exception("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap");
+            }
+
             this.isServer = isServer; //isServer == false then isClient
-            InitialProcedure();
+
+            InitializeComponent(); //gui
+            InitialProcedure(); //correct settings of gui
+
+            /*
             try
             {
                 listBoxMethod.SelectedIndex = listBoxMethod.FindStringExact(method);
             }
-            catch
-            {
-            }
+            catch{}            
+            */
         }
-        */
 
         private void InitialProcedure()
         {
@@ -91,12 +83,10 @@ namespace SteganographyFramework
             checkBoxServer.Checked = isServer;
 
             List<String> IPv4addresses = NetDevice.GetIPv4addressesLocal();
-
             foreach (string ipa in IPv4addresses) //print out
             {
                 textBoxDebug.AppendText(String.Format("Available IPv4: {0}\r\n", ipa));
             }
-            //textBoxDebug.Text += "----------------------------------------\r\n";
 
             //IP addresses server      
             //comboBoxServerAddress.DataSource = Dns.GetHostEntry(Dns.GetHostName()).AddressList; //pure from system
@@ -120,14 +110,15 @@ namespace SteganographyFramework
             listBoxMethod.DisplayMember = "Value";
             listBoxMethod.ValueMember = "Key";
             listBoxMethod.SelectedIndex = 0; //default method manual predefined option
+
         }
 
-        private void buttonListen_Click(object sender, EventArgs e)  //LISTENING method which starting THREAD (server start)
+        private void ButtonListen_Click(object sender, EventArgs e)  //LISTENING method which starting THREAD (server start)
         {
             if (isServerListening == true) //server is already listening DO DISCONNECT
             {
                 isServerListening = false;
-                backgroundWorkerDebugPrinter.CancelAsync(); //end backgroundworker
+                //END backgroundWorkerDebugPrinter
                 buttonListen.Text = "Listen";
 
                 if (serverThread != null)
@@ -140,12 +131,12 @@ namespace SteganographyFramework
             }
             else //server is NOT connected
             {
-                textBoxDebug.Text += "--------------------------------------SR\r\n";
+                textBoxDebug.Text += "----------------------------------------------------------------------------SR\r\n";
                 isServerListening = true;
                 buttonListen.Text = "Disconnect";
                 textBoxServerStatus.Text = "connected";
 
-                listener = new NetReceiverServer(comboBoxServerAddress.Text, (ushort)numericUpDownServerPort.Value, comboBoxClientAddress.Text, (ushort)numericUpDownClientPort.Value);                
+                listener = new NetReceiverServer(comboBoxServerAddress.Text, (ushort)numericUpDownServerPort.Value, comboBoxClientAddress.Text, (ushort)numericUpDownClientPort.Value);
                 listener.StegoUsedMethodIds = GetSelectedMethodsIds(); //previously listener.StegoUsedMethodIds = new List<int>() { (int)listBoxMethod.SelectedValue };                
 
                 //run server
@@ -153,8 +144,6 @@ namespace SteganographyFramework
                 serverThread.Start();
 
                 //run debug output
-                //writeInfoToTextBox = new writeInfoToTextBoxDelegate(WriteInfoDebug);
-                //BeginInvoke(writeInfoToTextBox, listener);                
                 if (backgroundWorkerDebugPrinter.IsBusy == false)
                 {
                     backgroundWorkerDebugPrinter.RunWorkerAsync(listener);
@@ -166,12 +155,12 @@ namespace SteganographyFramework
             }
         }
 
-        private void buttonSteganogr_Click(object sender, EventArgs e)
+        private void ButtonSteganogr_Click(object sender, EventArgs e)
         {
             if (isClientSpeaking == true) //client is speaking DO DISCONNECT
             {
                 isClientSpeaking = false;
-                //backgroundWorkerDebugPrinter.CancelAsync(); //FAILING
+                //END backgroundWorkerDebugPrinter
                 buttonClient.Text = "Start speaking";
 
                 if (clientThread != null)
@@ -183,7 +172,7 @@ namespace SteganographyFramework
             }
             else //client is NOT active
             {
-                textBoxDebug.Text += "--------------------------------------CR\r\n";
+                textBoxDebug.Text += "----------------------------------------------------------------------------CR\r\n";
                 isClientSpeaking = true;
                 buttonClient.Text = "Stop speaking";
                 textBoxClientStatus.Text = "active";
@@ -197,8 +186,6 @@ namespace SteganographyFramework
                 clientThread.Start();
 
                 //run output
-                //writeInfoToTextBox = new writeInfoToTextBoxDelegate(WriteInfoDebug); // initialize delegate object
-                //BeginInvoke(writeInfoToTextBox, speaker);                                
                 if (backgroundWorkerDebugPrinter.IsBusy == false)
                 {
                     backgroundWorkerDebugPrinter.RunWorkerAsync(speaker);
@@ -207,36 +194,14 @@ namespace SteganographyFramework
                 {
                     textBoxDebug.AppendText("output canceled due to thread utilization\r\n");
                 }
-
             }
         }
 
-
-        public void WriteInfoDebug(INetNode mm) //printing 
+        private void BackgroundWorkerDebugPrinter_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e) //runs silently and checking debug messages
         {
-            //while (!mm.AskTermination()) //console print out
-            while(true)
-            {
-                try
-                {
-                    textBoxDebug.AppendText(mm.Messages.Dequeue() + "\r\n"); //show message inline on GUI                  
-                }
-                catch
-                {
-                    Thread.Sleep(1000);
-                }
-                //Thread.Sleep(50); //slow down output
-            }
-        }
-        
-
-        private void backgroundWorkerDebugPrinter_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
-        {
-            INetNode mm = (INetNode)e.Argument; //parse who is debugged
-
+            INetNode mm = (INetNode)e.Argument; //parse what is debugged
             if (mm == null)
             {
-                textBoxDebug.AppendText("debug output wrongly initialized\r\n");
                 return;
             }
 
@@ -246,38 +211,34 @@ namespace SteganographyFramework
                 return;
             }
 
-            string debufTextToAppend = "";
-            while (true) //while (!mm.AskTermination()) 
+            //while (!mm.AskTermination()) //console print out
+            while (true)
             {
                 try
                 {
-                    debufTextToAppend = mm.Messages.Dequeue().ToString();                    
-                    //console print out
-                    //textBoxDebug.AppendText(mm.Messages.Dequeue().ToString() + "\r\n"); //show message inline on GUI                  
+                    //textBoxDebug.AppendText(mm.Messages.Dequeue() + "\r\n"); //unsafe
+                    AppendDebugText(mm.Messages.Dequeue().ToString() + "\r\n"); //safely show message inline on GUI           
                 }
                 catch
                 {
-                    //textBoxDebug.AppendText(ex.ToString()); //Message = "Cross-thread operation not valid: Control 'textBoxDebug' accessed from a thread other than the thread it was created on."
                     Thread.Sleep(1000);
-                    return;
                 }
-
-                try
-                {
-                    SafeInvoke(textBoxDebug, () => { textBoxDebug.AppendText(debufTextToAppend + "\r\n"); });
-                }
-                catch
-                { }
-
+                Thread.Sleep(10); //slow down output
             }
         }
 
-        public static void SafeInvoke(System.Windows.Forms.Control control, System.Action action)
+        private void AppendDebugText(string text) //safe appending to textBoxDebug support method
         {
-            if (control.InvokeRequired)
-                control.Invoke(new System.Windows.Forms.MethodInvoker(() => { action(); }));
+            // InvokeRequired required compares the thread ID of the calling thread to the thread ID of the creating thread.
+            if (this.textBoxDebug.InvokeRequired) //If these threads are different, it returns true.
+            {
+                AppendDebugCallback adc = new AppendDebugCallback(AppendDebugText);
+                this.Invoke(adc, new object[] { text });
+            }
             else
-                action();
+            {
+                this.textBoxDebug.AppendText(text);
+            }
         }
 
         private List<int> GetSelectedMethodsIds() //parsing methods ids from ListBox
@@ -292,19 +253,19 @@ namespace SteganographyFramework
             return selectedIDs;
         }
 
-        private void buttonPlus_Click(object sender, EventArgs e) //one more window with agent
+        private void ButtonPlus_Click(object sender, EventArgs e) //one more window with agent
         {
-            //Form MainWindow2 = new MainWindow(!isServer, listBoxMethod.SelectedValue.ToString());
-            Form MainWindow2 = new MainWindow();
+            Form MainWindow2 = new MainWindow(!isServer, listBoxMethod.SelectedValue.ToString());
+            //Form MainWindow2 = new MainWindow();
             MainWindow2.Show();
         }
 
-        private void comboBoxServerAddress_SelectedIndexChanged(object sender, EventArgs e) //autofill destination by local server IP
+        private void ComboBoxServerAddress_SelectedIndexChanged(object sender, EventArgs e) //autofill destination by local server IP
         {
             textBoxDestination.Text = comboBoxServerAddress.SelectedValue.ToString();
         }
 
-        private void comboBoxMethod_SelectedIndexChanged(object sender, EventArgs e) //if you changed method, change property!
+        private void ComboBoxMethod_SelectedIndexChanged(object sender, EventArgs e) //if you changed method, change property
         {
             if (speaker != null)
             {
@@ -326,47 +287,48 @@ namespace SteganographyFramework
             }
         }
 
-        private void checkBoxServer_CheckedChanged(object sender, EventArgs e) //protection changing server/client button
+        private void CheckBoxServer_CheckedChanged(object sender, EventArgs e) //protection changing server/client button
         {
             if (checkBoxServer.Checked)
             {
                 checkBoxClient.Checked = false;
                 groupBoxServer.Enabled = true;
-                //groupBoxMethod.Enabled = false;
                 textBoxSecret.Enabled = false;
                 buttonClient.Enabled = false;
                 groupBoxClient.Enabled = false;
+                //groupBoxMethod.Enabled = false;
             }
             else
             {
                 checkBoxClient.Checked = true;
                 groupBoxServer.Enabled = false;
-                //groupBoxMethod.Enabled = true;
                 textBoxSecret.Enabled = true;
                 buttonClient.Enabled = true;
                 groupBoxClient.Enabled = true;
+                //groupBoxMethod.Enabled = true;
             }
         }
-        private void checkBoxClient_CheckedChanged(object sender, EventArgs e) //protection changing server/client button
+        private void CheckBoxClient_CheckedChanged(object sender, EventArgs e) //protection changing server/client button
         {
             if (checkBoxClient.Checked)
             {
                 checkBoxServer.Checked = false;
                 groupBoxServer.Enabled = false;
-                //groupBoxMethod.Enabled = true;
                 textBoxSecret.Enabled = true;
                 buttonClient.Enabled = true;
                 groupBoxClient.Enabled = true;
+                //groupBoxMethod.Enabled = true;
             }
             else
             {
                 checkBoxServer.Checked = true;
                 groupBoxServer.Enabled = true;
-                //groupBoxMethod.Enabled = false;
                 textBoxSecret.Enabled = false;
                 buttonClient.Enabled = false;
                 groupBoxClient.Enabled = false;
+                //groupBoxMethod.Enabled = false;
             }
         }
     }
 }
+
