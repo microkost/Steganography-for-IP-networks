@@ -148,37 +148,43 @@ namespace SteganoNetLib
                 //send packet or layer to reply method in NetStandard to reply according to RFC... (should be async?)
             }
 
-            /*
-            //ICMP methods //is part of IP, or separate? => replies
-            else if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
+            List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
+            if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
-                //if stego methods starts 3xx
-
-                messages.Enqueue("ICMP...");
+                //ifEchoRequest, send EchoReply back...
             }
 
-            //TCP methods
-            else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
-            {
-                messages.Enqueue("TCP...");
-            }
+                /*
+                //ICMP methods //is part of IP, or separate? => replies
+                else if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
+                {
+                    //if stego methods starts 3xx
 
-            //wtf //its IP method...
-            else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
-            {
-                messages.Enqueue("ISN+IP...");
-                StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
-            }           
+                    messages.Enqueue("ICMP...");
+                }
 
-            //DNS methods
-            else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
-            {
-                messages.Enqueue("DNS...");
-            }
-            */
+                //TCP methods
+                else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
+                {
+                    messages.Enqueue("TCP...");
+                }
+
+                //wtf //its IP method...
+                else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
+                {
+                    messages.Enqueue("ISN+IP...");
+                    StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
+                }           
+
+                //DNS methods
+                else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
+                {
+                    messages.Enqueue("DNS...");
+                }
+                */
 
 
-            StegoBinary.Add(builder); //storing just binary messages
+                StegoBinary.Add(builder); //storing just binary messages
             StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
 
             return;

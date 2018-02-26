@@ -30,7 +30,7 @@ namespace SteganoNetLib
 
             Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
             {
-                { 301, "IP (Type of service)" },
+                { 301, "IP (Type of service / DiffServ)" },
                 { 302, "IP (Identification)" },
                 { 303, "IP (Flags)" },
                 { 331, "ICMP (Identifier)" },
@@ -123,19 +123,50 @@ namespace SteganoNetLib
             }
         }
 
-        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
+        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null, bool agresive = false)
         {
             if (ip == null)
                 return null;
-            
-            sc.AddInfoMessage("SetContent3Network UNIMPLEMENTED!");
 
-            //TODO implement
+            //sc.AddInfoMessage("SetContent3Network UNIMPLEMENTED!");
 
-            //string insertedtext = "";           
-            //return new Tuple<IpV4Layer, string>(ip, insertedtext);
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                sc.AddInfoMessage("3IP: method " + methodId);
+                switch (methodId)
+                {
+                    case 301: //IP (Type of service / DiffServ)  
+                        {
+                            if(agresive)
+                            {
+                                //using 8 bits
+                                //ip.TypeOfService = "000001222";
+                            }
+                            else
+                            {
+                                //using 2 bits on position 6. and 7.
+                            }
+                            
+                            //string binvalue = Convert.ToString(ip.TypeOfService, 2);
+                            //BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                    case 302: //IP (Identification)
+                        {
+                            string binvalue = Convert.ToString(ip.Identification, 2);
+                            //TODO, only in first packet!
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                }
+            }
 
-            return new Tuple<IpV4Layer, string>(ip, secret);
+                        //TODO implement
+
+                        //string insertedtext = "";           
+                        //return new Tuple<IpV4Layer, string>(ip, insertedtext);
+
+                        return new Tuple<IpV4Layer, string>(ip, secret);
         }
 
         //tcp layer methods

@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{842DB534-8D1A-4394-A14D-D956E79C64B5}</ProjectGuid>
+    <ProjectGuid>{B26C4612-00A4-49CC-B994-B56B45F6C676}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SteganoNet.UI.WinForms</RootNamespace>
