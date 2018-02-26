@@ -48,6 +48,8 @@
             this.checkBoxServer = new System.Windows.Forms.CheckBox();
             this.checkBoxClient = new System.Windows.Forms.CheckBox();
             this.groupBoxMethod = new System.Windows.Forms.GroupBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.listBoxMethod = new System.Windows.Forms.ListBox();
             this.buttonClient = new System.Windows.Forms.Button();
             this.textBoxSecret = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
@@ -55,8 +57,7 @@
             this.label8 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.listBoxMethod = new System.Windows.Forms.ListBox();
-            this.label9 = new System.Windows.Forms.Label();
+            this.backgroundWorkerDebugPrinter = new System.ComponentModel.BackgroundWorker();
             this.groupBoxServer.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownServerPort)).BeginInit();
             this.groupBoxClient.SuspendLayout();
@@ -163,7 +164,7 @@
             this.textBoxDebug.Name = "textBoxDebug";
             this.textBoxDebug.ReadOnly = true;
             this.textBoxDebug.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.textBoxDebug.Size = new System.Drawing.Size(497, 381);
+            this.textBoxDebug.Size = new System.Drawing.Size(497, 405);
             this.textBoxDebug.TabIndex = 2;
             // 
             // groupBoxClient
@@ -285,7 +286,7 @@
             this.groupBoxMethod.Controls.Add(this.buttonClient);
             this.groupBoxMethod.Controls.Add(this.textBoxSecret);
             this.groupBoxMethod.Controls.Add(this.label7);
-            this.groupBoxMethod.Location = new System.Drawing.Point(11, 170);
+            this.groupBoxMethod.Location = new System.Drawing.Point(12, 195);
             this.groupBoxMethod.Margin = new System.Windows.Forms.Padding(2);
             this.groupBoxMethod.Name = "groupBoxMethod";
             this.groupBoxMethod.Padding = new System.Windows.Forms.Padding(2);
@@ -293,6 +294,26 @@
             this.groupBoxMethod.TabIndex = 14;
             this.groupBoxMethod.TabStop = false;
             this.groupBoxMethod.Text = "Message handling";
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(4, 16);
+            this.label9.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(149, 13);
+            this.label9.TabIndex = 18;
+            this.label9.Text = "Available fields (multiselection)";
+            // 
+            // listBoxMethod
+            // 
+            this.listBoxMethod.FormattingEnabled = true;
+            this.listBoxMethod.Location = new System.Drawing.Point(7, 31);
+            this.listBoxMethod.Name = "listBoxMethod";
+            this.listBoxMethod.ScrollAlwaysVisible = true;
+            this.listBoxMethod.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
+            this.listBoxMethod.Size = new System.Drawing.Size(255, 160);
+            this.listBoxMethod.TabIndex = 17;
             // 
             // buttonClient
             // 
@@ -378,31 +399,15 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Server network";
             // 
-            // listBoxMethod
+            // backgroundWorkerDebugPrinter
             // 
-            this.listBoxMethod.FormattingEnabled = true;
-            this.listBoxMethod.Location = new System.Drawing.Point(7, 31);
-            this.listBoxMethod.Name = "listBoxMethod";
-            this.listBoxMethod.ScrollAlwaysVisible = true;
-            this.listBoxMethod.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
-            this.listBoxMethod.Size = new System.Drawing.Size(255, 160);
-            this.listBoxMethod.TabIndex = 17;
-            // 
-            // label9
-            // 
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(4, 16);
-            this.label9.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(149, 13);
-            this.label9.TabIndex = 18;
-            this.label9.Text = "Available fields (multiselection)";
+            this.backgroundWorkerDebugPrinter.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorkerDebugPrinter_DoWork);
             // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1067, 398);
+            this.ClientSize = new System.Drawing.Size(1067, 422);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBoxClient);
@@ -458,6 +463,7 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.ListBox listBoxMethod;
         private System.Windows.Forms.Label label9;
+        private System.ComponentModel.BackgroundWorker backgroundWorkerDebugPrinter;
     }
 }
 

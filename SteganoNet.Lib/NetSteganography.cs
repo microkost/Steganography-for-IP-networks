@@ -11,8 +11,10 @@ namespace SteganoNetLib
     {
         //magic numbers dialer
         public const int IpRangeStart = 300;
-        public const int IpRangeEnd = 399;
-        
+        public const int IpRangeEnd = 329;
+        public const int IcmpRangeStart = 330;
+        public const int IcmpRangeEnd = 359;
+
         public static Dictionary<int, string> GetListStegoMethodsIdAndKey() //service method
         {
             /* 
