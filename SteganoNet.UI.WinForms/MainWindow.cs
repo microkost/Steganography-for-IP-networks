@@ -22,10 +22,11 @@ namespace SteganographyFramework
         private Thread clientThread;
         public NetSenderClient speaker; //for clientThread
         delegate void AppendDebugCallback(string text); //debug output delegate
-
+               
         private bool isServer = true; //which role has app now
-        private bool isServerListening = false;
+        private bool isServerListening = false;        
         private bool isClientSpeaking = false;
+        private bool closeDebug = false; //debug output delegate async closer
 
         public MainWindow() //ctor default generic
         {
@@ -110,29 +111,35 @@ namespace SteganographyFramework
             listBoxMethod.DisplayMember = "Value";
             listBoxMethod.ValueMember = "Key";
             listBoxMethod.SelectedIndex = 0; //default method manual predefined option
-
+            
+            backgroundWorkerDebugPrinter.WorkerSupportsCancellation = true; //cancel txt output debuging
         }
 
         private void ButtonListen_Click(object sender, EventArgs e)  //LISTENING method which starting THREAD (server start)
         {
             if (isServerListening == true) //server is already listening DO DISCONNECT
             {
-                isServerListening = false;
-                //END backgroundWorkerDebugPrinter
-                buttonListen.Text = "Listen";
-
                 if (serverThread != null)
                 {
                     listener.Terminate = true;
                 }
+                
+                if (backgroundWorkerDebugPrinter.IsBusy) //END backgroundWorkerDebugPrinter
+                {
+                    closeDebug = true;
+                    backgroundWorkerDebugPrinter.CancelAsync();
+                }
 
-                //pcap_freealldevs(alldevs); //We don't need any more the device list. Free it
+                isServerListening = false;
+                buttonListen.Text = "Listen";                
                 textBoxServerStatus.Text = "disconnected";
+                //pcap_freealldevs(alldevs); //We don't need any more the device list. Free it
             }
             else //server is NOT connected
             {
                 textBoxDebug.Text += "----------------------------------------------------------------------------SR\r\n";
                 isServerListening = true;
+                closeDebug = false;
                 buttonListen.Text = "Disconnect";
                 textBoxServerStatus.Text = "connected";
 
@@ -150,7 +157,7 @@ namespace SteganographyFramework
                 }
                 else
                 {
-                    textBoxDebug.AppendText("output canceled due to thread utilization\r\n");
+                    textBoxDebug.AppendText("Output canceled due to thread utilization\r\n");
                 }
             }
         }
@@ -159,21 +166,26 @@ namespace SteganographyFramework
         {
             if (isClientSpeaking == true) //client is speaking DO DISCONNECT
             {
-                isClientSpeaking = false;
-                //END backgroundWorkerDebugPrinter
-                buttonClient.Text = "Start speaking";
-
                 if (clientThread != null)
                 {
                     speaker.Terminate = true;
                 }
 
+                if (backgroundWorkerDebugPrinter.IsBusy) //END backgroundWorkerDebugPrinter
+                {
+                    closeDebug = true;
+                    backgroundWorkerDebugPrinter.CancelAsync();
+                }
+
+                isClientSpeaking = false;
+                buttonClient.Text = "Start speaking";             
                 textBoxClientStatus.Text = "disconnected";
             }
             else //client is NOT active
             {
                 textBoxDebug.Text += "----------------------------------------------------------------------------CR\r\n";
                 isClientSpeaking = true;
+                closeDebug = false;
                 buttonClient.Text = "Stop speaking";
                 textBoxClientStatus.Text = "active";
 
@@ -192,7 +204,7 @@ namespace SteganographyFramework
                 }
                 else
                 {
-                    textBoxDebug.AppendText("output canceled due to thread utilization\r\n");
+                    textBoxDebug.AppendText("Output canceled due to thread utilization\r\n");
                 }
             }
         }
@@ -204,16 +216,15 @@ namespace SteganographyFramework
             {
                 return;
             }
-
-            if (this.backgroundWorkerDebugPrinter.CancellationPending) //cancelation support
-            {
-                e.Cancel = true;
-                return;
-            }
-
-            //while (!mm.AskTermination()) //console print out
+                        
             while (true)
             {
+                if (closeDebug == true)
+                {
+                    AppendDebugText("Output suspended" + "\r\n");
+                    break;
+                }
+
                 try
                 {
                     //textBoxDebug.AppendText(mm.Messages.Dequeue() + "\r\n"); //unsafe
@@ -223,7 +234,8 @@ namespace SteganographyFramework
                 {
                     Thread.Sleep(1000);
                 }
-                Thread.Sleep(10); //slow down output
+
+                //Thread.Sleep(100); //slow down output
             }
         }
 
