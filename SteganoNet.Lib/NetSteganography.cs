@@ -30,11 +30,12 @@ namespace SteganoNetLib
 
             Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
             {
-                { 301, "IP (Type of service / DiffServ)" },
-                { 302, "IP (Identification)" },
-                { 303, "IP (Flags)" },
+                { 301, "IP (Type of service / DiffServ agresive)" },
+                { 302, "IP (Type of service / DiffServ)" },
+                { 303, "IP (Identification)" },
+                { 305, "IP (Flags)" },
                 { 331, "ICMP (Identifier)" },
-                { 332, "ICMP (Sequence number)" }
+                { 333, "ICMP (Sequence number)" }
             };
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
@@ -76,20 +77,27 @@ namespace SteganoNetLib
                 rs.AddInfoMessage("3IP: method " + methodId);
                 switch (methodId)
                 {
-                    case 301: //IP (Type of service)
+                    case 301: //IP (Type of service / DiffServ agresive) RECEIVER
                         {
-                            string binvalue = Convert.ToString(ip.TypeOfService, 2);
-                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            string binvalue = Convert.ToString(ip.TypeOfService, 2); //use whole field
+                            BlocksOfSecret.Add(binvalue.PadLeft(8, '0')); //when zeros was cutted
                             break;
                         }
-                    case 302: //IP (Identification)
+                    case 302: //IP (Type of service / DiffServ) RECEIVER
+                        {
+                            string fullfield = Convert.ToString(ip.TypeOfService, 2).PadLeft(8, '0');
+                            string binvalue = fullfield.Substring(fullfield.Length - 2); //use only last two bits
+                            BlocksOfSecret.Add(binvalue);
+                            break;
+                        }
+                    case 303: //IP (Identification) RECEIVER
                         {
                             string binvalue = Convert.ToString(ip.Identification, 2);
                             //TODO, only in first packet!
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
-                    case 331: //ICMP (Identifier)
+                    case 331: //ICMP (Identifier) RECEIVER
                         {
                             IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
                             if (icmp.IsValid != true)
@@ -100,7 +108,7 @@ namespace SteganoNetLib
 
                             break;
                         }
-                    case 332: //ICMP (Sequence number)
+                    case 333: //ICMP (Sequence number) RECEIVER
                         {
                             IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
                             if (icmp.IsValid != true)
@@ -111,7 +119,7 @@ namespace SteganoNetLib
                             break;
                         }
                 }
-            }            
+            }
 
             if (BlocksOfSecret.Count != 0) //providing value output
             {
@@ -123,7 +131,7 @@ namespace SteganoNetLib
             }
         }
 
-        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null, bool agresive = false)
+        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
         {
             if (ip == null)
                 return null;
@@ -133,40 +141,52 @@ namespace SteganoNetLib
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
                 sc.AddInfoMessage("3IP: method " + methodId);
+
                 switch (methodId)
                 {
-                    case 301: //IP (Type of service / DiffServ)  
+                    case 301: //IP (Type of service / DiffServ) //SENDER
                         {
-                            if(agresive)
+                            try
                             {
-                                //using 8 bits
-                                //ip.TypeOfService = "000001222";
+                                ip.TypeOfService = Convert.ToByte(secret.Remove(0, 8)); //using 8 bits
                             }
-                            else
+                            catch
                             {
-                                //using 2 bits on position 6. and 7.
+                                if (secret.Length != 0)
+                                {
+                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0')); //using rest + padding
+                                }
+                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more
                             }
-                            
-                            //string binvalue = Convert.ToString(ip.TypeOfService, 2);
-                            //BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
-                    case 302: //IP (Identification)
+                    case 302: //IP (Type of service / DiffServ) //SENDER
                         {
-                            string binvalue = Convert.ToString(ip.Identification, 2);
-                            //TODO, only in first packet!
-                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+
+                            try
+                            {
+                                ip.TypeOfService = Convert.ToByte(secret.Remove(0, 2).PadLeft(8, '0')); //using 2 bits on LSB positions
+                            }
+                            catch
+                            {
+                                if (secret.Length != 0)
+                                {
+                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0')); //using rest of 2 bits on LSB positions + padding
+                                }
+                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more
+                            }
+                            break;
+                        }
+                    case 303: //IP (Identification) //SENDER
+                        {
+                            //https://tools.ietf.org/html/rfc6864#page-4
+                            //first run start timer, add value to output and save it outside loop. Replace value and send new one after timer expire.
                             break;
                         }
                 }
             }
 
-                        //TODO implement
-
-                        //string insertedtext = "";           
-                        //return new Tuple<IpV4Layer, string>(ip, insertedtext);
-
-                        return new Tuple<IpV4Layer, string>(ip, secret);
+            return new Tuple<IpV4Layer, string>(ip, secret);
         }
 
         //tcp layer methods
