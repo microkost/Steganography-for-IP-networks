@@ -9,11 +9,13 @@ namespace SteganoNetLib
 {
     public static class NetSteganography //not static
     {
-        //magic numbers dialer
+        //magic numbers dialer (never use number directly)
         public const int IpRangeStart = 300;
         public const int IpRangeEnd = 329;
         public const int IcmpRangeStart = 330;
         public const int IcmpRangeEnd = 359;
+        public const int NetworkRangeStart = IpRangeStart;
+        public const int NetworkRangeEnd = 399;
 
         public static Dictionary<int, string> GetListStegoMethodsIdAndKey() //service method
         {
@@ -144,17 +146,20 @@ namespace SteganoNetLib
 
                 switch (methodId)
                 {
+                    //remove works like 
                     case 301: //IP (Type of service / DiffServ) //SENDER
                         {
                             try
-                            {
-                                ip.TypeOfService = Convert.ToByte(secret.Remove(0, 8)); //using 8 bits
+                            {                                
+                                const int usedbits = 8;
+                                ip.TypeOfService = Convert.ToByte(secret.Remove(usedbits, secret.Length - usedbits), 2); //using 8 bits
+                                secret = secret.Remove(0, usedbits);
                             }
                             catch
                             {
                                 if (secret.Length != 0)
                                 {
-                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0')); //using rest + padding
+                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0'),2); //using rest + padding
                                 }
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more
                             }
@@ -165,7 +170,9 @@ namespace SteganoNetLib
 
                             try
                             {
-                                ip.TypeOfService = Convert.ToByte(secret.Remove(0, 2).PadLeft(8, '0')); //using 2 bits on LSB positions
+                                const int usedbits = 2;
+                                ip.TypeOfService = Convert.ToByte(secret.Remove(usedbits, secret.Length - usedbits).PadLeft(8, '0'), 2); //using 2 bits on LSB positions
+                                secret = secret.Remove(0, usedbits);
                             }
                             catch
                             {

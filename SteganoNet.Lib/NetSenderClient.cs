@@ -41,7 +41,7 @@ namespace SteganoNetLib
             this.IpOfInterface = new IpV4Address(ipOfSendingInterface);
             this.PortLocal = portSendFrom;
             this.IpOfRemoteHost = new IpV4Address(ipOfReceivingInterface);
-            this.PortRemote = portSendTo;                      
+            this.PortRemote = portSendTo;
             this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpOfInterface);
             this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpOfRemoteHost);
 
@@ -52,13 +52,13 @@ namespace SteganoNetLib
 
         public void Speaking() //thread main method
         {
-
             if (!ArePrerequisitiesDone()) //check values in properties
             {
                 AddInfoMessage("Client is not ready to start, check initialization values...");
                 return;
             }
 
+            SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -67,25 +67,24 @@ namespace SteganoNetLib
 
                 do
                 {
-                    List<Layer> layers = new List<Layer>(); //list of used layers
-                    layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
-
                     //creating implicit layers
-                    IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost);
-                    IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
+                    List<Layer> layers = new List<Layer>(); //list of used layers
+                    layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2                    
+                    IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
+                    IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //TMP! Remove when not needed...
 
-                    //IP methods                    
+                    //IP methods
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
-                        AddInfoMessage("Making IP layer");
-                        Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, ipSelectionIds, SecretMessage, this);
+                        //AddInfoMessage("Making IP layer");
+                        Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
                         layers.Add(ipV4Layer); //mark layer as done                        
                     }
 
-                    if(layers.Count < 3)
+                    if (layers.Count < 3)
                     {
                         layers.Add(icmpLayer); //TODO make it better!
                     }
@@ -126,7 +125,9 @@ namespace SteganoNetLib
                 return false;
             }
 
-            if(MacAddressLocal.Equals("{00:00:00:00:00:00}") || MacAddressRemote.Equals("{00:00:00:00:00:00}"))
+            //should test SecretMessage for containing other characters than 0 / 1
+
+            if (MacAddressLocal.Equals("{00:00:00:00:00:00}") || MacAddressRemote.Equals("{00:00:00:00:00:00}"))
             {
                 AddInfoMessage("Warning! Mac addresses contains suscpicious values.");
             }
@@ -142,7 +143,7 @@ namespace SteganoNetLib
                 AddInfoMessage("Warning! Ports are set to 0, network issue expected.");
             }
 
-                return true;
+            return true;
         }
 
         public void AddInfoMessage(string txt) //add something to output from everywhere else...

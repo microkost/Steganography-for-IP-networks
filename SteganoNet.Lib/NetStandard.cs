@@ -68,7 +68,7 @@ namespace SteganoNetLib
         //---------L3------------------------------------------------------------------------------------------------------------
         public static IpV4Layer GetIpV4Layer(IpV4Address SourceIP, IpV4Address DestinationIP)
         {
-            IpV4Layer ipv4Vrstva = new IpV4Layer();
+            IpV4Layer ipv4Vrstva = new IpV4Layer();            
             ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
             ipv4Vrstva.Source = SourceIP;
             ipv4Vrstva.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
