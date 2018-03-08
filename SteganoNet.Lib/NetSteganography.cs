@@ -32,6 +32,7 @@ namespace SteganoNetLib
 
             Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
             {
+                { 000, "Nothing, pure" },
                 { 301, "IP (Type of service / DiffServ agresive)" },
                 { 302, "IP (Type of service / DiffServ)" },
                 { 303, "IP (Identification)" },
@@ -150,7 +151,7 @@ namespace SteganoNetLib
                     case 301: //IP (Type of service / DiffServ) //SENDER
                         {
                             try
-                            {                                
+                            {
                                 const int usedbits = 8;
                                 ip.TypeOfService = Convert.ToByte(secret.Remove(usedbits, secret.Length - usedbits), 2); //using 8 bits
                                 secret = secret.Remove(0, usedbits);
@@ -159,7 +160,7 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0'),2); //using rest + padding
+                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0'), 2); //using rest + padding
                                 }
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more
                             }

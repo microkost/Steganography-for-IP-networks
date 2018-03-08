@@ -120,7 +120,7 @@ namespace SteganoNet.UI.Console
                     System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote));
                 }
                 System.Console.WriteLine("");
-
+                               
                 stegoMethods = ConsoleTools.SelectStegoMethods(); //which methods are used (interactive)                                
             }
             else //skip the wizard, source from parametres
@@ -208,14 +208,35 @@ namespace SteganoNet.UI.Console
                 }
             }
 
+            if (String.Equals("c", role)) //changing message
+            {
+                System.Console.WriteLine(String.Format("\n\tActual message: \n\t\t{0}", messageReadable));
+                System.Console.Write("\tDo you want to change message? (y/n) ");
+                runSame = System.Console.ReadLine();
+                if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
+                {
+                    System.Console.Write("\tEnter secret message: ");
+                    messageReadable = System.Console.ReadLine();
+                    messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
+                }
+            }
+
             //offers running another window with client or server
             if (!runSame.StartsWith("n")) //runSame is difeerent than n (asking for first time)
-            {
+            {            
                 System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
                 runSame = System.Console.ReadLine();
                 if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
                 {
-                    messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
+                    System.Console.Write(String.Format("\nDo you want to change message? (y/n)\n\t{0}", messageReadable));
+                    runSame = System.Console.ReadLine();
+                    if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
+                    {
+                        System.Console.Write(String.Format("\tEnter secret message: (like {0})", messageReadable));
+                        messageReadable = System.Console.ReadLine();
+                        messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);                        
+                    }
+
                     string roleToRun = (role.StartsWith("c")) ? "s" : "c";
                     string arguments = String.Format("-role {0} -ip {1} -port {2} -ipremote {3} -portremote {4} -methods {5} -runsame {6} -message \"{7}\"", roleToRun, ipRemote, portRemote, ipSource, portSource, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n", messageReadable); //inverted settings
                     secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
@@ -259,13 +280,6 @@ namespace SteganoNet.UI.Console
             else if (String.Equals("c", role)) //its client
             {
                 //prepare client
-                //messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering. Provides tertiary education in technical and economic sciences across a wide range of study programmes andcourses at the Bachelor’s, Master’s and Doctoral level. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies and the needs of industry and society.";
-                //messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering.";
-
-                //System.Console.Write(String.Format("\tEnter secret message: (like {0})", messageReadable));
-                //messageReadable = System.Console.ReadLine();
-                messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
-
                 NetSenderClient sc = new NetSenderClient(ipSource, portSource, ipRemote, portRemote);
                 sc.SecretMessage = messageEncrypted; //never pass in messageReadable! It works, but from principe...
                 sc.StegoUsedMethodIds = stegoMethods;
@@ -307,7 +321,7 @@ namespace SteganoNet.UI.Console
             catch (NullReferenceException)
             {
                 //System.Console.WriteLine("No another window opened...");
-            }
+            }            
 
             //making executable command (WIN+R) and copy-paste
             System.Console.Write(String.Format("\nRun same scenario again with command: \n{0} ", Assembly.GetExecutingAssembly().CodeBase/*, Path.GetFileName(Assembly.GetExecutingAssembly().CodeBase)*/));

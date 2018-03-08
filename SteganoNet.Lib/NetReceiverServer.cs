@@ -16,7 +16,7 @@ namespace SteganoNetLib
     {
         //steganography parametres
         public volatile bool Terminate = false; //ends listening        
-        public List<int> StegoUsedMethodIds { get; set; }                
+        public List<int> StegoUsedMethodIds { get; set; }
         public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
 
         //network parametres
@@ -28,7 +28,7 @@ namespace SteganoNetLib
         public MacAddress MacAddressRemote { get; set; }
 
         //internal         
-        private PacketDevice selectedDevice = null;        
+        private PacketDevice selectedDevice = null;
         private IpV4Address IpLocalListening { get; set; }
         private IpV4Address IpRemoteSpeaker { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
@@ -88,10 +88,16 @@ namespace SteganoNetLib
                             continue;
                         case PacketCommunicatorReceiveResult.Ok:
                             {
-                                if (packet.IsValid && packet.IpV4 != null && packet.IpV4.IsValid)
+                                if (packet.IsValid && packet.IpV4 != null)
                                 {
-                                    ProcessIncomingV4Packet(packet); //only IPv4
-                                    //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
+                                    ProcessIncomingV4Packet(packet);
+                                    /*
+                                    if (packet.IpV4.IsValid)
+                                    {
+                                        ProcessIncomingV4Packet(packet); //only IPv4
+                                                                         //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
+                                    }
+                                    */
                                 }
                                 //if (packet.IsValid && packet.IpV6 != null && packet.IpV6.IsValid)                                
                                 break;
@@ -101,7 +107,7 @@ namespace SteganoNetLib
                     }
                 } while (!Terminate);
 
-                AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
+                AddInfoMessage(String.Format("L> Message is assembling from {0} packets", StegoPackets.Count));
                 //AddInfoMessagee(String.Format("Secret in this session: {0}\n", GetSecretMessage(StegoPackets))); //result of steganography
                 //StegoPackets.Clear();                
                 return;
@@ -115,15 +121,29 @@ namespace SteganoNetLib
             //call proper parsing method from stego library
             //get answer packet and send it
 
-            AddInfoMessage("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+            //if (!packet.IpV4.IsValid) this condition needed but not working
+            //{
+            //    AddInfoMessage("packet invalid");
+            //    return;
+            //}
+
+            AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
 
             IpV4Datagram ip = packet.Ethernet.IpV4; //validity and not nullable tested in Listening()
 
             //parsing layers for processing
-            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid) ? (IcmpIdentifiedDatagram)ip.Icmp : null;
-            TcpDatagram tcp = ip.Tcp; //TODO needs try catch solution?
-            UdpDatagram udp = ip.Udp;
-            DnsDatagram dns = udp.Dns;
+            try
+            {
+                IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid) ? (IcmpIdentifiedDatagram)ip.Icmp : null;
+                TcpDatagram tcp = ip.Tcp;
+                UdpDatagram udp = ip.Udp;
+                DnsDatagram dns = udp.Dns;
+            }
+            catch
+            {
+                AddInfoMessage("L> packet discarted");
+                return;
+            }
 
             //TODO recognize seting connection + ending...
             NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //use list of used IDs as secret!
@@ -140,7 +160,7 @@ namespace SteganoNetLib
             List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
-                AddInfoMessage("IP...");
+                //AddInfoMessage("L> IP...");
                 builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO clever to send ipSelectionIds only
                 //send instance ot RS
                 //pure IP is not responding to requests
@@ -154,37 +174,37 @@ namespace SteganoNetLib
                 //ifEchoRequest, send EchoReply back...
             }
 
-                /*
-                //ICMP methods //is part of IP, or separate? => replies
-                else if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
-                {
-                    //if stego methods starts 3xx
+            /*
+            //ICMP methods //is part of IP, or separate? => replies
+            else if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
+            {
+                //if stego methods starts 3xx
 
-                    messages.Enqueue("ICMP...");
-                }
+                messages.Enqueue("ICMP...");
+            }
 
-                //TCP methods
-                else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
-                {
-                    messages.Enqueue("TCP...");
-                }
+            //TCP methods
+            else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
+            {
+                messages.Enqueue("TCP...");
+            }
 
-                //wtf //its IP method...
-                else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
-                {
-                    messages.Enqueue("ISN+IP...");
-                    StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
-                }           
+            //wtf //its IP method...
+            else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
+            {
+                messages.Enqueue("ISN+IP...");
+                StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
+            }           
 
-                //DNS methods
-                else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
-                {
-                    messages.Enqueue("DNS...");
-                }
-                */
+            //DNS methods
+            else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
+            {
+                messages.Enqueue("DNS...");
+            }
+            */
 
 
-                StegoBinary.Add(builder); //storing just binary messages
+            StegoBinary.Add(builder); //storing just binary messages
             StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
 
             return;
@@ -236,7 +256,7 @@ namespace SteganoNetLib
 
             //return "Not Implemented Exception";
         }
-        
+
         public void AddInfoMessage(string txt) //add something to output from everywhere else...
         {
             this.Messages.Enqueue(txt);

@@ -133,6 +133,7 @@ namespace SteganographyFramework
                 isServerListening = false;
                 buttonListen.Text = "Listen";                
                 textBoxServerStatus.Text = "disconnected";
+                //textBoxSecretReveived.Text = DataOperationsCrypto.ReadCrypto(listener.SecretMessage); //do it need 
                 //pcap_freealldevs(alldevs); //We don't need any more the device list. Free it
             }
             else //server is NOT connected
@@ -178,7 +179,7 @@ namespace SteganographyFramework
                 }
 
                 isClientSpeaking = false;
-                buttonClient.Text = "Start speaking";             
+                buttonClient.Text = "Start speaking";                
                 textBoxClientStatus.Text = "disconnected";
             }
             else //client is NOT active

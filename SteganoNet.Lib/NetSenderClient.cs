@@ -86,6 +86,17 @@ namespace SteganoNetLib
 
                     if (layers.Count < 3)
                     {
+                        if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
+                        {
+                            layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
+                        }
+
+                        if (!layers.OfType<EthernetLayer>().Any())
+                        {
+                            IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
+                            layers.Add(ipV4LayerTMP);
+                        }
+
                         layers.Add(icmpLayer); //TODO make it better!
                     }
 
