@@ -156,15 +156,18 @@ namespace SteganoNetLib
                                 const int usedbits = 8;
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
                                 ip.TypeOfService = Convert.ToByte(partOfSecret, 2); //using 8 bits
+                                sc.AddInfoMessage(">> " + methodId + " : " + partOfSecret);
                                 secret = secret.Remove(0, usedbits);
                             }
                             catch
                             {
                                 if (secret.Length != 0)
-                                {
+                                {                                    
                                     ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0'), 2); //using rest + padding
+                                    sc.AddInfoMessage(">> " + methodId + " : " + secret + " alias " + secret.PadLeft(8, '0'));
+                                    secret = secret.Remove(0, secret.Length);
                                 }
-                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more
+                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more                               
                             }
                             break;
                         }

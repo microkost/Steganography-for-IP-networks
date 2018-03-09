@@ -58,6 +58,7 @@ namespace SteganoNetLib
             }
 
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
+            AddInfoMessage("DEBUG: sender: " + SecretMessage);
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -107,13 +108,13 @@ namespace SteganoNetLib
                     Packet packet = builder.Build(DateTime.Now);
                     communicator.SendPacket(packet);
 
-                    AddInfoMessage(String.Format("{0} bits left to send", SecretMessage.Count()));
-                    try
+                    AddInfoMessage(String.Format("{0} bits left to send", SecretMessage.Length));
+
+                    if(SecretMessage.Length == 0)
                     {
-                        SecretMessage = SecretMessage.Substring(0, SecretMessage.Length - 1);
+                        Terminate = true;
                     }
-                    catch
-                    { Terminate = true; }
+
                 }
                 while (!Terminate || SecretMessage.Length != 0);
 

@@ -163,10 +163,10 @@ namespace SteganoNetLib
 
             //TODO recognize seting connection + ending...
             NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
-            //remember source! Do not run this method for non steganography sources!
+                                                                            //remember source! Do not run this method for non steganography sources!
 
-            //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží + casy bez breaků...
             //TODO How to handle answers?
+            //send packet or layer to reply method in NetStandard to reply according to RFC... (should be async?)
 
             //StegoMethodIds contain numbered list of uncolissioning methods which can be used simultaneously
             //List<int> listOfStegoMethodsIds = NetSteganography.GetListStegoMethodsIdAndKey().Keys.ToList(); //all
@@ -177,11 +177,9 @@ namespace SteganoNetLib
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
                 //AddInfoMessage("L> IP...");
-                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO clever to send ipSelectionIds only
-                //send instance ot RS
+                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
                 //pure IP is not responding to requests
-                //if added async processing then add in return value also timestamp or smth how to assembly messages back in order!
-                //send packet or layer to reply method in NetStandard to reply according to RFC... (should be async?)
+                //if added async processing then save also timestamp for assembling messages back in order!                
             }
 
             List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -219,9 +217,8 @@ namespace SteganoNetLib
             }
             */
 
-
             StegoBinary.Add(builder); //storing just binary messages
-            StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
+            //StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
 
             return;
         }
@@ -234,6 +231,7 @@ namespace SteganoNetLib
                 return false;
             }
 
+            //TODO use iplementation from Client...
             //TODO ip, ports, ...
             //TODO use version from NetSenderClient
 
@@ -264,25 +262,12 @@ namespace SteganoNetLib
             foreach (string word in streams)
             {
                 string message = DataOperations.BinaryNumber2stringASCII(word);
+                AddInfoMessage("DEBUG: receiver: " + word);
                 AddInfoMessage("Message: " + message);
-                sb.Append(message + "\n\r"); //line splitter //TODO CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
+                sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
             }
 
             return sb.ToString();
-        }
-
-        private string GetSecretMessage(List<Tuple<Packet, List<int>>> MessageIncluded) //private internal method, source list of packets
-        {
-            if (MessageIncluded.Count == 0) //nothing to show
-            {
-                return "error: no packets captured => no message contained";
-            }
-
-            //if List<int> is same as local
-            //call GetSecretMessageBinary(ProcessIncomingV4Packet(MessageIncluded.Item0)).Binary 
-            throw new NotImplementedException();
-
-            //return "Not Implemented Exception";
         }
 
         public void AddInfoMessage(string txt) //add something to output from everywhere else...
@@ -290,7 +275,7 @@ namespace SteganoNetLib
             this.Messages.Enqueue(txt);
             return;
         }
-        public bool AskTermination()
+        public bool AskTermination() //for handling threads synchronization from UI
         {
             return this.Terminate;
         }
