@@ -39,6 +39,8 @@ namespace SteganoNetLib
         {
             //real cryptography not in use - mock version in use to have easy upgrade solution
 
+            //when implementing check adding \r\n in method private string GetSecretMessage(List<StringBuilder> stegoBinary) in NetReceiverSender
+
             string clearTextOutput = "";
             if (method == 0)
             {

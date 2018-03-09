@@ -48,16 +48,23 @@ namespace SteganoNetLib
         public static string BinaryNumber2stringASCII(string input) //convert binary number to string
         {
             List<string> binNumToConvert = input.SplitInParts(bitsForChar).ToList();
-            string result = "";            
+            string result = "";
 
             foreach (string num in binNumToConvert)
             {
-                char c = (char)Convert.ToInt32(num, 2); //missing any input protection
+                char c = ' ';
+                try 
+                {
+                    c = (char)Convert.ToInt32(num, 2); //missing any input protection
+                }
+                catch
+                {
+                    //should be tested if result of conversion is ASCII like if(IsASCII)...?
+                    return "message is non-stego";
+                }
 
                 if (c == '\0') //dont return end of char earlier!
-                    continue;
-
-                //should be tested if result of conversion is ASCII like if(IsASCII)...?
+                    continue;                
 
                 result += c;
             }
@@ -92,14 +99,14 @@ namespace SteganoNetLib
             MD5 md5 = System.Security.Cryptography.MD5.Create();
             byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
             byte[] hash = md5.ComputeHash(inputBytes); //calculate MD5 hash from input
-          
+
             StringBuilder sb = new StringBuilder(); // step 2, convert byte array to hex string
             for (int i = 0; i < hash.Length; i++)
             {
                 sb.Append(hash[i].ToString("x2"));
             }
 
-            return sb.ToString();            
+            return sb.ToString();
         }
 
         //crc or another consistency check appended to string...

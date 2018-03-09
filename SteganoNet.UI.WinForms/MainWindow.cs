@@ -4,9 +4,6 @@ using System.Windows.Forms;
 //using System.Runtime.InteropServices; //console
 using System.Threading;
 using SteganoNetLib;
-using System.Data;
-using System.Linq;
-using System.ComponentModel;
 
 /***************************************************************************
  * 

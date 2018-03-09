@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using PcapDotNet.Core;
 using PcapDotNet.Packets;
 using PcapDotNet.Packets.Ethernet;
@@ -20,8 +19,8 @@ namespace SteganoNetLib
         public Queue<string> Messages { get; set; }
 
         //network parametres
-        public string IpLocalString { get; set; } //converted to IpOfInterface in ctor
-        public string IpRemoteString { get; set; } //converted to IpOfRemoteHost in ctor
+        //public string IpLocalString { get; set; } //converted to IpOfInterface in ctor
+        //public string IpRemoteString { get; set; } //converted to IpOfRemoteHost in ctor
         public ushort PortRemote { get; set; }
         public ushort PortLocal { get; set; }
         public MacAddress MacAddressLocal { get; set; }
@@ -148,6 +147,14 @@ namespace SteganoNetLib
                 AddInfoMessage("Error! IP addresses are not wrongly initialized.");
                 return false;
             }
+
+            /*
+            if (IpLocalString.Equals("0.0.0.0") || IpRemoteString.Equals("0.0.0.0"))
+            {
+                AddInfoMessage("Warning! IP addresses are not wrongly initialized to 0.0.0.0");
+                //return false;
+            }
+            */
 
             if (PortRemote == 0 || PortLocal == 0)
             {

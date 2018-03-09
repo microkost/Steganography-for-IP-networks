@@ -36,19 +36,18 @@ namespace SteganoNet.UI.Console
 
         public static void WriteInfoConsole(object nn) //printing output from console
         {
-            INetNode mm = (INetNode)(nn); //retype //TODO more than hope = try-catch            
+            INetNode mm = (INetNode)(nn); //it's OK?           
             try
             {
                 System.Console.WriteLine("\t>{0}", mm.Messages.Dequeue());
             }
             catch
-            {
-                //System.Console.WriteLine("\t> ");
+            {                
                 Thread.Sleep(100);
             }
         }
 
-        internal static List<int> SelectStegoMethods()
+        internal static List<int> SelectStegoMethods() //console selection menu
         {
             Dictionary<int, string> allmethods = NetSteganography.GetListStegoMethodsIdAndKey();
             List<int> selectedMethodsID = new List<int>();
@@ -77,6 +76,8 @@ namespace SteganoNet.UI.Console
                 System.Console.WriteLine("\t Invalid input! Using IDs 301, 302");
                 return new List<int>() { 301, 302 };
             }
+
+            //TODO: Add mixed order
 
             System.Console.WriteLine(String.Format("\r\tSelected: {0}", string.Join(",", selectedMethodsID)));
             return selectedMethodsID;

@@ -9,6 +9,7 @@ using PcapDotNet.Packets.Transport;
 using PcapDotNet.Packets.Dns;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SteganoNetLib
 {
@@ -20,8 +21,8 @@ namespace SteganoNetLib
         public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
 
         //network parametres
-        public string IpLocalString { get; set; }
-        public string IpRemoteString { get; set; }
+        //public string IpLocalString { get; set; }
+        //public string IpRemoteString { get; set; }
         public ushort PortLocal { get; set; } //PortListening //obviously not used
         public ushort PortRemote { get; set; } //PortOfRemoteHost
         public MacAddress MacAddressLocal { get; set; }
@@ -32,7 +33,9 @@ namespace SteganoNetLib
         private IpV4Address IpLocalListening { get; set; }
         private IpV4Address IpRemoteSpeaker { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
-        private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)                
+        private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)    
+        private int packetSize { get; set; } //recognize change in stream
+        private bool firstRun { get; set; }
 
         public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString, ushort portRemote)
         {
@@ -49,6 +52,7 @@ namespace SteganoNetLib
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
             Messages.Enqueue("Server created...");
+            this.firstRun = true;
         }
 
         public void Listening() //thread looped method
@@ -90,6 +94,11 @@ namespace SteganoNetLib
                             {
                                 if (packet.IsValid && packet.IpV4 != null)
                                 {
+                                    if(firstRun)
+                                    {
+                                        packetSize = packet.Length;
+                                        firstRun = false;
+                                    }
                                     ProcessIncomingV4Packet(packet);
                                     /*
                                     if (packet.IpV4.IsValid)
@@ -126,8 +135,15 @@ namespace SteganoNetLib
             //    AddInfoMessage("packet invalid");
             //    return;
             //}
-
+           
             AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+            //same lenght is usually same stego stream
+            
+            if(packetSize != packet.Length) //temporary recognizing of different streams
+            {
+                firstRun = true;
+                StegoBinary.Add(new StringBuilder("spacebetweenstreams")); //storing just binary messages    
+            }
 
             IpV4Datagram ip = packet.Ethernet.IpV4; //validity and not nullable tested in Listening()
 
@@ -146,7 +162,7 @@ namespace SteganoNetLib
             }
 
             //TODO recognize seting connection + ending...
-            NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //use list of used IDs as secret!
+            NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
             //remember source! Do not run this method for non steganography sources!
 
             //switchem protečou všechna ID metod a jeden packet, do kterého se zapíšou odpovědi nebo který se uloží + casy bez breaků...
@@ -219,6 +235,7 @@ namespace SteganoNetLib
             }
 
             //TODO ip, ports, ...
+            //TODO use version from NetSenderClient
 
             return true;
         }
@@ -240,7 +257,18 @@ namespace SteganoNetLib
 
             StringBuilder sb = new StringBuilder();
             stegoBinary.ForEach(item => sb.Append(item)); //convert many strings to one
-            return DataOperations.BinaryNumber2stringASCII(sb.ToString());
+                        
+            string[] streams = Regex.Split(sb.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
+
+            sb.Clear(); //reused for output
+            foreach (string word in streams)
+            {
+                string message = DataOperations.BinaryNumber2stringASCII(word);
+                AddInfoMessage("Message: " + message);
+                sb.Append(message + "\n\r"); //line splitter //TODO CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
+            }
+
+            return sb.ToString();
         }
 
         private string GetSecretMessage(List<Tuple<Packet, List<int>>> MessageIncluded) //private internal method, source list of packets

@@ -32,7 +32,7 @@ namespace SteganoNetLib
 
             Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
             {
-                { 000, "Nothing, pure" },
+                // { 000, "Nothing, pure" },
                 { 301, "IP (Type of service / DiffServ agresive)" },
                 { 302, "IP (Type of service / DiffServ)" },
                 { 303, "IP (Identification)" },
@@ -77,13 +77,14 @@ namespace SteganoNetLib
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
-                rs.AddInfoMessage("3IP: method " + methodId);
+                rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                 switch (methodId)
                 {
                     case 301: //IP (Type of service / DiffServ agresive) RECEIVER
                         {
                             string binvalue = Convert.ToString(ip.TypeOfService, 2); //use whole field
-                            BlocksOfSecret.Add(binvalue.PadLeft(8, '0')); //when zeros was cutted
+                            string binvaluePadded = binvalue.PadLeft(8, '0');
+                            BlocksOfSecret.Add(binvaluePadded); //when zeros was cutted
                             break;
                         }
                     case 302: //IP (Type of service / DiffServ) RECEIVER
@@ -153,7 +154,8 @@ namespace SteganoNetLib
                             try
                             {
                                 const int usedbits = 8;
-                                ip.TypeOfService = Convert.ToByte(secret.Remove(usedbits, secret.Length - usedbits), 2); //using 8 bits
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2); //using 8 bits
                                 secret = secret.Remove(0, usedbits);
                             }
                             catch

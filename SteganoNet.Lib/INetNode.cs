@@ -13,8 +13,8 @@ namespace SteganoNetLib
         List<int> StegoUsedMethodIds { get; set; }
 
         //network parametres
-        string IpLocalString { get; set; } //not IpV4Address from PcapDotNet (reference izolation)        
-        string IpRemoteString { get; set; } //server not need it         
+        //string IpLocalString { get; set; } //not IpV4Address from PcapDotNet (reference izolation)        
+        //string IpRemoteString { get; set; } //server not need it         
         ushort PortLocal { get; set; }
         ushort PortRemote { get; set; }
         MacAddress MacAddressLocal { get; set; }
