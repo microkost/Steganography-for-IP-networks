@@ -12,13 +12,13 @@ namespace SteganoNetLib
 {
     public class NetSenderClient : INetNode
     {
-        //steganography parametres
+        //steganography public parametres
         public volatile bool Terminate = false; //ends endless speaking
         public List<int> StegoUsedMethodIds { get; set; }
         public string SecretMessage { get; set; }
         public Queue<string> Messages { get; set; }
 
-        //network parametres
+        //network public parametres
         //public string IpLocalString { get; set; } //converted to IpOfInterface in ctor
         //public string IpRemoteString { get; set; } //converted to IpOfRemoteHost in ctor
         public ushort PortRemote { get; set; }
@@ -32,6 +32,9 @@ namespace SteganoNetLib
         private IpV4Address IpOfRemoteHost { get; set; } //isolation of referencies
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private int DelayInMs { get; set; } //how long to wait between iterations
+        private ushort SequenceNumber { get; set; } //for legacy usage
+        private static Random rand = new Random();
+
 
         //private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)        
 
@@ -49,6 +52,7 @@ namespace SteganoNetLib
             //bussiness ctor            
             Messages = new Queue<string>();
             DelayInMs = 0;
+            SequenceNumber = (ushort)DateTime.Now.Ticks;
             AddInfoMessage("Client created...");
         }
 
@@ -100,8 +104,8 @@ namespace SteganoNetLib
 
                         //TODO some condition? Quite hardcoded solution...
                         IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
-                        icmpLayer.SequenceNumber = Convert.ToByte("0011", 2);
-                        icmpLayer.Identifier = Convert.ToByte("1100", 2);
+                        icmpLayer.SequenceNumber = SequenceNumber++; //legacy sequence number
+                        icmpLayer.Identifier = (ushort)rand.Next(0, 65535);
                         layers.Add(icmpLayer);
                         DelayInMs = 1000;
                     }

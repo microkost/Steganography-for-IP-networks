@@ -49,6 +49,8 @@ namespace SteganoNetLib
             //IP method 4 - TypeOfService fild - extrely lame way but... Usage high bits 6 + 7 is "OK"...
             //IP method 5  - 
 
+            //ttl methods, resting value is magic value
+
             return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
         }
 

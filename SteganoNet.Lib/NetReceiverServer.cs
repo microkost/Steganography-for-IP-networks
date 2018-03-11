@@ -34,8 +34,10 @@ namespace SteganoNetLib
         private IpV4Address IpRemoteSpeaker { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)    
-        private int packetSize { get; set; } //recognize change in stream
-        private bool firstRun { get; set; }
+        private int PacketSize { get; set; } //recognize change in stream
+        private bool FirstRun { get; set; }
+
+        
 
         public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString, ushort portRemote)
         {
@@ -52,7 +54,7 @@ namespace SteganoNetLib
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
             Messages.Enqueue("Server created...");
-            this.firstRun = true;
+            this.FirstRun = true;
         }
 
         public void Listening() //thread looped method
@@ -94,10 +96,10 @@ namespace SteganoNetLib
                             {
                                 if (packet.IsValid && packet.IpV4 != null)
                                 {
-                                    if (firstRun) //used for separation of streams based on packet size
+                                    if (FirstRun) //used for separation of streams based on packet size
                                     {
-                                        packetSize = packet.Length;
-                                        firstRun = false;
+                                        PacketSize = packet.Length;
+                                        FirstRun = false;
                                     }
                                     ProcessIncomingV4Packet(packet);
                                     /*
@@ -139,9 +141,9 @@ namespace SteganoNetLib
             AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
             //same lenght is usually same stego stream
 
-            if (packetSize != packet.Length) //temporary recognizing of different streams
+            if (PacketSize != packet.Length) //temporary recognizing of different streams
             {
-                firstRun = true;
+                FirstRun = true;
                 StegoBinary.Add(new StringBuilder("spacebetweenstreams")); //storing just binary messages    
             }
 
@@ -203,8 +205,8 @@ namespace SteganoNetLib
                 layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
                 layers.Add(NetStandard.GetIpV4Layer(IpLocalListening, IpRemoteSpeaker)); //reversed order of IP addresses from ip but also working like this
                 IcmpEchoReplyLayer icmpLayer = new IcmpEchoReplyLayer();
-                icmpLayer.SequenceNumber = icmp.SequenceNumber;
-                icmpLayer.Identifier = icmp.Identifier;
+                icmpLayer.SequenceNumber = icmp.SequenceNumber; //field MUST be returned to the sender unaltered
+                icmpLayer.Identifier = icmp.Identifier; //field MUST be returned to the sender unaltered
                 layers.Add(icmpLayer);
 
                 SendReplyPacket(layers);
@@ -308,7 +310,7 @@ namespace SteganoNetLib
         }
 
         public void SendReplyPacket(List<Layer> layers) //send answer just from list of layers, building and forwarning the answer
-        {           
+        {
             if (layers.Count < 3) //should use complex test of content as client method
             {
                 AddInfoMessage("L> Warning: Count of layers in reply packet is low! ");
