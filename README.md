@@ -3,6 +3,10 @@ Network steganography is approach how to invisible transfer data via IP computer
 used for purposes of routing and switching to provide connectivity. This framework could **help with testing of security mechanism** via adding hidden
 information to simulate steganography attack.
 
+## Methods
+* IP steganography (v4)
+* ICMP steganography
+
 ## Usage
 * run GUI (SteganoNet.UI.WinForms) or command line app (SteganoNet.UI.Console)
 * select role of your computer (server / client)

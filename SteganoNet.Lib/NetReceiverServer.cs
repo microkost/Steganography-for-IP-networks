@@ -94,14 +94,14 @@ namespace SteganoNetLib
                             {
                                 if (packet.IsValid && packet.IpV4 != null)
                                 {
-                                    if(firstRun)
+                                    if (firstRun) //used for separation of streams based on packet size
                                     {
                                         packetSize = packet.Length;
                                         firstRun = false;
                                     }
                                     ProcessIncomingV4Packet(packet);
                                     /*
-                                    if (packet.IpV4.IsValid)
+                                    if (packet.IpV4.IsValid) //for some magic reason its making troubles...
                                     {
                                         ProcessIncomingV4Packet(packet); //only IPv4
                                                                          //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
@@ -135,25 +135,29 @@ namespace SteganoNetLib
             //    AddInfoMessage("packet invalid");
             //    return;
             //}
-           
+
             AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
             //same lenght is usually same stego stream
-            
-            if(packetSize != packet.Length) //temporary recognizing of different streams
+
+            if (packetSize != packet.Length) //temporary recognizing of different streams
             {
                 firstRun = true;
                 StegoBinary.Add(new StringBuilder("spacebetweenstreams")); //storing just binary messages    
             }
 
-            IpV4Datagram ip = packet.Ethernet.IpV4; //validity and not nullable tested in Listening()
-
             //parsing layers for processing
+            IpV4Datagram ip = packet.Ethernet.IpV4; //add test
+            IcmpIdentifiedDatagram icmp = null;
+            TcpDatagram tcp = null;
+            UdpDatagram udp = null;
+            DnsDatagram dns = null;
             try
             {
-                IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid) ? (IcmpIdentifiedDatagram)ip.Icmp : null;
-                TcpDatagram tcp = ip.Tcp;
-                UdpDatagram udp = ip.Udp;
-                DnsDatagram dns = udp.Dns;
+                AddInfoMessage((ip.IsValid) ? "" : "L> packet invalid"); //TODO more testing
+                icmp = (ip.Icmp.IsValid) ? (IcmpIdentifiedDatagram)ip.Icmp : null;
+                tcp = (ip.Tcp.IsValid) ? ip.Tcp : null;
+                udp = (ip.Udp.IsValid) ? ip.Udp : null;
+                dns = (udp.Dns.IsValid) ? udp.Dns : null;
             }
             catch
             {
@@ -170,22 +174,40 @@ namespace SteganoNetLib
 
             //StegoMethodIds contain numbered list of uncolissioning methods which can be used simultaneously
             //List<int> listOfStegoMethodsIds = NetSteganography.GetListStegoMethodsIdAndKey().Keys.ToList(); //all
-            StringBuilder builder = new StringBuilder();
+            StringBuilder messageCollector = new StringBuilder();
 
             //IP methods
             List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
                 //AddInfoMessage("L> IP...");
-                builder.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
-                //pure IP is not responding to requests
+                messageCollector.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
+                //pure IP is not responding
                 //if added async processing then save also timestamp for assembling messages back in order!                
             }
 
+            //ICMP methods
             List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
-            if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
+            if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
             {
                 //ifEchoRequest, send EchoReply back...
+            }
+
+            //ICMP methods when not expected but ICMP received
+            if (!StegoUsedMethodIds.Any(icmpSelectionIds.Contains) && icmp != null && icmp.GetType() == typeof(IcmpEchoDatagram))
+            {
+                //making traffic less suspicious by answering, when is ICMP but not defined as ICMP stego method
+                List<Layer> layers = new List<Layer>(); //list of used layers
+
+                //redo to get NetStandard.SetIcmpReply()
+                layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
+                layers.Add(NetStandard.GetIpV4Layer(IpLocalListening, IpRemoteSpeaker)); //reversed order of IP addresses from ip but also working like this
+                IcmpEchoReplyLayer icmpLayer = new IcmpEchoReplyLayer();
+                icmpLayer.SequenceNumber = icmp.SequenceNumber;
+                icmpLayer.Identifier = icmp.Identifier;
+                layers.Add(icmpLayer);
+
+                SendReplyPacket(layers);
             }
 
             /*
@@ -217,7 +239,7 @@ namespace SteganoNetLib
             }
             */
 
-            StegoBinary.Add(builder); //storing just binary messages
+            StegoBinary.Add(messageCollector); //storing just binary messages
             //StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
 
             return;
@@ -254,24 +276,61 @@ namespace SteganoNetLib
             //TODO if (stegoBinary.Count > XXX) //if message is too big
 
             StringBuilder sb = new StringBuilder();
-            stegoBinary.ForEach(item => sb.Append(item)); //convert many strings to one
-                        
+            stegoBinary.ForEach(item => sb.Append(item)); //convert many binary substrings to one message
+
             string[] streams = Regex.Split(sb.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
 
             sb.Clear(); //reused for output
             foreach (string word in streams)
             {
+                if (word.StartsWith("00000000000") || word.Length == 0) //cut off mess
+                {
+                    AddInfoMessage("Warning: empty word removed from received messages. ");
+                    continue;
+                }
+
                 string message = DataOperations.BinaryNumber2stringASCII(word);
-                AddInfoMessage("DEBUG: receiver: " + word);
-                AddInfoMessage("Message: " + message);
                 sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
+                //AddInfoMessage("Message: " + message);
             }
 
             return sb.ToString();
         }
 
+        public void SendReplyPacket(Packet packet) //universal anwering method
+        {
+            selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
+            using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+            {
+                communicator.SendPacket(packet);
+            }
+            return;
+        }
+
+        public void SendReplyPacket(List<Layer> layers) //send answer just from list of layers, building and forwarning the answer
+        {           
+            if (layers.Count < 3) //should use complex test of content as client method
+            {
+                AddInfoMessage("L> Warning: Count of layers in reply packet is low! ");
+            }
+
+            PacketBuilder builder = new PacketBuilder(layers);
+            Packet packet = builder.Build(DateTime.Now);
+
+            selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
+            using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+            {
+                communicator.SendPacket(packet);
+            }
+            return;
+
+        }
+
         public void AddInfoMessage(string txt) //add something to output from everywhere else...
         {
+            if (txt.Length == 0) //do not show zero lenght message, but sometimes simplifying other tasks.
+                return;
+
             this.Messages.Enqueue(txt);
             return;
         }

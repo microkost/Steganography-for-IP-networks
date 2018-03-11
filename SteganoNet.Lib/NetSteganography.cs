@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using PcapDotNet.Packets;
 using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.IpV4;
 
@@ -9,7 +8,7 @@ namespace SteganoNetLib
 {
     public static class NetSteganography //not static
     {
-        //magic numbers dialer (never use number directly)
+        //magic numbers dialer (never use numbers directly)
         public const int IpRangeStart = 300;
         public const int IpRangeEnd = 329;
         public const int IcmpRangeStart = 330;
@@ -30,15 +29,17 @@ namespace SteganoNetLib
              * 8xx > other methods like time channel
              */
 
+            //for details read file MethodDescription.txt, keep it updated if changing following list!
             Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
             {
                 // { 000, "Nothing, pure" },
-                { 301, "IP (Type of service / DiffServ agresive)" },
-                { 302, "IP (Type of service / DiffServ)" },
+                { 301, "IP (Type of service / DiffServ agresive) - 8b" },
+                { 302, "IP (Type of service / DiffServ) - 2b" },
                 { 303, "IP (Identification)" },
                 { 305, "IP (Flags)" },
-                { 331, "ICMP (Identifier)" },
-                { 333, "ICMP (Sequence number)" }
+                { 331, "ICMP (standard, for other layers) - 0b" },
+                { 333, "ICMP (Identifier)" },
+                { 335, "ICMP (Sequence number)" }
             };
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
@@ -68,12 +69,12 @@ namespace SteganoNetLib
         //---------------------------------------------------------------------------------------------------------------------
 
         //ip layer methods
-        public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rs = null)
+        public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rs = null) //RECEIVER
         {
-            //List<string> LocalMethodMessages = new List<string>();
+            if (ip == null) { return null; } //extra protection
             List<string> BlocksOfSecret = new List<string>();
 
-            if (ip == null) { return null; } //extra protection
+
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
@@ -101,7 +102,12 @@ namespace SteganoNetLib
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
-                    case 331: //ICMP (Identifier) RECEIVER
+                    case 331: //ICMP (pure) RECEIVER
+                        {
+
+                            break;
+                        }
+                    case 333: //ICMP (Identifier) RECEIVER
                         {
                             IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
                             if (icmp.IsValid != true)
@@ -112,7 +118,7 @@ namespace SteganoNetLib
 
                             break;
                         }
-                    case 333: //ICMP (Sequence number) RECEIVER
+                    case 335: //ICMP (Sequence number) RECEIVER
                         {
                             IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
                             if (icmp.IsValid != true)
@@ -131,16 +137,14 @@ namespace SteganoNetLib
             }
             else
             {
-                return "error"; //null
+                return null;
             }
         }
 
+        //SENDER
         public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
         {
-            if (ip == null)
-                return null;
-
-            //sc.AddInfoMessage("SetContent3Network UNIMPLEMENTED!");
+            if (ip == null) { return null; } //extra protection
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
@@ -148,23 +152,22 @@ namespace SteganoNetLib
 
                 switch (methodId)
                 {
-                    //remove works like 
                     case 301: //IP (Type of service / DiffServ) //SENDER
                         {
+                            const int usedbits = 8;
                             try
                             {
-                                const int usedbits = 8;
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2); //using 8 bits
-                                sc.AddInfoMessage(">> " + methodId + " : " + partOfSecret);
+                                //sc.AddInfoMessage(">> " + methodId + " : " + partOfSecret);
+                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2); //using 8 bits                                
                                 secret = secret.Remove(0, usedbits);
                             }
                             catch
                             {
                                 if (secret.Length != 0)
-                                {                                    
-                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0'), 2); //using rest + padding
-                                    sc.AddInfoMessage(">> " + methodId + " : " + secret + " alias " + secret.PadLeft(8, '0'));
+                                {
+                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    //sc.AddInfoMessage(">> " + methodId + " : " + secret + " alias " + secret.PadLeft(usedbits, '0'));
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more                               
@@ -173,20 +176,23 @@ namespace SteganoNetLib
                         }
                     case 302: //IP (Type of service / DiffServ) //SENDER
                         {
-
+                            const int usedbits = 2;
                             try
                             {
-                                const int usedbits = 2;
-                                ip.TypeOfService = Convert.ToByte(secret.Remove(usedbits, secret.Length - usedbits).PadLeft(8, '0'), 2); //using 2 bits on LSB positions
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                //sc.AddInfoMessage(">> " + methodId + " : " + partOfSecret);
+                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
                                 secret = secret.Remove(0, usedbits);
                             }
                             catch
                             {
                                 if (secret.Length != 0)
                                 {
-                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(8, '0')); //using rest of 2 bits on LSB positions + padding
+                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    //sc.AddInfoMessage(">> " + methodId + " : " + secret + " alias " + secret.PadLeft(usedbits, '0'));
+                                    secret = secret.Remove(0, secret.Length);
                                 }
-                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more
+                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
                             }
                             break;
                         }
@@ -200,6 +206,31 @@ namespace SteganoNetLib
             }
 
             return new Tuple<IpV4Layer, string>(ip, secret);
+        }
+
+        public static Tuple<IcmpLayer, string> SetContent3Icmp(IcmpLayer icmp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
+        {
+            if (icmp == null) { return null; } //extra protection
+
+            //{ 331, "ICMP (standard, for other layers) - 0b" },
+            //{ 333, "ICMP (Identifier)" },
+            //{ 335, "ICMP (Sequence number)" }
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                sc.AddInfoMessage("3IP: method " + methodId);
+
+                switch (methodId)
+                {
+                    case 331: //ICMP (standard, for other layers) //SENDER
+                        {
+                            break;
+                        }
+                }
+            }
+
+
+            return new Tuple<IcmpLayer, string>(icmp, secret);
         }
 
         //tcp layer methods

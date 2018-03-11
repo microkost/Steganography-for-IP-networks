@@ -35,7 +35,7 @@ namespace SteganoNetLib
         //L2        
         public static MacAddress GetRandomMacAddress() //used when ARP request fails
         {
-            //should be extended 
+            //TODO should be extended 
             //* read computer manufacturer https://social.msdn.microsoft.com/Forums/vstudio/en-US/4c8e8287-3898-4990-a81b-98f6432514b1/how-to-get-system-manufacturer-name-using-c?forum=csharpgeneral
             //* get some random mac http://www.gcstech.net/macvendor/index.php?node=vensea&list
             return new MacAddress("84:2B:2B:23:8C:AB");

@@ -262,7 +262,7 @@ namespace SteganoNet.UI.Console
                 messageReadable = DataOperationsCrypto.ReadCrypto(messageEncrypted); //mock
 
                 System.Console.WriteLine("");
-                System.Console.WriteLine(String.Format("Received secret message is: \n{0}", messageReadable));
+                System.Console.WriteLine(String.Format("Received secret message are: (per line)\n{0}", messageReadable));
             }
             else if (String.Equals("c", role)) //its client
             {

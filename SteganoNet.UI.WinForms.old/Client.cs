@@ -69,7 +69,7 @@ namespace SteganographyFramework
 
                         EthernetLayer ethernetLayer = NetworkMethodsStandard.GetEthernetLayer(MacAddressSource, MacAddressDestination); //2 Ethernet Layer                        
                         IpV4Layer ipV4Layer = NetworkMethodsStandard.GetIpV4Layer(SourceIP, DestinationIP); //3 IPv4 Layer
-                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer                        
+                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //4 ICMP Layer
                         PacketBuilder builder = new PacketBuilder(ethernetLayer, ipV4Layer, icmpLayer); // Create the builder that will build our packets
 
                         //send stego start sequence

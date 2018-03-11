@@ -31,6 +31,8 @@ namespace SteganoNetLib
         private IpV4Address IpOfInterface { get; set; } //isolation of referencies
         private IpV4Address IpOfRemoteHost { get; set; } //isolation of referencies
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
+        private int DelayInMs { get; set; } //how long to wait between iterations
+
         //private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)        
 
 
@@ -46,6 +48,7 @@ namespace SteganoNetLib
 
             //bussiness ctor            
             Messages = new Queue<string>();
+            DelayInMs = 0;
             AddInfoMessage("Client created...");
         }
 
@@ -58,7 +61,6 @@ namespace SteganoNetLib
             }
 
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
-            AddInfoMessage("DEBUG: sender: " + SecretMessage);
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -70,8 +72,7 @@ namespace SteganoNetLib
                     //creating implicit layers
                     List<Layer> layers = new List<Layer>(); //list of used layers
                     layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2                    
-                    IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
-                    IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //TMP! Remove when not needed...
+                    IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                    
 
                     //IP methods
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
@@ -91,33 +92,34 @@ namespace SteganoNetLib
                             layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
                         }
 
-                        if (!layers.OfType<EthernetLayer>().Any())
+                        if (!layers.OfType<IpV4Layer>().Any())
                         {
                             IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
                             layers.Add(ipV4LayerTMP);
                         }
 
-                        layers.Add(icmpLayer); //TODO make it better!
+                        //TODO some condition? Quite hardcoded solution...
+                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
+                        icmpLayer.SequenceNumber = Convert.ToByte("0011", 2);
+                        icmpLayer.Identifier = Convert.ToByte("1100", 2);
+                        layers.Add(icmpLayer);
+                        DelayInMs = 1000;
                     }
-
-
+                    
                     //build packet and send
-                    //TODO implement sending, implement method SetContent3Network
-
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now);
                     communicator.SendPacket(packet);
+                    AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
+                    System.Threading.Thread.Sleep(DelayInMs);
 
-                    AddInfoMessage(String.Format("{0} bits left to send", SecretMessage.Length));
-
-                    if(SecretMessage.Length == 0)
+                    if (SecretMessage.Length == 0)
                     {
                         Terminate = true;
                     }
 
                 }
                 while (!Terminate || SecretMessage.Length != 0);
-
             }
         }
 
@@ -145,14 +147,14 @@ namespace SteganoNetLib
 
             if (IpOfRemoteHost == null || IpOfInterface == null)
             {
-                AddInfoMessage("Error! IP addresses are not wrongly initialized.");
+                AddInfoMessage("Error! IP addresses are wrongly initialized.");
                 return false;
             }
 
             /*
             if (IpLocalString.Equals("0.0.0.0") || IpRemoteString.Equals("0.0.0.0"))
             {
-                AddInfoMessage("Warning! IP addresses are not wrongly initialized to 0.0.0.0");
+                AddInfoMessage("Warning! IP addresses are wrongly initialized to 0.0.0.0");
                 //return false;
             }
             */
