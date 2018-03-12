@@ -43,7 +43,8 @@ namespace SteganoNetLib
                 { 305, "IP (Flags)" },
                 { 331, "ICMP ping (Standard, for other layers) - 0b" },
                 { 333, "ICMP ping (Identifier) - 16b" },
-                { 335, "ICMP ping (Sequence number) - 16b" }
+                { 335, "ICMP ping (Sequence number) - 16b" },
+                { 337, "ICMP ping (Data field) - up to MTU" }
             };
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
@@ -127,6 +128,8 @@ namespace SteganoNetLib
                             IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
                             if (icmp.IsValid != true)
                                 continue;
+
+                            //337 icmp.Payload = "";
 
                             //todo
 
