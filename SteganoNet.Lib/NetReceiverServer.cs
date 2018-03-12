@@ -285,7 +285,7 @@ namespace SteganoNetLib
             sb.Clear(); //reused for output
             foreach (string word in streams)
             {
-                if (word.StartsWith("00000000000") || word.Length == 0) //cut off mess
+                if (/*word.StartsWith("00000000000") ||*/ word.Length == 0) //cut off mess
                 {
                     AddInfoMessage("Warning: empty word removed from received messages. ");
                     continue;

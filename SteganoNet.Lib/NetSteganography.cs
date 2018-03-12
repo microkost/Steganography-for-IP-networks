@@ -8,13 +8,17 @@ namespace SteganoNetLib
 {
     public static class NetSteganography //not static
     {
-        //magic numbers dialer (never use numbers directly)
+        //magic numbers dialer (never use numbers directly outside this class, if needed use like "IcmpGenericPing" value)
         public const int IpRangeStart = 300;
         public const int IpRangeEnd = 329;
         public const int IcmpRangeStart = 330;
         public const int IcmpRangeEnd = 359;
+        public const int IcmpGenericPing = 331;
         public const int NetworkRangeStart = IpRangeStart;
         public const int NetworkRangeEnd = 399;
+
+        private static Random rand = new Random();
+        private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage
 
         public static Dictionary<int, string> GetListStegoMethodsIdAndKey() //service method
         {
@@ -37,9 +41,9 @@ namespace SteganoNetLib
                 { 302, "IP (Type of service / DiffServ) - 2b" },
                 { 303, "IP (Identification)" },
                 { 305, "IP (Flags)" },
-                { 331, "ICMP (standard, for other layers) - 0b" },
-                { 333, "ICMP (Identifier)" },
-                { 335, "ICMP (Sequence number)" }
+                { 331, "ICMP ping (Standard, for other layers) - 0b" },
+                { 333, "ICMP ping (Identifier) - 16b" },
+                { 335, "ICMP ping (Sequence number) - 16b" }
             };
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
@@ -76,8 +80,6 @@ namespace SteganoNetLib
             if (ip == null) { return null; } //extra protection
             List<string> BlocksOfSecret = new List<string>();
 
-
-
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
                 rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
@@ -106,7 +108,7 @@ namespace SteganoNetLib
                         }
                     case 331: //ICMP (pure) RECEIVER
                         {
-
+                            //do not reply? 
                             break;
                         }
                     case 333: //ICMP (Identifier) RECEIVER
@@ -160,7 +162,7 @@ namespace SteganoNetLib
                             try
                             {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                //sc.AddInfoMessage(">> " + methodId + " : " + partOfSecret);
+                                //sc.AddInfoMessage("S> " + methodId + " : " + partOfSecret);
                                 ip.TypeOfService = Convert.ToByte(partOfSecret, 2); //using 8 bits                                
                                 secret = secret.Remove(0, usedbits);
                             }
@@ -169,7 +171,7 @@ namespace SteganoNetLib
                                 if (secret.Length != 0)
                                 {
                                     ip.TypeOfService = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
-                                    //sc.AddInfoMessage(">> " + methodId + " : " + secret + " alias " + secret.PadLeft(usedbits, '0'));
+                                    //sc.AddInfoMessage("S> " + methodId + " : " + secret + " alias " + secret.PadLeft(usedbits, '0'));
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more                               
@@ -210,7 +212,7 @@ namespace SteganoNetLib
             return new Tuple<IpV4Layer, string>(ip, secret);
         }
 
-        public static Tuple<IcmpLayer, string> SetContent3Icmp(IcmpLayer icmp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
+        public static Tuple<IcmpEchoLayer, string> SetContent3Icmp(IcmpEchoLayer icmp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
         {
             if (icmp == null) { return null; } //extra protection
 
@@ -224,15 +226,45 @@ namespace SteganoNetLib
 
                 switch (methodId)
                 {
-                    case 331: //ICMP (standard, for other layers) //SENDER
+                    case IcmpGenericPing: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
                         {
+                            icmp.SequenceNumber = SequenceNumber++; //legacy sequence number
+                            icmp.Identifier = (ushort)rand.Next(0, 65535);
+                            //add delay 1000 miliseconds on parent object
+                            break;
+                        }
+                    case 333: //ICMP (Identifier) //SENDER
+                        {
+                            if (!stegoUsedMethodIds.Contains(335)) //do not overwrite sequence number when that method selected
+                            {
+                                icmp.SequenceNumber = SequenceNumber++; //legacy sequence number
+                            }
+
+                            const int usedbits = 8;
+                            try
+                            {
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                ushort value = Convert.ToUInt16(partOfSecret, 2);
+                                icmp.Identifier = value;
+                                //icmp.Identifier = Convert.ToByte(partOfSecret, 2);                              
+                                secret = secret.Remove(0, usedbits);
+                            }
+                            catch
+                            {
+                                if (secret.Length != 0)
+                                {
+                                    //PROBLEM
+                                    icmp.Identifier = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    secret = secret.Remove(0, secret.Length);
+                                }
+                                return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
+                            }
                             break;
                         }
                 }
             }
 
-
-            return new Tuple<IcmpLayer, string>(icmp, secret);
+            return new Tuple<IcmpEchoLayer, string>(icmp, secret);
         }
 
         //tcp layer methods

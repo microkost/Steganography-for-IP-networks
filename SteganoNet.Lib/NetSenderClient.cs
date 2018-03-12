@@ -32,8 +32,8 @@ namespace SteganoNetLib
         private IpV4Address IpOfRemoteHost { get; set; } //isolation of referencies
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private int DelayInMs { get; set; } //how long to wait between iterations
-        private ushort SequenceNumber { get; set; } //for legacy usage
-        private static Random rand = new Random();
+        //private ushort SequenceNumber { get; set; } //for legacy usage moved to NetStego
+        //private static Random rand = new Random();
 
 
         //private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)        
@@ -52,7 +52,7 @@ namespace SteganoNetLib
             //bussiness ctor            
             Messages = new Queue<string>();
             DelayInMs = 0;
-            SequenceNumber = (ushort)DateTime.Now.Ticks;
+            //SequenceNumber = (ushort)DateTime.Now.Ticks;
             AddInfoMessage("Client created...");
         }
 
@@ -76,17 +76,29 @@ namespace SteganoNetLib
                     //creating implicit layers
                     List<Layer> layers = new List<Layer>(); //list of used layers
                     layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2                    
-                    IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                    
+
 
                     //IP methods
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
-                        //AddInfoMessage("Making IP layer");
+                        IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3 
                         Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
                         layers.Add(ipV4Layer); //mark layer as done                        
+                    }
+
+                    //ICMP methods
+                    List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
+                    if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
+                    {
+                        //here is problem in creating correct layer because ICMP doesnt have instantable generic one
+                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
+                        Tuple<IcmpEchoLayer, string> icmpStego = NetSteganography.SetContent3Icmp(icmpLayer, StegoUsedMethodIds, SecretMessage, this);
+                        icmpLayer = icmpStego.Item1; //save layer containing steganography
+                        SecretMessage = icmpStego.Item2; //save rest of unsended bites
+                        layers.Add(icmpLayer); //mark layer as done                                 
                     }
 
                     if (layers.Count < 3)
@@ -102,17 +114,17 @@ namespace SteganoNetLib
                             layers.Add(ipV4LayerTMP);
                         }
 
-                        //TODO some condition? Quite hardcoded solution...
-                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
-                        icmpLayer.SequenceNumber = SequenceNumber++; //legacy sequence number
-                        icmpLayer.Identifier = (ushort)rand.Next(0, 65535);
-                        layers.Add(icmpLayer);
-                        DelayInMs = 1000;
+                        if (!layers.OfType<IcmpEchoLayer>().Any())
+                        {                            
+                            Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
+                            layers.Add(icmpStegoTMP.Item1);
+                            DelayInMs = 100; //DEBUG, originally 1000
+                        }
                     }
-                    
+
                     //build packet and send
-                    PacketBuilder builder = new PacketBuilder(layers);
-                    Packet packet = builder.Build(DateTime.Now);
+                    PacketBuilder builder = new PacketBuilder(layers);                    
+                    Packet packet = builder.Build(DateTime.Now); //'Can't determine ether type automatically from next layer (PcapDotNet.Packets.Icmp.IcmpEchoLayer)'
                     communicator.SendPacket(packet);
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
                     System.Threading.Thread.Sleep(DelayInMs);
