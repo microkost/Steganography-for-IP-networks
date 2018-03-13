@@ -19,10 +19,12 @@ namespace SteganoNetLib
 
         public static EthernetLayer GetEthernetLayer(MacAddress MacAddressSource, MacAddress MacAddressDestination)
         {
-            EthernetLayer ethernetVrstva = new EthernetLayer();
-            ethernetVrstva.Source = MacAddressSource;
-            ethernetVrstva.Destination = MacAddressDestination;
-            ethernetVrstva.EtherType = EthernetType.None; //Will be filled automatically.                            
+            EthernetLayer ethernetVrstva = new EthernetLayer
+            {
+                Source = MacAddressSource,
+                Destination = MacAddressDestination,
+                EtherType = EthernetType.None //Will be filled automatically.
+            };
             return ethernetVrstva;
         }
         public static MacAddress GetMacAddressFromArp(IpV4Address ipAddressInterface) //when mac address is not known locally

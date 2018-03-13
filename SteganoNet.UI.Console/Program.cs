@@ -220,7 +220,7 @@ namespace SteganoNet.UI.Console
             //offers running another window with client or server
             if (!runSame.StartsWith("n")) //runSame is difeerent than n (asking for first time)
             {
-                System.Console.Write("\nDo you want to run client on same device for testing? (y/n) ");
+                System.Console.Write("\nDo you want to run opposite node on same device for testing? (y/n) ");
                 runSame = System.Console.ReadLine();
                 if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
                 {

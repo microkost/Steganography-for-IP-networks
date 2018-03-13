@@ -243,14 +243,14 @@ namespace SteganoNetLib
                                 icmp.SequenceNumber = SequenceNumber++; //legacy sequence number
                             }
 
-                            const int usedbits = 8;
+                            const int usedbits = 16;
                             try
                             {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                ushort value = Convert.ToUInt16(partOfSecret, 2);
-                                icmp.Identifier = value;
-                                //icmp.Identifier = Convert.ToByte(partOfSecret, 2);                              
+                                icmp.Identifier = Convert.ToUInt16(partOfSecret, 2);
                                 secret = secret.Remove(0, usedbits);
+
+                                //TODO WRITE READING METHOD!
                             }
                             catch
                             {

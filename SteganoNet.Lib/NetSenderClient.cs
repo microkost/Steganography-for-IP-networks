@@ -88,6 +88,12 @@ namespace SteganoNetLib
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
                         layers.Add(ipV4Layer); //mark layer as done                        
                     }
+                    else
+                    {
+                        //if not stego in IP add normal IP layer - they need to be in proper order otherwise "Can't determine protocol automatically from next layer because there is no next layer"
+                        IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3 
+                        layers.Add(ipV4Layer);
+                    }
 
                     //ICMP methods
                     List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
@@ -115,7 +121,7 @@ namespace SteganoNetLib
                         }
 
                         if (!layers.OfType<IcmpEchoLayer>().Any())
-                        {                            
+                        {
                             Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
                             layers.Add(icmpStegoTMP.Item1);
                             DelayInMs = 100; //DEBUG, originally 1000
@@ -123,8 +129,8 @@ namespace SteganoNetLib
                     }
 
                     //build packet and send
-                    PacketBuilder builder = new PacketBuilder(layers);                    
-                    Packet packet = builder.Build(DateTime.Now); //'Can't determine ether type automatically from next layer (PcapDotNet.Packets.Icmp.IcmpEchoLayer)'
+                    PacketBuilder builder = new PacketBuilder(layers);
+                    Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
                     communicator.SendPacket(packet);
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
                     System.Threading.Thread.Sleep(DelayInMs);
