@@ -149,14 +149,14 @@ namespace SteganoNetLib
 
             //parsing layers for processing
             IpV4Datagram ip = packet.Ethernet.IpV4; //add test
-            IcmpIdentifiedDatagram icmp = null;
+            IcmpEchoDatagram icmp = null;
             TcpDatagram tcp = null;
             UdpDatagram udp = null;
             DnsDatagram dns = null;
             try
             {
                 AddInfoMessage((ip.IsValid) ? "" : "L> packet invalid"); //TODO more testing
-                icmp = (ip.Icmp.IsValid) ? (IcmpIdentifiedDatagram)ip.Icmp : null;
+                icmp = (ip.Icmp.IsValid) ? (IcmpEchoDatagram)ip.Icmp : null;
                 tcp = (ip.Tcp.IsValid) ? ip.Tcp : null;
                 udp = (ip.Udp.IsValid) ? ip.Udp : null;
                 dns = (udp.Dns.IsValid) ? udp.Dns : null;
@@ -192,7 +192,8 @@ namespace SteganoNetLib
             List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
             {
-                //ifEchoRequest, send EchoReply back...
+                messageCollector.Append(NetSteganography.GetContent3Icmp(icmp, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
+                //TODO how to reply... Implement method which returns list of layers...
             }
 
             //ICMP methods when not expected but ICMP received

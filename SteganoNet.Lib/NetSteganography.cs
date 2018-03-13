@@ -75,81 +75,8 @@ namespace SteganoNetLib
 
         //---------------------------------------------------------------------------------------------------------------------
 
-        //ip layer methods
-        public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rs = null) //RECEIVER
-        {
-            if (ip == null) { return null; } //extra protection
-            List<string> BlocksOfSecret = new List<string>();
-
-            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
-            {
-                rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
-                switch (methodId)
-                {
-                    case 301: //IP (Type of service / DiffServ agresive) RECEIVER
-                        {
-                            string binvalue = Convert.ToString(ip.TypeOfService, 2); //use whole field
-                            string binvaluePadded = binvalue.PadLeft(8, '0');
-                            BlocksOfSecret.Add(binvaluePadded); //when zeros was cutted
-                            break;
-                        }
-                    case 302: //IP (Type of service / DiffServ) RECEIVER
-                        {
-                            string fullfield = Convert.ToString(ip.TypeOfService, 2).PadLeft(8, '0');
-                            string binvalue = fullfield.Substring(fullfield.Length - 2); //use only last two bits
-                            BlocksOfSecret.Add(binvalue);
-                            break;
-                        }
-                    case 303: //IP (Identification) RECEIVER
-                        {
-                            string binvalue = Convert.ToString(ip.Identification, 2);
-                            //TODO, only in first packet!
-                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
-                            break;
-                        }
-                    case 331: //ICMP (pure) RECEIVER
-                        {
-                            //do not reply? 
-                            break;
-                        }
-                    case 333: //ICMP (Identifier) RECEIVER
-                        {
-                            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
-                            if (icmp.IsValid != true)
-                                continue;
-
-                            string binvalue = Convert.ToString(icmp.Identifier, 2);
-                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
-
-                            break;
-                        }
-                    case 335: //ICMP (Sequence number) RECEIVER
-                        {
-                            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
-                            if (icmp.IsValid != true)
-                                continue;
-
-                            //337 icmp.Payload = "";
-
-                            //todo
-
-                            break;
-                        }
-                }
-            }
-
-            if (BlocksOfSecret.Count != 0) //providing value output
-            {
-                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        //SENDER
-        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
+        //ip layer methods               
+        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null) //SENDER
         {
             if (ip == null) { return null; } //extra protection
 
@@ -214,7 +141,51 @@ namespace SteganoNetLib
 
             return new Tuple<IpV4Layer, string>(ip, secret);
         }
+        public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rs = null) //RECEIVER
+        {
+            if (ip == null) { return null; } //extra protection
+            List<string> BlocksOfSecret = new List<string>();
 
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
+                switch (methodId)
+                {
+                    case 301: //IP (Type of service / DiffServ agresive) RECEIVER
+                        {
+                            string binvalue = Convert.ToString(ip.TypeOfService, 2); //use whole field
+                            string binvaluePadded = binvalue.PadLeft(8, '0');
+                            BlocksOfSecret.Add(binvaluePadded); //when zeros was cutted
+                            break;
+                        }
+                    case 302: //IP (Type of service / DiffServ) RECEIVER
+                        {
+                            string fullfield = Convert.ToString(ip.TypeOfService, 2).PadLeft(8, '0');
+                            string binvalue = fullfield.Substring(fullfield.Length - 2); //use only last two bits
+                            BlocksOfSecret.Add(binvalue);
+                            break;
+                        }
+                    case 303: //IP (Identification) RECEIVER
+                        {
+                            string binvalue = Convert.ToString(ip.Identification, 2);
+                            //TODO, only in first packet!
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                }
+            }
+
+            if (BlocksOfSecret.Count != 0) //providing value output
+            {
+                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+            }
+            else
+            {
+                return null;
+            }
+        }
+        
+        //icmp layer methods
         public static Tuple<IcmpEchoLayer, string> SetContent3Icmp(IcmpEchoLayer icmp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
         {
             if (icmp == null) { return null; } //extra protection
@@ -268,6 +239,51 @@ namespace SteganoNetLib
             }
 
             return new Tuple<IcmpEchoLayer, string>(icmp, secret);
+        }
+   
+        public static string GetContent3Icmp(IcmpEchoDatagram icmp, List<int> stegoUsedMethodIds, NetReceiverServer rs = null) //RECEIVER
+        {
+            if (icmp == null) { return null; } //extra protection
+            List<string> BlocksOfSecret = new List<string>();
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                rs.AddInfoMessage("3ICMP: method " + methodId); //add number of received bits in this iteration
+                switch (methodId)
+                {
+                    case 331: //ICMP (pure) RECEIVER
+                        {
+                            //no stehanography included
+                            break;
+                        }
+                    case 333: //ICMP (Identifier) RECEIVER
+                        {
+                            /*
+                            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
+                            if (icmp.IsValid != true)
+                                continue;
+                            */
+                            string binvalue = Convert.ToString(icmp.Identifier, 2);
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                    case 335: //ICMP (Sequence number) RECEIVER
+                        {                                                     
+                            //todo
+                            break;
+                        }
+                  //case 337: icmp.Payload = "";
+                }
+            }
+
+            if (BlocksOfSecret.Count != 0) //providing value output
+            {
+                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+            }
+            else
+            {
+                return null;
+            }
         }
 
         //tcp layer methods
