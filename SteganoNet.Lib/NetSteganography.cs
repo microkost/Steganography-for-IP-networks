@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.IpV4;
+using PcapDotNet.Packets.Transport;
 
 namespace SteganoNetLib
 {
@@ -16,6 +17,9 @@ namespace SteganoNetLib
         public const int IcmpGenericPing = 331;
         public const int NetworkRangeStart = IpRangeStart;
         public const int NetworkRangeEnd = 399;
+        //udp
+        public const int TcpRangeStart = 450;
+        public const int TcpRangeEnd = 499;
 
         private static Random rand = new Random();
         private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage
@@ -44,7 +48,8 @@ namespace SteganoNetLib
                 { 331, "ICMP ping (Standard, for other layers) - 0b" },
                 { 333, "ICMP ping (Identifier) - 16b" },
                 { 335, "ICMP ping (Sequence number) - 16b" },
-                { 337, "ICMP ping (Data field) - up to MTU" }
+                { 337, "ICMP ping (Data field) - up to MTU" },
+                { 451, "TCP (standard) - 0b" }
             };
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
@@ -286,9 +291,42 @@ namespace SteganoNetLib
             }
         }
 
-        //tcp layer methods
+
+        //-L4------------------------------------------------------------------------------------------------------------------
 
         //udp layer methods - skipped by assigment
+
+        //tcp layer methods
+
+        public static Tuple<TcpLayer, string> SetContent4Tcp(TcpLayer tcp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
+        {
+            if (tcp == null) { return null; } //extra protection
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                sc.AddInfoMessage("4TCP: method " + methodId);
+
+                //needs to handle states
+                //SYN
+                //SYN+ACK
+                //ACK
+
+                switch (methodId)
+                {
+                    case 451: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
+                        {
+                            
+                            break;
+                        }
+                }
+            }
+
+            return new Tuple<TcpLayer, string>(tcp, secret);
+        }
+
+        //get content
+
+        //-L5---L7-------------------------------------------------------------------------------------------------------------
 
         //application layer methods
     }

@@ -147,7 +147,7 @@ namespace SteganoNetLib
                 StegoBinary.Add(new StringBuilder("spacebetweenstreams")); //storing just binary messages    
             }
 
-            //parsing layers for processing
+            //parsing layers for processing            
             IpV4Datagram ip = packet.Ethernet.IpV4; //add test
             IcmpEchoDatagram icmp = null;
             TcpDatagram tcp = null;
@@ -169,59 +169,36 @@ namespace SteganoNetLib
 
             //TODO recognize seting connection + ending...
             NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
-                                                                            //remember source! Do not run this method for non steganography sources!
+                                                                            //remember source => Do not run this method for non steganography sources!
 
-            //TODO How to handle answers?
-            //send packet or layer to reply method in NetStandard to reply according to RFC... (should be async?)
-
-            //StegoMethodIds contain numbered list of uncolissioning methods which can be used simultaneously
-            //List<int> listOfStegoMethodsIds = NetSteganography.GetListStegoMethodsIdAndKey().Keys.ToList(); //all
-            StringBuilder messageCollector = new StringBuilder();
+            StringBuilder messageCollector = new StringBuilder(); //for appending answers
 
             //IP methods
             List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
             {
-                //AddInfoMessage("L> IP...");
                 messageCollector.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
-                //pure IP is not responding
-                //if added async processing then save also timestamp for assembling messages back in order!                
+                //SendReplyPacket(null) => pure IP is not responding 
+                //TODO if ever added async processing then save also timestamp for assembling messages back in order!
             }
 
             //ICMP methods
             List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
             {
-                messageCollector.Append(NetSteganography.GetContent3Icmp(icmp, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
-                //TODO how to reply... Implement method which returns list of layers...
+                messageCollector.Append(NetSteganography.GetContent3Icmp(icmp, StegoUsedMethodIds, this));
+                SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
-            //ICMP methods when not expected but ICMP received
+            //ICMP methods when not expected but ICMP received (pure IP stego etc.)
             if (!StegoUsedMethodIds.Any(icmpSelectionIds.Contains) && icmp != null && icmp.GetType() == typeof(IcmpEchoDatagram))
             {
-                //making traffic less suspicious by answering, when is ICMP but not defined as ICMP stego method
-                List<Layer> layers = new List<Layer>(); //list of used layers
-
-                //redo to get NetStandard.SetIcmpReply()
-                layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
-                layers.Add(NetStandard.GetIpV4Layer(IpLocalListening, IpRemoteSpeaker)); //reversed order of IP addresses from ip but also working like this
-                IcmpEchoReplyLayer icmpLayer = new IcmpEchoReplyLayer();
-                icmpLayer.SequenceNumber = icmp.SequenceNumber; //field MUST be returned to the sender unaltered
-                icmpLayer.Identifier = icmp.Identifier; //field MUST be returned to the sender unaltered
-                layers.Add(icmpLayer);
-
-                SendReplyPacket(layers);
+                //making traffic less suspicious by answering, when is ICMP but not defined as ICMP stego method                            
+                SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
+            
             /*
-            //ICMP methods //is part of IP, or separate? => replies
-            else if (icmp != null && icmp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[0]))
-            {
-                //if stego methods starts 3xx
-
-                messages.Enqueue("ICMP...");
-            }
-
             //TCP methods
             else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
             {

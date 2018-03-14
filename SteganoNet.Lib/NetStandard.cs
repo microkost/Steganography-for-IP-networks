@@ -8,6 +8,8 @@ using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using PcapDotNet.Packets;
 using System.Collections.Generic;
+using PcapDotNet.Packets.Icmp;
+using System.Diagnostics;
 
 namespace SteganoNetLib
 {
@@ -34,10 +36,10 @@ namespace SteganoNetLib
             if (ipAddressInterface == null || ipAddressInterface.ToString().Length == 0 || ipAddressInterface.ToString().Equals("0.0.0.0")) //in case of input problem or unknown
             {
                 ipAddressInterface = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip                
-            }            
+            }
 
             try //source: https://stephenhaunts.com/2014/01/06/getting-the-mac-address-for-a-machine-on-the-network/
-            {  
+            {
                 byte[] macAddr = new byte[6];
                 uint macAddrLen = (uint)macAddr.Length;
                 string[] str = new string[(int)macAddrLen]; //bit too classic C but working...
@@ -49,7 +51,7 @@ namespace SteganoNetLib
                     {
                         //if still not valid then return smth universal
                         return NetDevice.GetRandomMacAddress();
-                    }                       
+                    }
                 }
                 for (int i = 0; i < macAddrLen; i++)
                 {
@@ -70,7 +72,7 @@ namespace SteganoNetLib
         //---------L3------------------------------------------------------------------------------------------------------------
         public static IpV4Layer GetIpV4Layer(IpV4Address SourceIP, IpV4Address DestinationIP)
         {
-            IpV4Layer ipv4Vrstva = new IpV4Layer();            
+            IpV4Layer ipv4Vrstva = new IpV4Layer();
             ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
             ipv4Vrstva.Source = SourceIP;
             ipv4Vrstva.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
@@ -119,6 +121,19 @@ namespace SteganoNetLib
             string address = result.ToString();
             IpV4Address ipv4address = new IpV4Address(address);
             return ipv4address;
+        }
+
+        public static List<Layer> GetIcmpEchoReplyPacket(MacAddress MacAddressLocal, MacAddress MacAddressRemote, IpV4Address SourceIP, IpV4Address DestinationIP, IcmpEchoDatagram icmp)
+        {
+            //create legacy "datagram" which is going to be sent back
+            List<Layer> layers = new List<Layer>(); //list of used layers
+            layers.Add(GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
+            layers.Add(GetIpV4Layer(SourceIP, DestinationIP));
+            IcmpEchoReplyLayer icmpLayer = new IcmpEchoReplyLayer();
+            icmpLayer.SequenceNumber = icmp.SequenceNumber; //field MUST be returned to the sender unaltered
+            icmpLayer.Identifier = icmp.Identifier; //field MUST be returned to the sender unaltered
+            layers.Add(icmpLayer);
+            return (layers);
         }
 
 
@@ -190,20 +205,64 @@ namespace SteganoNetLib
 
         public static TcpLayer GetTcpLayer(ushort sourcePort, ushort destinationPort, uint sequenceNumber, uint acknowledgmentNumber, TcpControlBits SetBit = TcpControlBits.Synchronize)
         {
-            TcpLayer tcpLayer = new TcpLayer();
-            tcpLayer.SourcePort = sourcePort;
-            tcpLayer.DestinationPort = destinationPort;
-            tcpLayer.SequenceNumber = sequenceNumber;
-            tcpLayer.AcknowledgmentNumber = acknowledgmentNumber;
-            tcpLayer.ControlBits = SetBit; //needs to be changed regarding flow of TCP!
+           /* How it works
+            * client sending SYN               seq = generated         ack = 0
+            * server sending SYNACK            seq = generated         ack = received seq + 1
+            * client sending ACK               seq = received ack      ack = received seq + 1
+            *
+            * client sending PSH, DATA         seq = same as before    ack = same as before
+            * server sending ACK               seq = received ack      ack = received seq + size of data
+            * server sending DATA optional     seq = same as before    ack = same as before
+            * client sending ACK               seq = received ack      ack = received seq + size of data
+            * client sending DATA              seq = same as before    ack = same as before
+            * server sending ACK               seq = received ack      ack = received seq + size of data
+            * client sending DATA              seq = same as before    ack = same as before
+            * ...
+            * server sending ACK               seq = received ack      ack = received seq + size of data
+            * client sending FINACK            seq = same as before    ack = same as before
+            * server sending FINACK            seq = received ack      ack = received seq + 1
+            * client sending ACK               seq = received ack      ack = received seq + 1 
+            */
 
-            tcpLayer.Window = 100;
-            tcpLayer.Checksum = null; //Will be filled automatically
-            tcpLayer.UrgentPointer = 0;
-            tcpLayer.Options = TcpOptions.None;
+            TcpLayer tcpLayer = new TcpLayer
+            {
+                SourcePort = sourcePort,
+                DestinationPort = destinationPort,
+                SequenceNumber = sequenceNumber,
+                AcknowledgmentNumber = acknowledgmentNumber,
+                ControlBits = SetBit, //needs to be changed regarding flow of TCP!
+
+                Window = 100,
+                Checksum = null, //Will be filled automatically
+                UrgentPointer = 0,
+                Options = TcpOptions.None
+            };
             return tcpLayer;
         }
 
+        public static uint? WaitForTcpAck(PcapDotNet.Core.PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
+        {
+            communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
+            Stopwatch sw = new Stopwatch(); //for timeout
+            sw.Start();
+
+            while (true)
+            {
+                if (communicator.ReceivePacket(out Packet packet) == PcapDotNet.Core.PacketCommunicatorReceiveResult.Ok && packet.Ethernet.IpV4.Tcp.ControlBits == waitForBit)
+                {
+                    if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == ackNumberExpected) //debug point
+                    {
+                        return packet.Ethernet.IpV4.Tcp.SequenceNumber; //if ACK fits, return SEQ
+                    }
+                }
+
+                if (sw.ElapsedMilliseconds > 20000) //timeout break
+                {
+                    sw.Stop();
+                    return null;
+                }
+            }
+        }
 
     }
 }

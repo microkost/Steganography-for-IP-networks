@@ -7,6 +7,7 @@ using PcapDotNet.Packets;
 using PcapDotNet.Packets.Ethernet;
 using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.IpV4;
+using PcapDotNet.Packets.Transport;
 
 namespace SteganoNetLib
 {
@@ -32,11 +33,10 @@ namespace SteganoNetLib
         private IpV4Address IpOfRemoteHost { get; set; } //isolation of referencies
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private int DelayInMs { get; set; } //how long to wait between iterations
-        //private ushort SequenceNumber { get; set; } //for legacy usage moved to NetStego
-        //private static Random rand = new Random();
-
-
-        //private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)        
+        private uint AckNumberLocal { get; set; } //for TCP requests
+        private uint AckNumberRemote { get; set; } //for TCP answers
+        private uint SeqNumberLocal { get; set; } //for TCP requests
+        private uint? SeqNumberRemote { get; set; } //for TCP answers
 
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
@@ -96,7 +96,7 @@ namespace SteganoNetLib
                     }
 
                     //ICMP methods
-                    List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
+                    List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
                     {
                         //here is problem in creating correct layer because ICMP doesnt have instantable generic one
@@ -107,6 +107,26 @@ namespace SteganoNetLib
                         layers.Add(icmpLayer); //mark layer as done                                 
                     }
 
+                    //UDP methods
+
+                    //TCP methods
+                    List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
+                    if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
+                    {
+                        //how to handle multiple answers and changes of data?
+                        //this need to receive answers and pass result to stego method...
+                        //probably stego method is handling state, client need to handle receiving...
+                        //here are needed to keep ack+seq values and handle them... SetContent is just using them...
+
+                        TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
+                        Tuple<TcpLayer, string> tcpStego = NetSteganography.SetContent4Tcp(tcpLayer, StegoUsedMethodIds, SecretMessage, this);
+                        tcpLayer = tcpStego.Item1;
+                        SecretMessage = tcpStego.Item2;
+                        layers.Add(tcpLayer);
+                    }
+
+
+                    //protection if not enought layers
                     if (layers.Count < 3)
                     {
                         if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
