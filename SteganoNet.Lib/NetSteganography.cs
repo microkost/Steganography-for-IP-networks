@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.IpV4;
@@ -22,7 +23,7 @@ namespace SteganoNetLib
         public const int TcpRangeEnd = 499;
 
         private static Random rand = new Random();
-        private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage
+        private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage        
 
         public static Dictionary<int, string> GetListStegoMethodsIdAndKey() //service method
         {
@@ -85,6 +86,7 @@ namespace SteganoNetLib
         public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null) //SENDER
         {
             if (ip == null) { return null; } //extra protection
+            Stopwatch sw = new Stopwatch(); //for timeout
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
@@ -137,9 +139,44 @@ namespace SteganoNetLib
                             break;
                         }
                     case 303: //IP (Identification) //SENDER
-                        {
-                            //https://tools.ietf.org/html/rfc6864#page-4
+                        {                            
+                            sw.Start();
+                            const int usedbits = 16;                         
                             //first run start timer, add value to output and save it outside loop. Replace value and send new one after timer expire.
+                            try
+                            {
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+                                ip.Identification = Convert.ToByte(partOfSecret, 2);
+                                secret = secret.Remove(0, usedbits);
+
+                                //after first is leave
+                                if (sw.ElapsedMilliseconds < 120000) //timeout break twoMinInMs
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    sw.Stop();
+                                    sw.Reset();
+                                }
+                            }
+                            catch
+                            {
+                                if (secret.Length != 0)
+                                {
+                                    ip.Identification = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    secret = secret.Remove(0, secret.Length);
+                                }
+                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
+                            }
+                            break;
+                        }
+                    case 305: //IP Flags...
+                        {
+                            /* In IPv4, fragments are indicated using four fields of the basic header: 
+                             * Identification(ID), Fragment Offset, a "Don't Fragment" (DF) flag, and a "More Fragments"(MF) flag
+                             */
                             break;
                         }
                 }
@@ -175,7 +212,7 @@ namespace SteganoNetLib
                         {
                             //TODO, only in first packet or change it every two minutes
                             //SENDER NOT DONE
-                            string binvalue = Convert.ToString(ip.Identification, 2);                            
+                            string binvalue = Convert.ToString(ip.Identification, 2);
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
@@ -191,7 +228,7 @@ namespace SteganoNetLib
                 return null;
             }
         }
-        
+
         //icmp layer methods
         public static Tuple<IcmpEchoLayer, string> SetContent3Icmp(IcmpEchoLayer icmp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
         {
@@ -259,14 +296,14 @@ namespace SteganoNetLib
                                 return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
                             }
                             break;
-                        }                        
+                        }
                         //case 337: icmp.Payload = "";
                 }
             }
 
             return new Tuple<IcmpEchoLayer, string>(icmp, secret);
         }
-   
+
         public static string GetContent3Icmp(IcmpEchoDatagram icmp, List<int> stegoUsedMethodIds, NetReceiverServer rs = null) //RECEIVER
         {
             if (icmp == null) { return null; } //extra protection
@@ -294,7 +331,7 @@ namespace SteganoNetLib
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
-                  //case 337: icmp.Payload = "";
+                        //case 337: icmp.Payload = "";
                 }
             }
 
@@ -332,7 +369,7 @@ namespace SteganoNetLib
                 {
                     case 451: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
                         {
-                            
+
                             break;
                         }
                 }

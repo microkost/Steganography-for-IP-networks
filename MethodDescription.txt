@@ -26,7 +26,13 @@ https://tools.ietf.org/html/rfc791#page-11
 302: same as 301 but using only 2 bits
 		used: Bit  6-7:  Reserved for Future Use.
 --------------------------------------------------------------------------------
-
+303: https://tools.ietf.org/html/rfc6864
+     RFC 6864 updated RFC’s 791, 1122, and 2003 to clarify the definition of the IPv4 ID field.
+		Atomic datagrams: (DF==1)&&(MF==0)&&(frag_offset==0)
+        Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+        The IPv4 ID field is thus meaningful only for non-atomic datagrams
+		Sources emitting non-atomic datagrams MUST NOT repeat IPv4 ID values within one MDL for a given source address/destination address/protocol tuple.
+		does not repeat within the maximum datagram lifetime (MDL) [RFC791] [RFC1122] which is typically interpreted as two minutes
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
