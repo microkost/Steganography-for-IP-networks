@@ -289,6 +289,8 @@ namespace SteganoNetLib
 
         public void SendReplyPacket(List<Layer> layers) //send answer just from list of layers, building and forwarning the answer
         {
+            if (layers == null) { return; } //extra protection
+
             if (layers.Count < 3) //should use complex test of content as client method
             {
                 AddInfoMessage("L> Warning: Count of layers in reply packet is low! ");

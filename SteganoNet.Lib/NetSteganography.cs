@@ -43,13 +43,13 @@ namespace SteganoNetLib
                 // { 000, "Nothing, pure" },
                 { 301, "IP (Type of service / DiffServ agresive) - 8b" },
                 { 302, "IP (Type of service / DiffServ) - 2b" },
-                { 303, "IP (Identification)" },
-                { 305, "IP (Flags)" },
+                { 303, "IP (Identification)" }, //TODO
+                { 305, "IP (Flags)" }, //TODO
                 { 331, "ICMP ping (Standard, for other layers) - 0b" },
                 { 333, "ICMP ping (Identifier) - 16b" },
                 { 335, "ICMP ping (Sequence number) - 16b" },
-                { 337, "ICMP ping (Data field) - up to MTU" },
-                { 451, "TCP (standard) - 0b" }
+                { 337, "ICMP ping (Data field) - up to MTU" }, //TODO
+                { 451, "TCP (standard) - 0b" } //TODO
             };
 
             //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
@@ -59,7 +59,8 @@ namespace SteganoNetLib
             //IP method 4 - TypeOfService fild - extrely lame way but... Usage high bits 6 + 7 is "OK"...
             //IP method 5  - 
 
-            //ttl methods, resting value is magic value
+            //ttl methods, resting value is magic value, round trip timer
+            //ping delay or TCP delay
 
             return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
         }
@@ -172,8 +173,9 @@ namespace SteganoNetLib
                         }
                     case 303: //IP (Identification) RECEIVER
                         {
-                            string binvalue = Convert.ToString(ip.Identification, 2);
-                            //TODO, only in first packet!
+                            //TODO, only in first packet or change it every two minutes
+                            //SENDER NOT DONE
+                            string binvalue = Convert.ToString(ip.Identification, 2);                            
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
@@ -193,11 +195,7 @@ namespace SteganoNetLib
         //icmp layer methods
         public static Tuple<IcmpEchoLayer, string> SetContent3Icmp(IcmpEchoLayer icmp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
         {
-            if (icmp == null) { return null; } //extra protection
-
-            //{ 331, "ICMP (standard, for other layers) - 0b" },
-            //{ 333, "ICMP (Identifier)" },
-            //{ 335, "ICMP (Sequence number)" }
+            if (icmp == null) { return null; } //extra protection            
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
@@ -225,14 +223,11 @@ namespace SteganoNetLib
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
                                 icmp.Identifier = Convert.ToUInt16(partOfSecret, 2);
                                 secret = secret.Remove(0, usedbits);
-
-                                //TODO WRITE READING METHOD!
                             }
                             catch
                             {
                                 if (secret.Length != 0)
                                 {
-                                    //PROBLEM
                                     icmp.Identifier = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
                                     secret = secret.Remove(0, secret.Length);
                                 }
@@ -240,6 +235,32 @@ namespace SteganoNetLib
                             }
                             break;
                         }
+                    case 335: //ICMP (Sequence number) //SENDER
+                        {
+                            if (!stegoUsedMethodIds.Contains(333)) //do not overwrite identifier when that method selected
+                            {
+                                icmp.Identifier = icmp.Identifier = (ushort)rand.Next(0, 65535); //legacy Identifier number
+                            }
+
+                            const int usedbits = 16;
+                            try
+                            {
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                icmp.SequenceNumber = Convert.ToUInt16(partOfSecret, 2);
+                                secret = secret.Remove(0, usedbits);
+                            }
+                            catch
+                            {
+                                if (secret.Length != 0)
+                                {
+                                    icmp.SequenceNumber = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    secret = secret.Remove(0, secret.Length);
+                                }
+                                return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
+                            }
+                            break;
+                        }                        
+                        //case 337: icmp.Payload = "";
                 }
             }
 
@@ -258,23 +279,19 @@ namespace SteganoNetLib
                 {
                     case 331: //ICMP (pure) RECEIVER
                         {
-                            //no stehanography included
+                            //no stehanography included - OK
                             break;
                         }
                     case 333: //ICMP (Identifier) RECEIVER
                         {
-                            /*
-                            IcmpIdentifiedDatagram icmp = (ip.Icmp.IsValid == true) ? (IcmpIdentifiedDatagram)ip.Icmp : null; //parsing layer for processing            
-                            if (icmp.IsValid != true)
-                                continue;
-                            */
                             string binvalue = Convert.ToString(icmp.Identifier, 2);
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
                     case 335: //ICMP (Sequence number) RECEIVER
-                        {                                                     
-                            //todo
+                        {
+                            string binvalue = Convert.ToString(icmp.SequenceNumber, 2);
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
                   //case 337: icmp.Payload = "";

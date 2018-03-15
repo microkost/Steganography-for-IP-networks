@@ -64,6 +64,9 @@ namespace SteganoNetLib
                 return;
             }
 
+            const int delayIcmp = 500; //DEBUG, originally 1000
+            const int delay = 0;
+
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
 
@@ -86,13 +89,15 @@ namespace SteganoNetLib
                         Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
-                        layers.Add(ipV4Layer); //mark layer as done                        
+                        layers.Add(ipV4Layer); //mark layer as done     
+                        DelayInMs = delay;
                     }
                     else
                     {
                         //if not stego in IP add normal IP layer - they need to be in proper order otherwise "Can't determine protocol automatically from next layer because there is no next layer"
                         IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3 
                         layers.Add(ipV4Layer);
+                        DelayInMs = delay;
                     }
 
                     //ICMP methods
@@ -104,7 +109,8 @@ namespace SteganoNetLib
                         Tuple<IcmpEchoLayer, string> icmpStego = NetSteganography.SetContent3Icmp(icmpLayer, StegoUsedMethodIds, SecretMessage, this);
                         icmpLayer = icmpStego.Item1; //save layer containing steganography
                         SecretMessage = icmpStego.Item2; //save rest of unsended bites
-                        layers.Add(icmpLayer); //mark layer as done                                 
+                        layers.Add(icmpLayer); //mark layer as done     
+                        DelayInMs = delayIcmp;
                     }
 
                     //UDP methods
@@ -123,6 +129,7 @@ namespace SteganoNetLib
                         tcpLayer = tcpStego.Item1;
                         SecretMessage = tcpStego.Item2;
                         layers.Add(tcpLayer);
+                        DelayInMs = delay;
                     }
 
 
@@ -132,34 +139,36 @@ namespace SteganoNetLib
                         if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
                         {
                             layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
+                            DelayInMs = delay;
                         }
 
                         if (!layers.OfType<IpV4Layer>().Any())
                         {
                             IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
                             layers.Add(ipV4LayerTMP);
+                            DelayInMs = delay;
                         }
 
                         if (!layers.OfType<IcmpEchoLayer>().Any())
                         {
                             Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
                             layers.Add(icmpStegoTMP.Item1);
-                            DelayInMs = 100; //DEBUG, originally 1000
+                            DelayInMs = delayIcmp;
                         }
+                    }
+
+                    AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
+                    if (SecretMessage.Length == 0)
+                    {
+                        AddInfoMessage(String.Format("Message departured, you can stop the process by pressing ESC")); //TODO it's confusing when is running from GUI
+                        Terminate = true;
                     }
 
                     //build packet and send
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
-                    communicator.SendPacket(packet);
-                    AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
+                    communicator.SendPacket(packet);                    
                     System.Threading.Thread.Sleep(DelayInMs);
-
-                    if (SecretMessage.Length == 0)
-                    {
-                        Terminate = true;
-                    }
-
                 }
                 while (!Terminate || SecretMessage.Length != 0);
             }

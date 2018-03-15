@@ -125,6 +125,8 @@ namespace SteganoNetLib
 
         public static List<Layer> GetIcmpEchoReplyPacket(MacAddress MacAddressLocal, MacAddress MacAddressRemote, IpV4Address SourceIP, IpV4Address DestinationIP, IcmpEchoDatagram icmp)
         {
+            if (icmp == null) { return null; } //extra protection
+
             //create legacy "datagram" which is going to be sent back
             List<Layer> layers = new List<Layer>(); //list of used layers
             layers.Add(GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
