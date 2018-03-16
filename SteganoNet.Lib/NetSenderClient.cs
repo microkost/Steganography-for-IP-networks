@@ -37,7 +37,8 @@ namespace SteganoNetLib
         private uint AckNumberRemote { get; set; } //for TCP answers
         private uint SeqNumberLocal { get; set; } //for TCP requests
         private uint? SeqNumberRemote { get; set; } //for TCP answers
-
+        private bool FirstRun { get; set; } //IP identification
+        private ushort IpIdentification { get; set; } //IP identification stored value
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
         {
@@ -53,6 +54,7 @@ namespace SteganoNetLib
             Messages = new Queue<string>();
             DelayInMs = 0;
             //SequenceNumber = (ushort)DateTime.Now.Ticks;
+            this.FirstRun = true;
             AddInfoMessage("Client created...");
         }
 
@@ -85,10 +87,29 @@ namespace SteganoNetLib
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
-                        IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3 
-                        Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this);
+                        IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                         
+                        if (FirstRun == false && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
+                        {
+                            ipV4Layer.Identification = IpIdentification; //put there previous identification, if there is previous... I will not change if time not expire...
+                        }
+
+                        Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this, FirstRun);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
+
+                        if (FirstRun && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
+                        {
+                            IpIdentification = ipV4Layer.Identification; //save stego info and reuse it for next two mins
+                            FirstRun = false;
+                        }
+                        else
+                        {
+                            if (IpIdentification != ipV4Layer.Identification && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
+                            {
+                                IpIdentification = ipV4Layer.Identification; //when timer expire, save new value for next iteration
+                            }
+                        }
+
                         layers.Add(ipV4Layer); //mark layer as done     
                         DelayInMs = delay;
                     }
@@ -104,7 +125,7 @@ namespace SteganoNetLib
                     List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
                     {
-                        //here is problem in creating correct layer because ICMP doesnt have instantable generic one
+                        //here is problem in creating correct layer because ICMP doesnt have instanstable generic one
                         IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
                         Tuple<IcmpEchoLayer, string> icmpStego = NetSteganography.SetContent3Icmp(icmpLayer, StegoUsedMethodIds, SecretMessage, this);
                         icmpLayer = icmpStego.Item1; //save layer containing steganography
@@ -160,14 +181,14 @@ namespace SteganoNetLib
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
                     if (SecretMessage.Length == 0)
                     {
-                        AddInfoMessage(String.Format("Message departured, you can stop the process by pressing ESC")); //TODO it's confusing when is running from GUI
+                        AddInfoMessage(String.Format("All message departured, you can stop the process by pressing ESC")); //TODO it's confusing when is running from GUI
                         Terminate = true;
                     }
 
                     //build packet and send
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
-                    communicator.SendPacket(packet);                    
+                    communicator.SendPacket(packet);
                     System.Threading.Thread.Sleep(DelayInMs);
                 }
                 while (!Terminate || SecretMessage.Length != 0);

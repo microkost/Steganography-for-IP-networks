@@ -13,6 +13,7 @@ namespace SteganoNetLib
         //magic numbers dialer (never use numbers directly outside this class, if needed use like "IcmpGenericPing" value)
         public const int IpRangeStart = 300;
         public const int IpRangeEnd = 329;
+        public const int IpIdentificationMethod = 303;
         public const int IcmpRangeStart = 330;
         public const int IcmpRangeEnd = 359;
         public const int IcmpGenericPing = 331;
@@ -24,7 +25,7 @@ namespace SteganoNetLib
 
         private static Random rand = new Random();
         private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage        
-
+        
         public static Dictionary<int, string> GetListStegoMethodsIdAndKey() //service method
         {
             /* 
@@ -83,10 +84,12 @@ namespace SteganoNetLib
         //---------------------------------------------------------------------------------------------------------------------
 
         //ip layer methods               
-        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null) //SENDER
+        public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null, bool firstRun = false) //SENDER
         {
             if (ip == null) { return null; } //extra protection
-            Stopwatch sw = new Stopwatch(); //for timeout
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start(); //for timeout of 303
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
@@ -139,36 +142,42 @@ namespace SteganoNetLib
                             break;
                         }
                     case 303: //IP (Identification) //SENDER
-                        {                            
-                            sw.Start();
-                            const int usedbits = 16;                         
+                        {
                             //first run start timer, add value to output and save it outside loop. Replace value and send new one after timer expire.
-                            try
+                            const int usedbits = 16;
+                            if (firstRun == true)
                             {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
                                 //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
                                 ip.Identification = Convert.ToByte(partOfSecret, 2);
                                 secret = secret.Remove(0, usedbits);
+                                break;
+                            }
 
-                                //after first is leave
-                                if (sw.ElapsedMilliseconds < 120000) //timeout break twoMinInMs
+                            if (sw.ElapsedMilliseconds < 120000) //timeout break twoMinInMs is 120000
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                try
                                 {
-                                    break;
-                                }
-                                else
-                                {
+                                    string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                    //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+                                    ip.Identification = Convert.ToByte(partOfSecret, 2);
+                                    secret = secret.Remove(0, usedbits);
                                     sw.Stop();
                                     sw.Reset();
                                 }
-                            }
-                            catch
-                            {
-                                if (secret.Length != 0)
+                                catch
                                 {
-                                    ip.Identification = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
-                                    secret = secret.Remove(0, secret.Length);
+                                    if (secret.Length != 0)
+                                    {
+                                        ip.Identification = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                        secret = secret.Remove(0, secret.Length);
+                                    }
+                                    return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
                                 }
-                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
                             }
                             break;
                         }
