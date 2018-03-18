@@ -11,8 +11,6 @@ namespace SteganoNet.UI.Console
     {
         static void Main(string[] args) //static removed
         {
-            bool SimplifyConfigWhenDebug = true; //skips ports and IP address for developing
-
             //method flow:
             //check sw dependencies
             //recognize mode (parametres / wizard), if wizard then:
@@ -25,6 +23,9 @@ namespace SteganoNet.UI.Console
             //view immediate info
             //stop
             //analyze results
+
+            bool SimplifyConfigWhenDebug = false; //skips ports and IP address for developing
+            bool isHumanDriving = true; //skip asking when is runned from parametres
 
             System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
             if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //can run?
@@ -51,6 +52,7 @@ namespace SteganoNet.UI.Console
 
             if (args.Length == 0 || args == null) //no user parametrized input = configuration WIZARD
             {
+                isHumanDriving = true;
                 System.Console.WriteLine("Do you want to run configuration wizard? (y/n) y"); //ha-ha             
                 System.Console.WriteLine("\tUse IPv4 or IPv6? (4/6) 4"); //ha-ha
 
@@ -58,11 +60,18 @@ namespace SteganoNet.UI.Console
                 role = System.Console.ReadLine().ToLower();
                 System.Console.WriteLine("");
 
+                if(!role.StartsWith("c") && !role.StartsWith("s"))
+                {
+                    System.Console.Write("\t\tWrong selection, correct are 'c'lient or 's'erver\n\t\tPress Any Key to Exit...");
+                    System.Console.ReadKey();
+                    return;
+                }
+
                 //local IP
                 ipSource = ConsoleTools.SelectInterface(); //interactive
                 System.Console.WriteLine("");
 
-                if (SimplifyConfigWhenDebug == false)
+                if (!SimplifyConfigWhenDebug)
                 {
                     //local port                
                     System.Console.Write(String.Format("\tEnter source port: should it be {0}? (y or enter / number) ", portSource));
@@ -86,7 +95,7 @@ namespace SteganoNet.UI.Console
 
                     //remote IP address
                     String[] ipBytes = ipSource.Split('.'); uint byte1 = Convert.ToUInt32(ipBytes[0]); uint byte2 = Convert.ToUInt32(ipBytes[1]); uint byte3 = Convert.ToUInt32(ipBytes[2]);
-                    uint byte4 = Convert.ToUInt32(ipBytes[3]) + 0;
+                    uint byte4 = Convert.ToUInt32(ipBytes[3]) + 1; //MAGIC NUMBER for IP higher 1 than local
                     ipRemote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
                     System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}?  (y or enter / ip address) ", ipRemote));
                     string ipremoteNotParsed = System.Console.ReadLine();
@@ -134,6 +143,7 @@ namespace SteganoNet.UI.Console
             }
             else //skip the wizard, source from parametres
             {
+                isHumanDriving = false;
                 System.Console.WriteLine("Do you want to run configuration wizard? (y/n) n\n\nUsing following parametres as settings: ");
 
                 /*
@@ -267,14 +277,18 @@ namespace SteganoNet.UI.Console
             else if (String.Equals("c", role)) //its client
             {
                 System.Console.WriteLine(String.Format("\n\tActual message: \n\t\t{0}", messageReadable));
-                System.Console.Write("\tDo you want to change message? (y/n) ");
-                runSame = System.Console.ReadLine();
-                if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
+
+                if (isHumanDriving) //skip interactive question when is from parametres
                 {
-                    System.Console.Write("\tEnter secret message: ");
-                    messageReadable = System.Console.ReadLine();
-                    messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
-                }                
+                    System.Console.Write("\tDo you want to change message? (y/n) ");
+                    runSame = System.Console.ReadLine();
+                    if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
+                    {
+                        System.Console.Write("\tEnter secret message: ");
+                        messageReadable = System.Console.ReadLine();
+                        messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
+                    }
+                }
 
                 //prepare client
                 NetSenderClient sc = new NetSenderClient(ipSource, portSource, ipRemote, portRemote);
@@ -288,15 +302,28 @@ namespace SteganoNet.UI.Console
                 senderClientThread.IsBackground = true;
                 senderClientThread.Start();
 
-                //server activity output
-                System.Console.WriteLine("\nShowing client running information. Press ESC to stop when message is received.");
-                do
-                {
-                    while (!System.Console.KeyAvailable)
+                //client activity output
+                if (isHumanDriving)
+                {                    
+                    System.Console.WriteLine(String.Format("\nSending should wait around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods)/1000));
+
+                    System.Console.WriteLine("\nShowing client running information. Press ESC to stop when message is received.");
+                    do
                     {
-                        ConsoleTools.WriteInfoConsole(sc);
-                    }
-                } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape);
+                        while (!System.Console.KeyAvailable)
+                        {
+                            ConsoleTools.WriteInfoConsole(sc);
+                        }
+
+                    } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape); //show when is human is watching
+                }
+                else
+                {
+                    //do not show output but leave some time for run of sending thread
+                    int sleepTime = ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods);
+                    System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} ms for end...", sleepTime));
+                    Thread.Sleep(sleepTime);
+                }
 
                 sc.Terminate = true;
                 senderClientThread.Abort(); //stop client thread
@@ -324,8 +351,13 @@ namespace SteganoNet.UI.Console
             System.Console.Write(String.Format("\nRun same scenario again with command: \n{0} ", Assembly.GetExecutingAssembly().CodeBase/*, Path.GetFileName(Assembly.GetExecutingAssembly().CodeBase)*/));
             System.Console.WriteLine(String.Format("-role {0} -ip {1} -port {2} -ipremote {3} -portremote {4} -methods {5} -runsame {6} -message \"{7}\"", role, ipSource, portSource, ipRemote, portRemote, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n", "sample"));
 
-            System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool. Press any key to exit...");
-            System.Console.ReadKey();
+            if (isHumanDriving) //dont ask when script
+            {
+                System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool. Press any key to exit...");
+                System.Console.ReadKey();
+            }
+
+            return;
         }
     }
 

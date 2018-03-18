@@ -91,6 +91,14 @@ namespace SteganoNetLib
             return Encoding.UTF8.GetByteCount(value) == value.Length;
         }
 
+        public static int MessageASCIItoBitLenght(string messageEncrypted) //returns bit size of message or 0 when error
+        {
+            string binaryMesssage = StringASCII2BinaryNumber(messageEncrypted);
+            if(binaryMesssage == null) { return 0; };
+
+            return binaryMesssage.Count();
+        }
+
         public static string CalculateHash(string input)
         {
             //source https://blogs.msdn.microsoft.com/csharpfaq/2006/10/09/how-do-i-calculate-a-md5-hash-from-a-string/

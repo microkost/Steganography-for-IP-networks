@@ -148,22 +148,22 @@ namespace SteganoNetLib
             }
 
             //parsing layers for processing            
-            IpV4Datagram ip = packet.Ethernet.IpV4; //add test
+            IpV4Datagram ip = packet.Ethernet.IpV4; //TODO add test
             IcmpEchoDatagram icmp = null;
             TcpDatagram tcp = null;
             UdpDatagram udp = null;
             DnsDatagram dns = null;
             try
             {
-                AddInfoMessage((ip.IsValid) ? "" : "L> packet invalid"); //TODO more testing
+                //AddInfoMessage((ip.IsValid) ? "" : "L> packet invalid"); //TODO more testing
                 icmp = (ip.Icmp.IsValid) ? (IcmpEchoDatagram)ip.Icmp : null;
                 tcp = (ip.Tcp.IsValid) ? ip.Tcp : null;
                 udp = (ip.Udp.IsValid) ? ip.Udp : null;
                 dns = (udp.Dns.IsValid) ? udp.Dns : null;
             }
-            catch
+            catch (Exception ex)
             {
-                AddInfoMessage("L> packet discarted");
+                AddInfoMessage("L> packet discarted, " + ex.Message.ToString());
                 return;
             }
 
@@ -274,6 +274,11 @@ namespace SteganoNetLib
                 //AddInfoMessage("Message: " + message);
             }
 
+            //if more than half of next message contains 
+            //parse by "\n\r"
+            //cut of empty lines
+            //join together longer and ASCII one
+
             return sb.ToString();
         }
 
@@ -291,7 +296,7 @@ namespace SteganoNetLib
         {
             if (layers == null) { return; } //extra protection
 
-            if (layers.Count < 3) //should use complex test of content as client method
+            if (layers.Count < 3) //TODO should use complex test of content as client method
             {
                 AddInfoMessage("L> Warning: Count of layers in reply packet is low! ");
             }

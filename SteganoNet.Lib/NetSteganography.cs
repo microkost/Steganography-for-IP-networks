@@ -17,8 +17,8 @@ namespace SteganoNetLib
         public const int IcmpRangeStart = 330;
         public const int IcmpRangeEnd = 359;
         public const int IcmpGenericPing = 331;
-        public const int NetworkRangeStart = IpRangeStart;
-        public const int NetworkRangeEnd = 399;
+        //public const int NetworkRangeStart = IpRangeStart;
+        //public const int NetworkRangeEnd = 399;
         //udp
         public const int TcpRangeStart = 450;
         public const int TcpRangeEnd = 499;
@@ -92,13 +92,12 @@ namespace SteganoNetLib
             sw.Start(); //for timeout of 303
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
-            {
-                sc.AddInfoMessage("3IP: method " + methodId);
-
+            {                
                 switch (methodId)
                 {
                     case 301: //IP (Type of service / DiffServ) //SENDER
                         {
+                            sc.AddInfoMessage("3IP: method " + methodId);
                             const int usedbits = 8;
                             try
                             {
@@ -121,6 +120,7 @@ namespace SteganoNetLib
                         }
                     case 302: //IP (Type of service / DiffServ) //SENDER
                         {
+                            sc.AddInfoMessage("3IP: method " + methodId);
                             const int usedbits = 2;
                             try
                             {
@@ -143,6 +143,7 @@ namespace SteganoNetLib
                         }
                     case 303: //IP (Identification) //SENDER
                         {
+                            sc.AddInfoMessage("3IP: method " + methodId);
                             //first run start timer, add value to output and save it outside loop. Replace value and send new one after timer expire.
                             const int usedbits = 16;
                             if (firstRun == true)
@@ -183,6 +184,7 @@ namespace SteganoNetLib
                         }
                     case 305: //IP Flags...
                         {
+                            sc.AddInfoMessage("3IP: method " + methodId);
                             /* In IPv4, fragments are indicated using four fields of the basic header: 
                              * Identification(ID), Fragment Offset, a "Don't Fragment" (DF) flag, and a "More Fragments"(MF) flag
                              */
@@ -199,12 +201,12 @@ namespace SteganoNetLib
             List<string> BlocksOfSecret = new List<string>();
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
-            {
-                rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
+            {                
                 switch (methodId)
                 {
                     case 301: //IP (Type of service / DiffServ agresive) RECEIVER
                         {
+                            rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                             string binvalue = Convert.ToString(ip.TypeOfService, 2); //use whole field
                             string binvaluePadded = binvalue.PadLeft(8, '0');
                             BlocksOfSecret.Add(binvaluePadded); //when zeros was cutted
@@ -212,6 +214,7 @@ namespace SteganoNetLib
                         }
                     case 302: //IP (Type of service / DiffServ) RECEIVER
                         {
+                            rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                             string fullfield = Convert.ToString(ip.TypeOfService, 2).PadLeft(8, '0');
                             string binvalue = fullfield.Substring(fullfield.Length - 2); //use only last two bits
                             BlocksOfSecret.Add(binvalue);
@@ -219,6 +222,7 @@ namespace SteganoNetLib
                         }
                     case 303: //IP (Identification) RECEIVER
                         {
+                            rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                             //TODO, only in first packet or change it every two minutes
                             //SENDER NOT DONE
                             string binvalue = Convert.ToString(ip.Identification, 2);
@@ -244,13 +248,12 @@ namespace SteganoNetLib
             if (icmp == null) { return null; } //extra protection            
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
-            {
-                sc.AddInfoMessage("3IP: method " + methodId);
-
+            {                
                 switch (methodId)
                 {
                     case IcmpGenericPing: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
                         {
+                            sc.AddInfoMessage("3ICMP: method " + methodId);
                             icmp.SequenceNumber = SequenceNumber++; //legacy sequence number
                             icmp.Identifier = (ushort)rand.Next(0, 65535);
                             //add delay 1000 miliseconds on parent object
@@ -258,6 +261,7 @@ namespace SteganoNetLib
                         }
                     case 333: //ICMP (Identifier) //SENDER
                         {
+                            sc.AddInfoMessage("3ICMP: method " + methodId);
                             if (!stegoUsedMethodIds.Contains(335)) //do not overwrite sequence number when that method selected
                             {
                                 icmp.SequenceNumber = SequenceNumber++; //legacy sequence number
@@ -283,6 +287,7 @@ namespace SteganoNetLib
                         }
                     case 335: //ICMP (Sequence number) //SENDER
                         {
+                            sc.AddInfoMessage("3ICMP: method " + methodId);
                             if (!stegoUsedMethodIds.Contains(333)) //do not overwrite identifier when that method selected
                             {
                                 icmp.Identifier = icmp.Identifier = (ushort)rand.Next(0, 65535); //legacy Identifier number
@@ -319,23 +324,24 @@ namespace SteganoNetLib
             List<string> BlocksOfSecret = new List<string>();
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
-            {
-                rs.AddInfoMessage("3ICMP: method " + methodId); //add number of received bits in this iteration
+            {                
                 switch (methodId)
                 {
                     case 331: //ICMP (pure) RECEIVER
                         {
-                            //no stehanography included - OK
+                            rs.AddInfoMessage("3ICMP: method (no stehanography included)" + methodId); //add number of received bits in this iteration
                             break;
                         }
                     case 333: //ICMP (Identifier) RECEIVER
                         {
+                            rs.AddInfoMessage("3ICMP: method " + methodId);
                             string binvalue = Convert.ToString(icmp.Identifier, 2);
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
                     case 335: //ICMP (Sequence number) RECEIVER
                         {
+                            rs.AddInfoMessage("3ICMP: method " + methodId);
                             string binvalue = Convert.ToString(icmp.SequenceNumber, 2);
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
@@ -357,18 +363,15 @@ namespace SteganoNetLib
 
         //-L4------------------------------------------------------------------------------------------------------------------
 
-        //udp layer methods - skipped by assigment
+        //udp layer methods - skipped
 
-        //tcp layer methods
-
+        //TCP layer methods
         public static Tuple<TcpLayer, string> SetContent4Tcp(TcpLayer tcp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
         {
             if (tcp == null) { return null; } //extra protection
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
-                sc.AddInfoMessage("4TCP: method " + methodId);
-
                 //needs to handle states
                 //SYN
                 //SYN+ACK
@@ -378,7 +381,7 @@ namespace SteganoNetLib
                 {
                     case 451: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
                         {
-
+                            sc.AddInfoMessage("4TCP: method " + methodId);
                             break;
                         }
                 }

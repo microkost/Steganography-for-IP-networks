@@ -82,5 +82,29 @@ namespace SteganoNet.UI.Console
             System.Console.WriteLine(String.Format("\r\tSelected: {0}", string.Join(",", selectedMethodsID)));
             return selectedMethodsID;
         }
+
+        internal static int HowLongIsTransferInMs(string messageEncrypted, List<int> stegoMethods)
+        {
+            //how many bits have messageEncrypted
+            int bitsInMessage = DataOperations.MessageASCIItoBitLenght(messageEncrypted);
+
+            //how much space is in stegoMethods
+            int spaceInOneMethod = 3; //estimation TODO exactly!
+            int channelSize = stegoMethods.Count * spaceInOneMethod;
+            int transportsNeeded = bitsInMessage / channelSize;
+
+            //how much time is needed, wireshark log:
+            /* 750,859650
+               750,344017
+               ---------
+               000,515633 when 500 is waiting time then 15 633 what mean 15,633 ms per message*/
+            int delay = 1000; //waiting time in ms
+            int neededTimeInMs = transportsNeeded * 16 * delay;
+
+            //multiply by "some" constant as underestimation
+            neededTimeInMs = (int)(neededTimeInMs * 1.25);
+
+            return neededTimeInMs;
+        }
     }
 }

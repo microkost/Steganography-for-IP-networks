@@ -67,7 +67,7 @@ namespace SteganoNetLib
             }
 
             const int delayIcmp = 500; //DEBUG, originally 1000
-            const int delay = 0;
+            const int delay = 100; //just smth
 
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
@@ -82,21 +82,23 @@ namespace SteganoNetLib
                     List<Layer> layers = new List<Layer>(); //list of used layers
                     layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2                    
 
-
                     //IP methods
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
+                        //handling method IpIdentificationMethod
                         IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                         
                         if (FirstRun == false && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
                         {
                             ipV4Layer.Identification = IpIdentification; //put there previous identification, if there is previous... I will not change if time not expire...
                         }
 
+                        //generic for all methods
                         Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this, FirstRun);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
 
+                        //handling method IpIdentificationMethod
                         if (FirstRun && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
                         {
                             IpIdentification = ipV4Layer.Identification; //save stego info and reuse it for next two mins
@@ -115,7 +117,7 @@ namespace SteganoNetLib
                     }
                     else
                     {
-                        //if not stego in IP add normal IP layer - they need to be in proper order otherwise "Can't determine protocol automatically from next layer because there is no next layer"
+                        //if not stego IP selected, add normal IP layer - they need to be in proper order otherwise "Can't determine protocol automatically from next layer because there is no next layer"
                         IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3 
                         layers.Add(ipV4Layer);
                         DelayInMs = delay;
@@ -130,15 +132,15 @@ namespace SteganoNetLib
                         Tuple<IcmpEchoLayer, string> icmpStego = NetSteganography.SetContent3Icmp(icmpLayer, StegoUsedMethodIds, SecretMessage, this);
                         icmpLayer = icmpStego.Item1; //save layer containing steganography
                         SecretMessage = icmpStego.Item2; //save rest of unsended bites
-                        layers.Add(icmpLayer); //mark layer as done     
+                        layers.Add(icmpLayer); //mark layer as done
                         DelayInMs = delayIcmp;
                     }
 
-                    //UDP methods
+                    //UDP methods - not implemented
 
                     //TCP methods
                     List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
-                    if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
+                    if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
                     {
                         //how to handle multiple answers and changes of data?
                         //this need to receive answers and pass result to stego method...
@@ -157,14 +159,18 @@ namespace SteganoNetLib
                     //protection if not enought layers
                     if (layers.Count < 3)
                     {
+                        //TODO layers need to be correctly ordered! Cannot append L2 to end...
+
                         if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
                         {
+                            AddInfoMessage("S> Added L2 in last step"); 
                             layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
-                            DelayInMs = delay;
+                            DelayInMs = delay;                            
                         }
 
                         if (!layers.OfType<IpV4Layer>().Any())
                         {
+                            AddInfoMessage("S> Added L3 IP in last step");
                             IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
                             layers.Add(ipV4LayerTMP);
                             DelayInMs = delay;
@@ -172,6 +178,7 @@ namespace SteganoNetLib
 
                         if (!layers.OfType<IcmpEchoLayer>().Any())
                         {
+                            AddInfoMessage("S> Added L3 ICMP in last step");
                             Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
                             layers.Add(icmpStegoTMP.Item1);
                             DelayInMs = delayIcmp;
@@ -189,7 +196,7 @@ namespace SteganoNetLib
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
                     communicator.SendPacket(packet);
-                    System.Threading.Thread.Sleep(DelayInMs);
+                    System.Threading.Thread.Sleep(DelayInMs); //waiting for sending next one
                 }
                 while (!Terminate || SecretMessage.Length != 0);
             }
