@@ -21,8 +21,6 @@ namespace SteganoNetLib
         public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
 
         //network parametres
-        //public string IpLocalString { get; set; }
-        //public string IpRemoteString { get; set; }
         public ushort PortLocal { get; set; } //PortListening //obviously not used
         public ushort PortRemote { get; set; } //PortOfRemoteHost
         public MacAddress MacAddressLocal { get; set; }
@@ -36,8 +34,8 @@ namespace SteganoNetLib
         private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)    
         private int PacketSize { get; set; } //recognize change in stream
         private bool FirstRun { get; set; }
+        private bool IsListenedSameInterface { get; set; } //if debug mode is running
 
-        
 
         public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString, ushort portRemote)
         {
@@ -48,12 +46,13 @@ namespace SteganoNetLib
             this.PortRemote = portRemote;
             this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpLocalListening);
             this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpRemoteSpeaker); //use gateway mac
+            IsListenedSameInterface = (IpLocalListening.Equals(IpRemoteSpeaker)) ? true : false; //local debug mode?
 
             //bussiness ctor
             StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
-            Messages.Enqueue("Server created...");
+            Messages.Enqueue("L> Server created...");
             this.FirstRun = true;
         }
 
@@ -61,19 +60,32 @@ namespace SteganoNetLib
         {
             if (!ArePrerequisitiesDone()) //check values in properties //TODO finalize implementation!
             {
-                Messages.Enqueue("Server is not ready to start, check initialization values...");
+                AddInfoMessage("L> Server is not ready to start, check initialization values...");
                 return;
             }
 
-            selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
+            selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter           
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
-                Messages.Enqueue(String.Format("Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
+                AddInfoMessage(String.Format("L> Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
 
-                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortDestination); //be aware of ports when server is replying to request (DNS), filter catch again response => loop
-                //communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
+
+
+                if (IsListenedSameInterface)
+                {
+                    AddInfoMessage("L> Debug: listening same device");
+                }
+
+                //TODO filter: if IP source is not ListeningIP and ... not ip.src == 1.1.1.1
+                //not ip.src == 1.1.1.1 and icmp or udp 
+                //(not ip.src == 1.1.1.1) and icmp
+                string filter = String.Format("(not ip host {0}) and icmp", IpLocalListening);
+
+                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
+                //TODO be aware of ports when server is replying to request (DNS), filter catch again response => loop
+                communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
                 //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
                 //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
 
@@ -94,23 +106,19 @@ namespace SteganoNetLib
                             continue;
                         case PacketCommunicatorReceiveResult.Ok:
                             {
-                                if (packet.IsValid && packet.IpV4 != null)
+                                if (packet.IsValid && packet.IpV4 != null) //only IPv4
                                 {
                                     if (FirstRun) //used for separation of streams based on packet size
                                     {
                                         PacketSize = packet.Length;
                                         FirstRun = false;
                                     }
+                                    
                                     ProcessIncomingV4Packet(packet);
-                                    /*
-                                    if (packet.IpV4.IsValid) //for some magic reason its making troubles...
-                                    {
-                                        ProcessIncomingV4Packet(packet); //only IPv4
-                                                                         //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
-                                    }
-                                    */
+                                    //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
+                                    
                                 }
-                                //if (packet.IsValid && packet.IpV6 != null && packet.IpV6.IsValid)                                
+                                //if (packet.IsValid && packet.IpV6 != null)                                
                                 break;
                             }
                         default:
@@ -132,15 +140,9 @@ namespace SteganoNetLib
             //call proper parsing method from stego library
             //get answer packet and send it
 
-            //if (!packet.IpV4.IsValid) this condition needed but not working
-            //{
-            //    AddInfoMessage("packet invalid");
-            //    return;
-            //}
+            AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));            
 
-            AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
             //same lenght is usually same stego stream
-
             if (PacketSize != packet.Length) //temporary recognizing of different streams
             {
                 FirstRun = true;
@@ -165,7 +167,7 @@ namespace SteganoNetLib
             {
                 AddInfoMessage("L> packet discarted, " + ex.Message.ToString());
                 return;
-            }
+            }            
 
             //TODO recognize seting connection + ending...
             NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret

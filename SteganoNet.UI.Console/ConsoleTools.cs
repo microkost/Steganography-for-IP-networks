@@ -94,12 +94,12 @@ namespace SteganoNet.UI.Console
             int transportsNeeded = bitsInMessage / channelSize;
 
             //how much time is needed, wireshark log:
-            /* 750,859650
-               750,344017
+            /* 750,859650   packet 1
+               750,344017   packet 2
                ---------
                000,515633 when 500 is waiting time then 15 633 what mean 15,633 ms per message*/
-            int delay = 1000; //waiting time in ms
-            int neededTimeInMs = transportsNeeded * 16 * delay;
+            int bulgarianConstant = 10; //"basically anything which makes your result correct"
+            int neededTimeInMs = transportsNeeded * 16 * bulgarianConstant;
 
             //multiply by "some" constant as underestimation
             neededTimeInMs = (int)(neededTimeInMs * 1.25);

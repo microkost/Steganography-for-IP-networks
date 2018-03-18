@@ -303,9 +303,15 @@ namespace SteganoNet.UI.Console
                 senderClientThread.Start();
 
                 //client activity output
-                if (isHumanDriving)
+                //if (isHumanDriving)
+                if (true)
                 {                    
                     System.Console.WriteLine(String.Format("\nSending should wait around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods)/1000));
+
+                    //DEBUG START
+                    int sleepTime = ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods);
+                    System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} s ({1} min) for end...", sleepTime / 1000, sleepTime / 1000 / 60));
+                    //DEBUG END
 
                     System.Console.WriteLine("\nShowing client running information. Press ESC to stop when message is received.");
                     do
@@ -321,7 +327,7 @@ namespace SteganoNet.UI.Console
                 {
                     //do not show output but leave some time for run of sending thread
                     int sleepTime = ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods);
-                    System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} ms for end...", sleepTime));
+                    System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} s ({1} min) for end...", sleepTime/1000, sleepTime/1000/60));
                     Thread.Sleep(sleepTime);
                 }
 
