@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using PcapDotNet.Core;
@@ -39,6 +40,8 @@ namespace SteganoNetLib
         private uint? SeqNumberRemote { get; set; } //for TCP answers
         private bool FirstRun { get; set; } //IP identification
         private ushort IpIdentification { get; set; } //IP identification stored value
+
+        private Stopwatch sw = new Stopwatch(); //IP identification timer
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
         {
@@ -87,6 +90,16 @@ namespace SteganoNetLib
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
+                        if (sw.ElapsedMilliseconds < 20000) //timeout break twoMinInMs is 120000
+                        {                            
+                            FirstRun = true;
+                            AddInfoMessage("Timer reseted");
+                        }
+                        else
+                        {
+                            AddInfoMessage("Time elapsed " + sw.ElapsedMilliseconds/100 + "s");
+                        }
+
                         //handling method IpIdentificationMethod
                         IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                         
                         if (FirstRun == false && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
@@ -102,6 +115,7 @@ namespace SteganoNetLib
                         //handling method IpIdentificationMethod
                         if (FirstRun && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
                         {
+                            sw.Start(); //for timeout of 303
                             IpIdentification = ipV4Layer.Identification; //save stego info and reuse it for next two mins
                             FirstRun = false;
                         }

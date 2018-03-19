@@ -76,10 +76,9 @@ namespace SteganoNetLib
                     AddInfoMessage("L> Debug: listening same device");
                 }
 
-                //string filter = String.Format("(not ip host {0}) and tcp port {1} or icmp or udp port 53 and not src port 53", IpLocalListening, PortLocal);
-                string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
-
-                /*
+                string filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port 53 and not src port 53)", IpLocalListening, PortLocal);
+                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
+                
                 try
                 {
                     //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
@@ -90,7 +89,6 @@ namespace SteganoNetLib
                     //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
                     AddInfoMessage("L> Traffic filter was not applied, because it have wrong format.");
                 }
-                */
 
                 do // Retrieve the packets
                 {
