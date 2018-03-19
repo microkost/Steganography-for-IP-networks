@@ -84,7 +84,7 @@ namespace SteganoNetLib
                 yield return s.Substring(i, Math.Min(partLength, s.Length - i));
         }
 
-        private static bool IsASCII(this string value) //for testing ascii values
+        public static bool IsASCII(this string value) //for testing ascii values
         {
             //source http://stackoverflow.com/questions/1522884/c-sharp-ensure-string-contains-only-ascii
             // ASCII encoding replaces non-ascii with question marks, so we use UTF8 to see if multi-byte sequences are there

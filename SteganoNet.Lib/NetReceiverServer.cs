@@ -71,25 +71,26 @@ namespace SteganoNetLib
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
                 AddInfoMessage(String.Format("L> Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
 
-
-
                 if (IsListenedSameInterface)
                 {
                     AddInfoMessage("L> Debug: listening same device");
                 }
 
-                //TODO filter: if IP source is not ListeningIP and ... not ip.src == 1.1.1.1
-                //not ip.src == 1.1.1.1 and icmp or udp 
-                //(not ip.src == 1.1.1.1) and icmp
-                string filter = String.Format("(not ip host {0}) and icmp", IpLocalListening);
+                //string filter = String.Format("(not ip host {0}) and tcp port {1} or icmp or udp port 53 and not src port 53", IpLocalListening, PortLocal);
+                string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
 
-                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
-                //TODO be aware of ports when server is replying to request (DNS), filter catch again response => loop
-                communicator.SetFilter(filter); // Compile and set the filter //needs try-catch for new or dynamic filter
-                //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
-                //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
-
-                //TODO convert secret to binary
+                /*
+                try
+                {
+                    //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
+                    communicator.SetFilter(filter); // Compile and set the filter
+                }
+                catch
+                {
+                    //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
+                    AddInfoMessage("L> Traffic filter was not applied, because it have wrong format.");
+                }
+                */
 
                 do // Retrieve the packets
                 {
@@ -113,10 +114,10 @@ namespace SteganoNetLib
                                         PacketSize = packet.Length;
                                         FirstRun = false;
                                     }
-                                    
+
                                     ProcessIncomingV4Packet(packet);
                                     //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
-                                    
+
                                 }
                                 //if (packet.IsValid && packet.IpV6 != null)                                
                                 break;
@@ -140,7 +141,7 @@ namespace SteganoNetLib
             //call proper parsing method from stego library
             //get answer packet and send it
 
-            AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));            
+            AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
 
             //same lenght is usually same stego stream
             if (PacketSize != packet.Length) //temporary recognizing of different streams
@@ -167,7 +168,7 @@ namespace SteganoNetLib
             {
                 AddInfoMessage("L> packet discarted, " + ex.Message.ToString());
                 return;
-            }            
+            }
 
             //TODO recognize seting connection + ending...
             NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
@@ -199,7 +200,7 @@ namespace SteganoNetLib
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
-            
+
             /*
             //TCP methods
             else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
@@ -265,18 +266,30 @@ namespace SteganoNetLib
             sb.Clear(); //reused for output
             foreach (string word in streams)
             {
-                if (/*word.StartsWith("00000000000") ||*/ word.Length == 0) //cut off mess
+                if (word.Length < 8) //cut off mess (one char have 8 bits)
                 {
-                    AddInfoMessage("Warning: empty word removed from received messages. ");
+                    AddInfoMessage("Info: empty word removed from received messages. ");
                     continue;
                 }
 
                 string message = DataOperations.BinaryNumber2stringASCII(word);
+
+                /*
+                //foreach message, foreach word
+                //count non-ascii... ;
+                //if count of non-ascii > word.Count then remove...
+                if(DataOperations.IsASCII(message))
+                {
+                    AddInfoMessage("Info: Non ascii message removed from server");
+                    continue;
+                } 
+                */
+
                 sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
-                //AddInfoMessage("Message: " + message);
             }
 
-            //if more than half of next message contains 
+            
+            //if more than half of next message contains message 
             //parse by "\n\r"
             //cut of empty lines
             //join together longer and ASCII one

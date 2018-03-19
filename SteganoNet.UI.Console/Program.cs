@@ -24,7 +24,7 @@ namespace SteganoNet.UI.Console
             //stop
             //analyze results
 
-            bool SimplifyConfigWhenDebug = false; //skips ports and IP address for developing
+            bool SimplifyConfigWhenDebug = true; //skips ports and IP address for developing
             bool isHumanDriving = true; //skip asking when is runned from parametres
 
             System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
@@ -95,7 +95,7 @@ namespace SteganoNet.UI.Console
 
                     //remote IP address
                     String[] ipBytes = ipSource.Split('.'); uint byte1 = Convert.ToUInt32(ipBytes[0]); uint byte2 = Convert.ToUInt32(ipBytes[1]); uint byte3 = Convert.ToUInt32(ipBytes[2]);
-                    uint byte4 = Convert.ToUInt32(ipBytes[3]) + 1; //MAGIC NUMBER for IP higher 1 than local
+                    uint byte4 = Convert.ToUInt32(ipBytes[3]) + 0; //MAGIC NUMBER for IP higher 1 than local
                     ipRemote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
                     System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}?  (y or enter / ip address) ", ipRemote));
                     string ipremoteNotParsed = System.Console.ReadLine();
@@ -303,16 +303,10 @@ namespace SteganoNet.UI.Console
                 senderClientThread.Start();
 
                 //client activity output
-                //if (isHumanDriving)
-                if (true)
+                isHumanDriving = true; //TODO debug only
+                if (isHumanDriving)
                 {                    
-                    System.Console.WriteLine(String.Format("\nSending should wait around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods)/1000));
-
-                    //DEBUG START
-                    int sleepTime = ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods);
-                    System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} s ({1} min) for end...", sleepTime / 1000, sleepTime / 1000 / 60));
-                    //DEBUG END
-
+                    System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods)/1000));
                     System.Console.WriteLine("\nShowing client running information. Press ESC to stop when message is received.");
                     do
                     {

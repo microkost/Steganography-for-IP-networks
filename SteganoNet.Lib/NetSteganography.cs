@@ -17,8 +17,8 @@ namespace SteganoNetLib
         public const int IcmpRangeStart = 330;
         public const int IcmpRangeEnd = 359;
         public const int IcmpGenericPing = 331;
-        //public const int NetworkRangeStart = IpRangeStart;
-        //public const int NetworkRangeEnd = 399;
+        public const int NetworkRangeStart = IpRangeStart; //used in test
+        public const int NetworkRangeEnd = 399; //used in test
         //udp
         public const int TcpRangeStart = 450;
         public const int TcpRangeEnd = 499;

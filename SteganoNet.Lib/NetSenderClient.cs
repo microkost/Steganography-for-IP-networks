@@ -63,6 +63,7 @@ namespace SteganoNetLib
             if (!ArePrerequisitiesDone()) //check values in properties
             {
                 AddInfoMessage("Client is not ready to start, check initialization values...");
+                AddInfoMessage("Press ESC to exit");
                 return;
             }
 
@@ -70,7 +71,7 @@ namespace SteganoNetLib
             const int delay = 100; //just smth
 
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
-            selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
+            selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
@@ -163,9 +164,9 @@ namespace SteganoNetLib
 
                         if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
                         {
-                            AddInfoMessage("S> Added L2 in last step"); 
+                            AddInfoMessage("S> Added L2 in last step");
                             layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
-                            DelayInMs = delay;                            
+                            DelayInMs = delay;
                         }
 
                         if (!layers.OfType<IpV4Layer>().Any())
@@ -199,6 +200,7 @@ namespace SteganoNetLib
                     System.Threading.Thread.Sleep(DelayInMs); //waiting for sending next one
                 }
                 while (!Terminate || SecretMessage.Length != 0);
+
             }
         }
 
@@ -237,6 +239,21 @@ namespace SteganoNetLib
                 //return false;
             }
             */
+
+            try
+            {
+                selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
+                using (PacketCommunicator communicatorTMP = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+                {
+                    //try to use provide interface, if IP is not valid then it makes error... 
+                }
+            }
+            catch
+            {
+
+                AddInfoMessage("Error! Inserted interface cannot be opened. (check value of " + IpOfInterface + " and run again)");
+                return false;
+            }
 
             if (PortRemote == 0 || PortLocal == 0)
             {
