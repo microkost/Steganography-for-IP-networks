@@ -98,10 +98,6 @@ namespace SteganoNetLib
                             Timer.Restart();
 
                         }
-                        else
-                        {
-                            AddInfoMessage("\t>Time elapsed " + Timer.ElapsedMilliseconds / 1000 + "s");
-                        }
 
                         //handling method IpIdentificationMethod
                         IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                         
