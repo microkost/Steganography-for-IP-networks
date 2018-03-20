@@ -14,9 +14,11 @@ namespace SteganoNetLib
         public const int IpRangeStart = 300;
         public const int IpRangeEnd = 329;
         public const int IpIdentificationMethod = 303;
+
         public const int IcmpRangeStart = 330;
         public const int IcmpRangeEnd = 359;
         public const int IcmpGenericPing = 331;
+
         public const int NetworkRangeStart = IpRangeStart; //used in test
         public const int NetworkRangeEnd = 399; //used in test
         //udp
@@ -25,7 +27,7 @@ namespace SteganoNetLib
 
         private static Random rand = new Random();
         private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage        
-        private static string Identification = "";
+        private static string Identification = ""; //receiver's holding value place
 
         public static Dictionary<int, string> GetListStegoMethodsIdAndKey() //service method
         {
@@ -38,6 +40,9 @@ namespace SteganoNetLib
              * 4xx > transport layer 
              * 7xx > session, presentation and application layer
              * 8xx > other methods like time channel
+             * 
+             * dash '-' is splitter for parsing capacity size of method! Always at the end with size and unit ' - 100b' for 100 bits in method
+             * inform user about settings in [] brackets like delay
              */
 
             //for details read file MethodDescription.txt, keep it updated if changing following list!
@@ -45,26 +50,18 @@ namespace SteganoNetLib
             {
                 { 301, "IP Type of service / DiffServ (agresive) - 8b" },
                 { 302, "IP Type of service / DiffServ - 2b" },
-                { 303, "IP Identification (time) - 16b" },
+                { 303, String.Format("IP Identification [delay {0} s] - 16b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000) },
 
-                { 331, "ICMP ping (standard) - 0b" },
+                { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
                 { 333, "ICMP ping (Identifier) - 16b" },
                 { 335, "ICMP ping (Sequence number) - 16b" },
                 
                 { 451, "TCP (standard) - 0b" } //TODO
+                //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
+                //TODO TTL usage or similar (count TTL and use some value under as rest...)
             };
-
-            //IP method 1 - most transparent - using Identification field and changing it every two minutes accoring to standard - iteration of value 
-            //IP method X - offset number like TTL lower, smth constant is under or value is unmasked... IF allowed!
-            //IP method 2 - maximum method (method 1 + usage of flags + fragment offset + 
-            //ip method 3 - transparent - count TTL and use some value under as rest...
-            //IP method 4 - TypeOfService fild - extrely lame way but... Usage high bits 6 + 7 is "OK"...
-            //IP method 5  - 
-
-            //ttl methods, resting value is magic value, round trip timer
-            //ping delay or TCP delay
-
-            return listOfStegoMethods; //DO NOT MODIFY THAT LIST DURING RUNNING
+            
+            return listOfStegoMethods; //DO NOT DYNAMICAL MODIFY THAT LIST DURING RUNNING
         }
 
         //service method
@@ -83,6 +80,7 @@ namespace SteganoNetLib
 
         public static Dictionary<int, int> GetMethodsCapacity()
         {
+            //TODO
             //get list of all methods
             //parse their names by symbol "-" to keep just values
             //merge it with id to dictionary key
@@ -157,6 +155,7 @@ namespace SteganoNetLib
                                 {                                    
                                     string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
                                     //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+                                    //TODO ADD FLAGS
                                     ip.Identification = Convert.ToUInt16(partOfSecret, 2);
                                     secret = secret.Remove(0, usedbits);
                                 }
@@ -176,7 +175,7 @@ namespace SteganoNetLib
                         {
                             sc.AddInfoMessage("3IP: method " + methodId);
                             /* In IPv4, fragments are indicated using four fields of the basic header: 
-                             * Identification(ID), Fragment Offset, a "Don't Fragment" (DF) flag, and a "More Fragments"(MF) flag
+                             * Fragment Offset, a "Don't Fragment" (DF) flag, and a "More Fragments"(MF) flag
                              */
                             break;
                         }
@@ -339,7 +338,7 @@ namespace SteganoNetLib
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
-                        //case 337: icmp.Payload = "";
+                   //case 337: icmp.Payload = "";
                 }
             }
 
@@ -372,7 +371,7 @@ namespace SteganoNetLib
 
                 switch (methodId)
                 {
-                    case 451: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
+                    case 451: //TCP (standard, for other layers) //SENDER
                         {
                             sc.AddInfoMessage("4TCP: method " + methodId);
                             break;

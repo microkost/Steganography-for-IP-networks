@@ -90,11 +90,15 @@ namespace SteganoNet.UI.Console
 
             //how much space is in stegoMethods
             int spaceInOneMethod = 3; //estimation TODO exactly!
+            NetSteganography.GetMethodsCapacity(); //TODO not done...
+
             int channelSize = stegoMethods.Count * spaceInOneMethod;
             int transportsNeeded = bitsInMessage / channelSize;
 
-            //how much time is needed, wireshark log:
-            /* 750,859650   packet 1
+            //TODO how much time is needed - take from NetSenderClient public values...
+
+            /* wireshark log:            
+               750,859650   packet 1
                750,344017   packet 2
                ---------
                000,515633 when 500 is waiting time then 15 633 what mean 15,633 ms per message*/

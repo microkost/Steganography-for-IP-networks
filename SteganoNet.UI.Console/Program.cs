@@ -24,7 +24,7 @@ namespace SteganoNet.UI.Console
             //stop
             //analyze results
 
-            bool SimplifyConfigWhenDebug = false; //skips ports and IP address for developing
+            bool SimplifyConfigWhenDebug = true; //skips ports and IP address for developing
             bool isHumanDriving = true; //skip asking when is runned from parametres
 
             System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
