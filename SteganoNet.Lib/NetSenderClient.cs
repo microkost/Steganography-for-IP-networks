@@ -20,28 +20,32 @@ namespace SteganoNetLib
         public string SecretMessage { get; set; }
         public Queue<string> Messages { get; set; }
 
+        //timers public                
+        public const int delayGeneral = 100; //gap between all packets in miliseconds
+        public const int delayIcmp = 500; //gap for ICMP requests 1000
+        public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
+
         //network public parametres
-        //public string IpLocalString { get; set; } //converted to IpOfInterface in ctor
-        //public string IpRemoteString { get; set; } //converted to IpOfRemoteHost in ctor
         public ushort PortRemote { get; set; }
         public ushort PortLocal { get; set; }
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
 
-        //internal 
+        //internal properties based on re-typed public
         private PacketDevice selectedDevice = null;
         private IpV4Address IpOfInterface { get; set; } //isolation of referencies
         private IpV4Address IpOfRemoteHost { get; set; } //isolation of referencies
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private int DelayInMs { get; set; } //how long to wait between iterations
+
+        //methods value keepers 
+        private Stopwatch Timer { get; set; } //IP identification timer
+        private bool FirstRun { get; set; } //IP identification decision bit
+        private ushort IpIdentification { get; set; } //IP identification value field
         private uint AckNumberLocal { get; set; } //for TCP requests
         private uint AckNumberRemote { get; set; } //for TCP answers
         private uint SeqNumberLocal { get; set; } //for TCP requests
         private uint? SeqNumberRemote { get; set; } //for TCP answers
-        private bool FirstRun { get; set; } //IP identification
-        private ushort IpIdentification { get; set; } //IP identification stored value
-
-        private Stopwatch sw = new Stopwatch(); //IP identification timer
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
         {
@@ -55,9 +59,9 @@ namespace SteganoNetLib
 
             //bussiness ctor            
             Messages = new Queue<string>();
-            DelayInMs = 0;
-            //SequenceNumber = (ushort)DateTime.Now.Ticks;
+            Timer = new Stopwatch();
             this.FirstRun = true;
+            DelayInMs = 0;
             AddInfoMessage("Client created...");
         }
 
@@ -69,9 +73,6 @@ namespace SteganoNetLib
                 AddInfoMessage("Press ESC to exit");
                 return;
             }
-
-            const int delayIcmp = 500; //DEBUG, originally 1000
-            const int delay = 100; //just smth
 
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            
@@ -90,14 +91,16 @@ namespace SteganoNetLib
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
-                        if (sw.ElapsedMilliseconds < 20000) //timeout break twoMinInMs is 120000
-                        {                            
+                        if (Timer.ElapsedMilliseconds > IpIdentificationChangeSpeedInMs)
+                        {
                             FirstRun = true;
-                            AddInfoMessage("Timer reseted");
+                            AddInfoMessage("\t>Timer reseted after: " + Timer.ElapsedMilliseconds);
+                            Timer.Restart();
+
                         }
                         else
                         {
-                            AddInfoMessage("Time elapsed " + sw.ElapsedMilliseconds/100 + "s");
+                            AddInfoMessage("\t>Time elapsed " + Timer.ElapsedMilliseconds / 1000 + "s");
                         }
 
                         //handling method IpIdentificationMethod
@@ -115,7 +118,7 @@ namespace SteganoNetLib
                         //handling method IpIdentificationMethod
                         if (FirstRun && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
                         {
-                            sw.Start(); //for timeout of 303
+                            Timer.Start(); //for timeout of 303
                             IpIdentification = ipV4Layer.Identification; //save stego info and reuse it for next two mins
                             FirstRun = false;
                         }
@@ -128,14 +131,14 @@ namespace SteganoNetLib
                         }
 
                         layers.Add(ipV4Layer); //mark layer as done     
-                        DelayInMs = delay;
+                        DelayInMs = delayGeneral;
                     }
                     else
                     {
                         //if not stego IP selected, add normal IP layer - they need to be in proper order otherwise "Can't determine protocol automatically from next layer because there is no next layer"
                         IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3 
                         layers.Add(ipV4Layer);
-                        DelayInMs = delay;
+                        DelayInMs = delayGeneral;
                     }
 
                     //ICMP methods
@@ -167,7 +170,7 @@ namespace SteganoNetLib
                         tcpLayer = tcpStego.Item1;
                         SecretMessage = tcpStego.Item2;
                         layers.Add(tcpLayer);
-                        DelayInMs = delay;
+                        DelayInMs = delayGeneral;
                     }
 
 
@@ -180,7 +183,7 @@ namespace SteganoNetLib
                         {
                             AddInfoMessage("S> Added L2 in last step");
                             layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
-                            DelayInMs = delay;
+                            DelayInMs = delayGeneral;
                         }
 
                         if (!layers.OfType<IpV4Layer>().Any())
@@ -188,7 +191,7 @@ namespace SteganoNetLib
                             AddInfoMessage("S> Added L3 IP in last step");
                             IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
                             layers.Add(ipV4LayerTMP);
-                            DelayInMs = delay;
+                            DelayInMs = delayGeneral;
                         }
 
                         if (!layers.OfType<IcmpEchoLayer>().Any())

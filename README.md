@@ -3,6 +3,8 @@ Network steganography is approach how to invisible transfer data via IP computer
 used for purposes of routing and switching to provide connectivity. This framework could **help with testing of security mechanism** via adding hidden
 information to simulate steganography attack.
 
+TODO https://github.com/RichardLitt/standard-readme
+
 ## Methods
 * IP steganography (v4)
 * ICMP steganography

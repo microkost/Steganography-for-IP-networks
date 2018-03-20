@@ -43,15 +43,14 @@ namespace SteganoNetLib
             //for details read file MethodDescription.txt, keep it updated if changing following list!
             Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
             {
-                // { 000, "Nothing, pure" },
-                { 301, "IP (Type of service / DiffServ agresive) - 8b" },
-                { 302, "IP (Type of service / DiffServ) - 2b" },
-                { 303, "IP (Identification)" }, //TODO
-                //{ 305, "IP (Flags)" }, //TODO
-                { 331, "ICMP ping (Standard, for other layers) - 0b" },
+                { 301, "IP Type of service / DiffServ (agresive) - 8b" },
+                { 302, "IP Type of service / DiffServ - 2b" },
+                { 303, "IP Identification (time) - 16b" },
+
+                { 331, "ICMP ping (standard) - 0b" },
                 { 333, "ICMP ping (Identifier) - 16b" },
                 { 335, "ICMP ping (Sequence number) - 16b" },
-                { 337, "ICMP ping (Data field) - up to MTU" }, //TODO
+                
                 { 451, "TCP (standard) - 0b" } //TODO
             };
 
@@ -80,6 +79,14 @@ namespace SteganoNetLib
 
             IEnumerable<int> listOfIpMethods = from num in source where num >= startValue && num <= endValue select num;
             return listOfIpMethods.ToList();
+        }
+
+        public static Dictionary<int, int> GetMethodsCapacity()
+        {
+            //get list of all methods
+            //parse their names by symbol "-" to keep just values
+            //merge it with id to dictionary key
+            return null;
         }
 
         //---------------------------------------------------------------------------------------------------------------------
@@ -141,7 +148,7 @@ namespace SteganoNetLib
                         }
                     case 303: //IP (Identification) //SENDER
                         {
-                            sc.AddInfoMessage("3IP: method " + methodId);                            
+                            //sc.AddInfoMessage("3IP: method " + methodId);                            
                             const int usedbits = 16;
                             if (firstAndResetRun == true)
                             {
