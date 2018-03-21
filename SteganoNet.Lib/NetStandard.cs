@@ -16,6 +16,7 @@ namespace SteganoNetLib
     public static class NetStandard
     {
         //class is separated by ISO-OSI RM model layers
+        private static Random rand = new Random(); //TCP legal values        
 
         //---------L2------------------------------------------------------------------------------------------------------------
 
@@ -205,33 +206,36 @@ namespace SteganoNetLib
             return udpLayer;
         }
 
-        public static TcpLayer GetTcpLayer(ushort sourcePort, ushort destinationPort, uint sequenceNumber, uint acknowledgmentNumber, TcpControlBits SetBit = TcpControlBits.Synchronize)
+        public static TcpLayer GetTcpLayer(ushort sourcePort, ushort destinationPort, uint sequenceNumber = 65535, uint acknowledgmentNumber = 65535, TcpControlBits SetBit = TcpControlBits.Synchronize)
         {
-           /* How it works
-            * client sending SYN               seq = generated         ack = 0
-            * server sending SYNACK            seq = generated         ack = received seq + 1
-            * client sending ACK               seq = received ack      ack = received seq + 1
-            *
-            * client sending PSH, DATA         seq = same as before    ack = same as before
-            * server sending ACK               seq = received ack      ack = received seq + size of data
-            * server sending DATA optional     seq = same as before    ack = same as before
-            * client sending ACK               seq = received ack      ack = received seq + size of data
-            * client sending DATA              seq = same as before    ack = same as before
-            * server sending ACK               seq = received ack      ack = received seq + size of data
-            * client sending DATA              seq = same as before    ack = same as before
-            * ...
-            * server sending ACK               seq = received ack      ack = received seq + size of data
-            * client sending FINACK            seq = same as before    ack = same as before
-            * server sending FINACK            seq = received ack      ack = received seq + 1
-            * client sending ACK               seq = received ack      ack = received seq + 1 
-            */
+            /* How it works
+             * client sending SYN               seq = generated         ack = 0
+             * server sending SYNACK            seq = generated         ack = received seq + 1
+             * client sending ACK               seq = received ack      ack = received seq + 1
+             *
+             * client sending PSH, DATA         seq = same as before    ack = same as before
+             * server sending ACK               seq = received ack      ack = received seq + size of data
+             * server sending DATA optional     seq = same as before    ack = same as before
+             * client sending ACK               seq = received ack      ack = received seq + size of data
+             * client sending DATA              seq = same as before    ack = same as before
+             * server sending ACK               seq = received ack      ack = received seq + size of data
+             * client sending DATA              seq = same as before    ack = same as before
+             * ...
+             * server sending ACK               seq = received ack      ack = received seq + size of data
+             * client sending FINACK            seq = same as before    ack = same as before
+             * server sending FINACK            seq = received ack      ack = received seq + 1
+             * client sending ACK               seq = received ack      ack = received seq + 1 
+             */
 
+            uint seqNumberLocal = (sequenceNumber == 65535) ? GetSynOrAckRandNumber() : sequenceNumber;
+            uint ackNumberLocal = (acknowledgmentNumber == 65535) ? GetSynOrAckRandNumber() : acknowledgmentNumber;
+            
             TcpLayer tcpLayer = new TcpLayer
             {
                 SourcePort = sourcePort,
                 DestinationPort = destinationPort,
-                SequenceNumber = sequenceNumber,
-                AcknowledgmentNumber = acknowledgmentNumber,
+                SequenceNumber = seqNumberLocal,
+                AcknowledgmentNumber = ackNumberLocal,
                 ControlBits = SetBit, //needs to be changed regarding flow of TCP!
 
                 Window = 100,
@@ -240,6 +244,19 @@ namespace SteganoNetLib
                 Options = TcpOptions.None
             };
             return tcpLayer;
+        }
+
+        public static uint GetSynOrAckRandNumber() //for generating random SYN and ACK numbers
+        {
+            //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
+            uint generatedNum = (ushort)rand.Next(0, 65535);
+
+            //TODO REMOVE?
+            while (generatedNum % 11 == 0) //mod 11 is magic which distinguish stego from camouflage
+            {
+                generatedNum = (ushort)rand.Next(0, 65535);
+            }
+            return generatedNum;
         }
 
         public static uint? WaitForTcpAck(PcapDotNet.Core.PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
@@ -266,5 +283,19 @@ namespace SteganoNetLib
             }
         }
 
+        internal static string GetTcpPreviousPhrase(string TCPphrase)
+        {
+            List<String> TCPphrases = new List<string>{ "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" };
+
+            if (!TCPphrases.Contains(TCPphrase)) //protection
+                return TCPphrase;
+                        
+            if (TCPphrase.Equals("SYN ACK")) { return "SYN"; }; //previous
+            if (TCPphrase.Equals("ACK SYNACK")) { return "SYN ACK"; }; //previous
+
+            //TODO MORE
+
+            return TCPphrase;
+        }
     }
 }

@@ -15,14 +15,14 @@ namespace SteganoNetLib
     public class NetSenderClient : INetNode
     {
         //steganography public parametres
-        public volatile bool Terminate = false; //ends endless speaking
+        public volatile bool Terminate = false; //finishing endless speaking
         public List<int> StegoUsedMethodIds { get; set; }
         public string SecretMessage { get; set; }
-        public Queue<string> Messages { get; set; }
+        public Queue<string> Messages { get; set; } //status and debug info
 
-        //timers public                
+        //timers public saved to DelayInMs when used                
         public const int delayGeneral = 100; //gap between all packets in miliseconds
-        public const int delayIcmp = 500; //gap for ICMP requests 1000
+        public const int delayIcmp = 500; //gap for ICMP requests (default 1000)
         public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
 
         //network public parametres
@@ -38,14 +38,15 @@ namespace SteganoNetLib
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private int DelayInMs { get; set; } //how long to wait between iterations
 
-        //methods value keepers 
+        //network priovate parametres = methods value keepers 
         private Stopwatch Timer { get; set; } //IP identification timer
         private bool FirstRun { get; set; } //IP identification decision bit
         private ushort IpIdentification { get; set; } //IP identification value field
-        private uint AckNumberLocal { get; set; } //for TCP requests
-        private uint AckNumberRemote { get; set; } //for TCP answers
+        private string TCPphrase { get; set; } //keeping current TCP state
         private uint SeqNumberLocal { get; set; } //for TCP requests
         private uint? SeqNumberRemote { get; set; } //for TCP answers
+        private uint AckNumberLocal { get; set; } //for TCP requests
+        private uint AckNumberRemote { get; set; } //for TCP answers
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
         {
@@ -61,7 +62,10 @@ namespace SteganoNetLib
             Messages = new Queue<string>();
             Timer = new Stopwatch();
             this.FirstRun = true;
-            DelayInMs = 0;
+            DelayInMs = delayGeneral;
+            TCPphrase = "SYN";
+            SeqNumberLocal = 65535; //TODO change to constant here and inside GetTcpLayer()
+            AckNumberLocal = 65535; //TODO change to constant here and inside GetTcpLayer()
             AddInfoMessage("Client created...");
         }
 
@@ -91,22 +95,21 @@ namespace SteganoNetLib
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
                     {
+                        IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                         
+
+                        //handling method IpIdentificationMethod
                         if (Timer.ElapsedMilliseconds > IpIdentificationChangeSpeedInMs)
                         {
                             FirstRun = true;
                             AddInfoMessage("\t>Timer reseted after: " + Timer.ElapsedMilliseconds);
                             Timer.Restart();
-
                         }
-
-                        //handling method IpIdentificationMethod
-                        IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                         
                         if (FirstRun == false && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
                         {
-                            ipV4Layer.Identification = IpIdentification; //put there previous identification, if there is previous... I will not change if time not expire...
+                            ipV4Layer.Identification = IpIdentification; //put there previous identification = do not change until time expire...
                         }
 
-                        //generic for all methods
+                        //generic for all methods (name "first" run is confusing, used when new IP identification field is inserted)
                         Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this, FirstRun);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
@@ -137,12 +140,12 @@ namespace SteganoNetLib
                         DelayInMs = delayGeneral;
                     }
 
+
                     //ICMP methods
                     List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
                     {
-                        //here is problem in creating correct layer because ICMP doesnt have instanstable generic one
-                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer();
+                        IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //here is problem in creating correct layer because ICMP doesnt have instanstable generic one
                         Tuple<IcmpEchoLayer, string> icmpStego = NetSteganography.SetContent3Icmp(icmpLayer, StegoUsedMethodIds, SecretMessage, this);
                         icmpLayer = icmpStego.Item1; //save layer containing steganography
                         SecretMessage = icmpStego.Item2; //save rest of unsended bites
@@ -151,6 +154,7 @@ namespace SteganoNetLib
                     }
 
                     //UDP methods - not implemented
+
 
                     //TCP methods
                     List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -161,14 +165,55 @@ namespace SteganoNetLib
                         //probably stego method is handling state, client need to handle receiving...
                         //here are needed to keep ack+seq values and handle them... SetContent is just using them...
 
-                        TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
-                        Tuple<TcpLayer, string> tcpStego = NetSteganography.SetContent4Tcp(tcpLayer, StegoUsedMethodIds, SecretMessage, this);
-                        tcpLayer = tcpStego.Item1;
-                        SecretMessage = tcpStego.Item2;
+                        //do LINQ magic
+                        //ipV4Layer.Protocol = IpV4Protocol.Tcp; //set ISN
+
+                        //default for rewrite
+                        TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal);
+
+                        //ACK FINACK
+                        //FIN ACK
+                        //FIN
+                        //DATA ACK
+                        //DATA                    
+                        //ACK SYNACK
+
+                        if(TCPphrase.Equals("ACK"))
+                        {
+                            tcpLayer.ControlBits = TcpControlBits.Acknowledgment;
+
+                        }
+
+                        if (TCPphrase.Equals("SYN ACK"))
+                        {
+                            tcpLayer.ControlBits = TcpControlBits.Synchronize | TcpControlBits.Acknowledgment;
+
+                            SeqNumberLocal = AckNumberRemote;
+                            AckNumberLocal = (uint)SeqNumberRemote + 1;
+                        }
+
+
+                        if (TCPphrase.Equals("SYN"))
+                        {
+                            AddInfoMessage("TCP SYN");
+                            tcpLayer.ControlBits = TcpControlBits.Synchronize;
+
+                            //Tuple<TcpLayer, string> tcpStego = NetSteganography.SetContent4Tcp(tcpLayer, StegoUsedMethodIds, SecretMessage, this);
+                            //tcpLayer = tcpStego.Item1;
+                            //SecretMessage = tcpStego.Item2;
+
+                            //get some values from packet
+                            AckNumberLocal = SeqNumberLocal + 1; //expected value from oposite side
+                            AckNumberRemote = SeqNumberLocal + 1; //because we know it
+                        }
+
+                        
+
+
+
                         layers.Add(tcpLayer);
                         DelayInMs = delayGeneral;
                     }
-
 
                     //protection if not enought layers
                     if (layers.Count < 3)
@@ -177,14 +222,14 @@ namespace SteganoNetLib
 
                         if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
                         {
-                            AddInfoMessage("S> Added L2 in last step");
+                            AddInfoMessage("Added L2 in last step");
                             layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
                             DelayInMs = delayGeneral;
                         }
 
                         if (!layers.OfType<IpV4Layer>().Any())
                         {
-                            AddInfoMessage("S> Added L3 IP in last step");
+                            AddInfoMessage("Added L3 IP in last step");
                             IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
                             layers.Add(ipV4LayerTMP);
                             DelayInMs = delayGeneral;
@@ -192,7 +237,7 @@ namespace SteganoNetLib
 
                         if (!layers.OfType<IcmpEchoLayer>().Any())
                         {
-                            AddInfoMessage("S> Added L3 ICMP in last step");
+                            AddInfoMessage("Added L3 ICMP in last step");
                             Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
                             layers.Add(icmpStegoTMP.Item1);
                             DelayInMs = delayIcmp;
@@ -210,7 +255,38 @@ namespace SteganoNetLib
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
                     communicator.SendPacket(packet);
-                    System.Threading.Thread.Sleep(DelayInMs); //waiting for sending next one
+
+                    if (layers.OfType<TcpLayer>().Any())
+                    {
+                        //TODO based on phrase use correct TcpControlBits
+
+
+                        SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
+                        if (SeqNumberRemote == null)
+                        {
+                            AddInfoMessage("TCP ACK not received!");
+                            //TODO set one phrase back (if), fix values (next iteration is retransmission)
+                            //TCPphrase = NetStandard.GetTcpPreviousPhrase(TCPphrase);
+
+                            /* TODO REVERSE this (cannot -1)
+                             * AckNumberLocal = SeqNumberLocal + 1; //expected value from oposite side
+                             * AckNumberRemote = SeqNumberLocal + 1; //because we know it
+                             * 
+                             * AckNumberLocal = ;
+                             * AckNumberRemote = ;
+                             */
+                            continue;
+                        }
+                        else
+                        {
+
+                        }
+                    }
+                    else
+                    {
+                        System.Threading.Thread.Sleep(DelayInMs); //waiting for sending next one for everyone except TCP
+                    }
+
                 }
                 while (!Terminate || SecretMessage.Length != 0);
 
