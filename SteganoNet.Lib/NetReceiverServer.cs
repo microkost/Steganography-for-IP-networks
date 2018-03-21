@@ -44,7 +44,7 @@ namespace SteganoNetLib
         private uint AckNumberBase { get; set; } //for TCP answers
 
 
-        public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString, ushort portRemote)
+        public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString = "0.0.0.0", ushort portRemote = 0)
         {
             //network ctor
             this.IpLocalListening = new IpV4Address(ipLocalListening);
@@ -288,6 +288,7 @@ namespace SteganoNetLib
                 return false;
             }
 
+            //different test, remoteIP and portRemote are not accepted since its not neeeded
             //TODO use iplementation from Client...
             //TODO ip, ports, ...
             //TODO use version from NetSenderClient

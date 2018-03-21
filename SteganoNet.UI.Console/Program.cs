@@ -60,7 +60,7 @@ namespace SteganoNet.UI.Console
                 role = System.Console.ReadLine().ToLower();
                 System.Console.WriteLine("");
 
-                if(!role.StartsWith("c") && !role.StartsWith("s"))
+                if (!role.StartsWith("c") && !role.StartsWith("s"))
                 {
                     System.Console.Write("\t\tWrong selection, correct are 'c'lient or 's'erver\n\t\tPress Any Key to Exit...");
                     System.Console.ReadKey();
@@ -93,49 +93,52 @@ namespace SteganoNet.UI.Console
                         System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portSource));
                     }
 
-                    //remote IP address
-                    String[] ipBytes = ipSource.Split('.'); uint byte1 = Convert.ToUInt32(ipBytes[0]); uint byte2 = Convert.ToUInt32(ipBytes[1]); uint byte3 = Convert.ToUInt32(ipBytes[2]);
-                    uint byte4 = Convert.ToUInt32(ipBytes[3]) + 0; //MAGIC NUMBER for IP higher 1 than local
-                    ipRemote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
-                    System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}?  (y or enter / ip address) ", ipRemote));
-                    string ipremoteNotParsed = System.Console.ReadLine();
-                    if (ipremoteNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(ipremoteNotParsed)) //not default answer
+                    if (String.Equals("c", role))
                     {
-                        System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipRemote)); //without change
-                    }
-                    else
-                    {
-                        if (System.Net.IPAddress.TryParse(ipremoteNotParsed.ToString(), out System.Net.IPAddress parsed))
+                        //remote IP address
+                        String[] ipBytes = ipSource.Split('.'); uint byte1 = Convert.ToUInt32(ipBytes[0]); uint byte2 = Convert.ToUInt32(ipBytes[1]); uint byte3 = Convert.ToUInt32(ipBytes[2]);
+                        uint byte4 = Convert.ToUInt32(ipBytes[3]) + 0; //MAGIC NUMBER for IP higher 1 than local
+                        ipRemote = String.Format("{0}.{1}.{2}.{3}", byte1, byte2, byte3, byte4);
+                        System.Console.Write(String.Format("\tEnter remote host IP address: should it be {0}?  (y or enter / ip address) ", ipRemote));
+                        string ipremoteNotParsed = System.Console.ReadLine();
+                        if (ipremoteNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(ipremoteNotParsed)) //not default answer
                         {
-                            ipRemote = parsed.ToString();
-                        }
-                        System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipRemote));
-                    }
-
-                    //remote port
-                    System.Console.Write(String.Format("\tEnter remote port: should it be {0}? (y or enter / number) ", portRemote));
-                    string portRemoteNotParsed = System.Console.ReadLine();
-                    if (portRemoteNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(portRemoteNotParsed)) //not default answer
-                    {
-                        System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote)); //without change
-                    }
-                    else
-                    {
-                        if (!ushort.TryParse(portRemoteNotParsed.ToString(), out ushort parsed))
-                        {
-                            portRemote = NetStandard.GetAvailablePort(48000);
+                            System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipRemote)); //without change
                         }
                         else
                         {
-                            portRemote = parsed;
+                            if (System.Net.IPAddress.TryParse(ipremoteNotParsed.ToString(), out System.Net.IPAddress parsed))
+                            {
+                                ipRemote = parsed.ToString();
+                            }
+                            System.Console.WriteLine(String.Format("\t\tUsed remote ip is: {0}", ipRemote));
                         }
-                        System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote));
+
+                        //remote port
+                        System.Console.Write(String.Format("\tEnter remote port: should it be {0}? (y or enter / number) ", portRemote));
+                        string portRemoteNotParsed = System.Console.ReadLine();
+                        if (portRemoteNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(portRemoteNotParsed)) //not default answer
+                        {
+                            System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote)); //without change
+                        }
+                        else
+                        {
+                            if (!ushort.TryParse(portRemoteNotParsed.ToString(), out ushort parsed))
+                            {
+                                portRemote = NetStandard.GetAvailablePort(48000);
+                            }
+                            else
+                            {
+                                portRemote = parsed;
+                            }
+                            System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote));
+                        }
                     }
                     System.Console.WriteLine("");
                 }
                 else
                 {
-                    ipRemote = ipSource;
+                    //ipRemote = ipSource;
                     System.Console.WriteLine("\tSkipped detailed configuration info.\n");
                 }
 
@@ -243,7 +246,8 @@ namespace SteganoNet.UI.Console
             if (String.Equals("s", role)) //its server
             {
                 //prepare server
-                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote);
+                //NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote); //old way
+                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
                 rs.StegoUsedMethodIds = stegoMethods;
 
                 //prepare thread for server
@@ -305,8 +309,8 @@ namespace SteganoNet.UI.Console
                 //client activity output
                 isHumanDriving = true; //TODO debug only
                 if (isHumanDriving)
-                {                    
-                    System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods)/1000));
+                {
+                    System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods) / 1000));
                     System.Console.WriteLine("\nShowing client running information. Press ESC to stop when message is received.");
                     do
                     {
@@ -321,7 +325,7 @@ namespace SteganoNet.UI.Console
                 {
                     //do not show output but leave some time for run of sending thread
                     int sleepTime = ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods);
-                    System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} s ({1} min) for end...", sleepTime/1000, sleepTime/1000/60));
+                    System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} s ({1} min) for end...", sleepTime / 1000, sleepTime / 1000 / 60));
                     Thread.Sleep(sleepTime);
                 }
 

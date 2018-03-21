@@ -168,32 +168,16 @@ namespace SteganoNetLib
                         //default for rewrite
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal);
 
-                        //ACK FINACK
-                        //FIN ACK
-                        //FIN
-                        //DATA ACK
-                        //DATA                    
-                        //ACK SYNACK
-
-                        if(TCPphrase.Equals("ACK"))
-                        {
-                            tcpLayer.ControlBits = TcpControlBits.Acknowledgment;
-
-                        }
-
-                        if (TCPphrase.Equals("SYN ACK"))
-                        {
-                            tcpLayer.ControlBits = TcpControlBits.Synchronize | TcpControlBits.Acknowledgment;
-
-                            SeqNumberLocal = AckNumberRemote;
-                            AckNumberLocal = (uint)SeqNumberRemote + 1;
-                        }
-
-
+                        
                         if (TCPphrase.Equals("SYN"))
                         {
                             AddInfoMessage("TCP SYN");
                             tcpLayer.ControlBits = TcpControlBits.Synchronize;
+
+                            SeqNumberLocal = (uint)20180320; //STEGO IN
+                            tcpLayer.SequenceNumber = SeqNumberLocal;
+                            AckNumberLocal = 0; //will be sended in first SYN packet
+                            tcpLayer.AcknowledgmentNumber = AckNumberLocal;
 
                             //Tuple<TcpLayer, string> tcpStego = NetSteganography.SetContent4Tcp(tcpLayer, StegoUsedMethodIds, SecretMessage, this);
                             //tcpLayer = tcpStego.Item1;
@@ -202,11 +186,39 @@ namespace SteganoNetLib
                             //get some values from packet
                             AckNumberLocal = SeqNumberLocal + 1; //expected value from oposite side
                             AckNumberRemote = SeqNumberLocal + 1; //because we know it
+                            break;
+                        }
+
+
+                        if (TCPphrase.Equals("SYN ACK")) //not here
+                        {
+                            tcpLayer.ControlBits = TcpControlBits.Synchronize | TcpControlBits.Acknowledgment;
+                            AddInfoMessage("SYNACK should not be visible");
+                            //SeqNumberLocal = AckNumberRemote;
+                            //AckNumberLocal = (uint)SeqNumberRemote + 1;
+                            break;
+                        }
+
+                        //ACK SYNACK
+                        if (TCPphrase.Equals("ACK SYNACK"))
+                        {
+                            tcpLayer.ControlBits = TcpControlBits.Acknowledgment;
+                            tcpLayer.SequenceNumber = AckNumberRemote;
+                            tcpLayer.AcknowledgmentNumber = (uint)SeqNumberRemote; //TODO why retype
+                            //TODO SMTH
+
                         }
 
                         
+                        //DATA    
 
+                        //DATA ACK
 
+                        //FIN
+
+                        //FIN ACK
+
+                        //ACK FINACK
 
                         layers.Add(tcpLayer);
                         DelayInMs = delayGeneral;
@@ -257,8 +269,8 @@ namespace SteganoNetLib
                     {
                         //TODO based on phrase use correct TcpControlBits
 
-
                         SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
+                        AddInfoMessage("Wait for ack OK: " + SeqNumberRemote);
                         if (SeqNumberRemote == null)
                         {
                             AddInfoMessage("TCP ACK not received!");
@@ -276,7 +288,8 @@ namespace SteganoNetLib
                         }
                         else
                         {
-
+                            //TCPphrase = NetStandard.GetTcpNextPhrase(TCPphrase); //TODO
+                            TCPphrase = "ACK SYNACK";
                         }
                     }
                     else

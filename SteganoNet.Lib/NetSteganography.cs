@@ -57,7 +57,7 @@ namespace SteganoNetLib
                 { 335, "ICMP ping (Sequence number) - 16b" },
                 
                 { 451, "TCP (standard) - 0b" }, //TODO
-                { 453, "TCP (sequence) - 0b" } //TODO
+                { 453, "TCP (sequence) - 32b" } //TODO
 
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
                 //TODO TTL usage or similar (count TTL and use some value under as rest...)
