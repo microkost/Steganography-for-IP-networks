@@ -157,6 +157,7 @@ namespace SteganoNetLib
                                 {                                    
                                     string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
                                     //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+                                    //Fragmentation = IpV4Fragmentation.None, //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
                                     //TODO ADD FLAGS
                                     ip.Identification = Convert.ToUInt16(partOfSecret, 2);
                                     secret = secret.Remove(0, usedbits);
@@ -178,6 +179,7 @@ namespace SteganoNetLib
                             sc.AddInfoMessage("3IP: method " + methodId);
                             /* In IPv4, fragments are indicated using four fields of the basic header: 
                              * Fragment Offset, a "Don't Fragment" (DF) flag, and a "More Fragments"(MF) flag
+                             * Fragmentation = IpV4Fragmentation.None, //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
                              */
                             break;
                         }

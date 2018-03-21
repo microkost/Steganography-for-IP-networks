@@ -38,7 +38,7 @@ namespace SteganoNetLib
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
         private int DelayInMs { get; set; } //how long to wait between iterations
 
-        //network priovate parametres = methods value keepers 
+        //network private parametres = methods value keepers 
         private Stopwatch Timer { get; set; } //IP identification timer
         private bool FirstRun { get; set; } //IP identification decision bit
         private ushort IpIdentification { get; set; } //IP identification value field
@@ -64,8 +64,8 @@ namespace SteganoNetLib
             this.FirstRun = true;
             DelayInMs = delayGeneral;
             TCPphrase = "SYN";
-            SeqNumberLocal = 65535; //TODO change to constant here and inside GetTcpLayer()
-            AckNumberLocal = 65535; //TODO change to constant here and inside GetTcpLayer()
+            SeqNumberLocal = 0; //TODO change to constant here and inside GetTcpLayer()
+            AckNumberLocal = 0; //TODO change to constant here and inside GetTcpLayer()
             AddInfoMessage("Client created...");
         }
 
@@ -163,10 +163,7 @@ namespace SteganoNetLib
                         //how to handle multiple answers and changes of data?
                         //this need to receive answers and pass result to stego method...
                         //probably stego method is handling state, client need to handle receiving...
-                        //here are needed to keep ack+seq values and handle them... SetContent is just using them...
-
-                        //do LINQ magic
-                        //ipV4Layer.Protocol = IpV4Protocol.Tcp; //set ISN
+                        //here are needed to keep ack+seq values and handle them... SetContent is just using them...                        
 
                         //default for rewrite
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal);

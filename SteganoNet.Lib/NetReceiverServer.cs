@@ -36,6 +36,13 @@ namespace SteganoNetLib
         private bool FirstRun { get; set; }
         private bool IsListenedSameInterface { get; set; } //if debug mode is running
 
+        private uint AckNumberLocal { get; set; } //for TCP answers
+        private uint AckNumberRemote { get; set; } //for TCP answers
+        private uint SeqNumberLocal { get; set; } //for TCP answers
+        private uint SeqNumberRemote { get; set; } //for TCP answers
+        private uint? SeqNumberBase { get; set; } //for TCP answers
+        private uint AckNumberBase { get; set; } //for TCP answers
+
 
         public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString, ushort portRemote)
         {
@@ -71,14 +78,18 @@ namespace SteganoNetLib
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
                 AddInfoMessage(String.Format("L> Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
 
+                string filter = "";
                 if (IsListenedSameInterface)
                 {
-                    AddInfoMessage("L> Debug: listening same device");
+                    AddInfoMessage("L> Debug: listening same device"); //cannot apply filter which cutting off (reply) packets from same interface
+                    filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
+                }
+                else
+                {
+                    //cut off replies from same interface
+                    filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port 53 and not src port 53)", IpLocalListening, PortLocal);
                 }
 
-                string filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port 53 and not src port 53)", IpLocalListening, PortLocal);
-                //string filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
-                
                 try
                 {
                     //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
@@ -198,30 +209,73 @@ namespace SteganoNetLib
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
-
-            /*
             //TCP methods
-            else if (tcp != null && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[1]))
+            List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
+            if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
             {
-                messages.Enqueue("TCP...");
+                //connection enstablishing 
+                if (tcp.ControlBits == TcpControlBits.Synchronize) //receive SYN
+                {
+                    AddInfoMessage("Replying with TCP SYN/ACK...");
+                    SeqNumberLocal = NetStandard.GetSynOrAckRandNumber() + 11 * 11; //TODO properly
+                    AckNumberLocal = SeqNumberRemote;
+                    SeqNumberBase = SeqNumberLocal; //setting value is enstablished connection, setting to null is terminating
+                    AckNumberBase = AckNumberLocal;
+                    AckNumberLocal++;
+
+                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
+                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
+                }
+
+                //connection enstablished
+                if ((tcp.ControlBits & TcpControlBits.Acknowledgment) > 0 && (SeqNumberLocal - SeqNumberBase == 1) && (AckNumberLocal - AckNumberBase == 1)) //receive ACK
+                {
+                    AddInfoMessage(">>Handshake complete!");
+                    //return;
+                }
+
+                //receive DATA
+                if (tcp.ControlBits == TcpControlBits.None)
+                {
+                    SeqNumberLocal = AckNumberRemote;
+                    AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
+
+                    //SettextBoxDebug(">>Adding TCP..."); //before first adding check PSH: Push Function
+                    //StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
+
+                    //SettextBoxDebug(">>Replying with ACK...");
+                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
+                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
+                }
+
+                //terminating connection
+                if (tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
+                {
+                    SeqNumberLocal = AckNumberRemote;
+                    AckNumberLocal = SeqNumberRemote + 1;
+
+                    AddInfoMessage(">>Ending TCP connection with FIN ACK");
+                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment);
+                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
+
+                    //TODO? SEND ALSO FIN ACK
+                    //TODO wait for ACK, ideally
+
+                    SeqNumberBase = null; //reset enstablished connection
+                    //leave method
+                }                             
             }
 
-            //wtf //its IP method...
-            else if (ip != null && ip.IsValid && tcp.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[3])) //ISN + IP ID
-            {
-                messages.Enqueue("ISN+IP...");
-                StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
-            }           
-
+            /*
             //DNS methods
             else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
             {
-                messages.Enqueue("DNS...");
+                AddInfoMessage("DNS...");
             }
             */
 
             StegoBinary.Add(messageCollector); //storing just binary messages
-            //StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
+                                               //StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
 
             return;
         }
@@ -286,7 +340,7 @@ namespace SteganoNetLib
                 sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
             }
 
-            
+
             //if more than half of next message contains message 
             //parse by "\n\r"
             //cut of empty lines
@@ -295,15 +349,17 @@ namespace SteganoNetLib
             return sb.ToString();
         }
 
-        public void SendReplyPacket(Packet packet) //universal anwering method
-        {
-            selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
-            using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+        /*
+            public void SendReplyPacket(Packet packet) //universal anwering method
             {
-                communicator.SendPacket(packet);
+                selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
+                using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
+                {
+                    communicator.SendPacket(packet);
+                }
+                return;
             }
-            return;
-        }
+            */
 
         public void SendReplyPacket(List<Layer> layers) //send answer just from list of layers, building and forwarning the answer
         {

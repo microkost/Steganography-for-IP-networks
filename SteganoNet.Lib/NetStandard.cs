@@ -73,22 +73,17 @@ namespace SteganoNetLib
         //---------L3------------------------------------------------------------------------------------------------------------
         public static IpV4Layer GetIpV4Layer(IpV4Address SourceIP, IpV4Address DestinationIP)
         {
-            IpV4Layer ipv4Vrstva = new IpV4Layer();
-            ipv4Vrstva.TypeOfService = Convert.ToByte(0); //STEGO ready //0 default value
-            ipv4Vrstva.Source = SourceIP;
-            ipv4Vrstva.CurrentDestination = DestinationIP; //ipv4Vrstva.Destination is read only
-            ipv4Vrstva.Fragmentation = IpV4Fragmentation.None; //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
-            ipv4Vrstva.HeaderChecksum = null; //Will be filled automatically.
-            ipv4Vrstva.Identification = 1;
-            ipv4Vrstva.Options = IpV4Options.None;
-            ipv4Vrstva.Ttl = 128;
-            /*
-            if (carryingLayer == IpV4Protocol.Tcp)
-                ipv4Vrstva.Protocol = IpV4Protocol.Tcp;
-
-            if (carryingLayer == IpV4Protocol.Udp)
-                ipv4Vrstva.Protocol = IpV4Protocol.Udp;
-            */
+            IpV4Layer ipv4Vrstva = new IpV4Layer
+            {
+                TypeOfService = Convert.ToByte(0),
+                Source = SourceIP,
+                CurrentDestination = DestinationIP, //ipv4Vrstva.Destination is read only
+                Fragmentation = IpV4Fragmentation.None, //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
+                HeaderChecksum = null, //Will be filled automatically.
+                Identification = 1,
+                Options = IpV4Options.None,
+                Ttl = 128
+            };            
             return ipv4Vrstva;
         }
 
@@ -140,7 +135,7 @@ namespace SteganoNetLib
         }
 
 
-        //checks for used ports and retrieves the first free port <returns>the free port or 0 if it did not find a free port</returns>
+        //checks for used ports and retrieves the first free port <returns>the free port or 0 if it did not find a free port
         public static ushort GetAvailablePort(ushort startingPort)
         {
             //source: https://gist.github.com/jrusbatch/4211535
@@ -246,6 +241,17 @@ namespace SteganoNetLib
             return tcpLayer;
         }
 
+        public static List<Layer> GetTcpReplyPacket(MacAddress MacAddressLocal, MacAddress MacAddressRemote, IpV4Address SourceIP, IpV4Address DestinationIP, TcpLayer tcpLayer)
+        {
+            if (tcpLayer == null) { return null; } //extra protection
+
+            //create legacy "datagram" which is going to be sent back
+            List<Layer> layers = new List<Layer>(); //list of used layers
+            layers.Add(GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
+            layers.Add(GetIpV4Layer(SourceIP, DestinationIP));
+            layers.Add(tcpLayer);
+            return (layers);
+        }
         public static uint GetSynOrAckRandNumber() //for generating random SYN and ACK numbers
         {
             //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
