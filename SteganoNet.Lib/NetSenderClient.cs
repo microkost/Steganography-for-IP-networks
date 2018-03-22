@@ -172,50 +172,55 @@ namespace SteganoNetLib
                         if (TCPphrase.Equals("SYN"))
                         {
                             AddInfoMessage("TCP SYN");
-                            tcpLayer.ControlBits = TcpControlBits.Synchronize;
 
-                            SeqNumberLocal = (uint)20180320; //STEGO IN
+                            SeqNumberLocal = (uint)1000; //STEGO IN                            
                             AckNumberLocal = 0;
-                            tcpLayer.SequenceNumber = SeqNumberLocal;
-                            tcpLayer.AcknowledgmentNumber = AckNumberLocal;
+                            SeqNumberRemote = 0; //we dont know
+                            AckNumberRemote = SeqNumberLocal + 1; //we dont know
 
-                            //Tuple<TcpLayer, string> tcpStego = NetSteganography.SetContent4Tcp(tcpLayer, StegoUsedMethodIds, SecretMessage, this);
-                            //tcpLayer = tcpStego.Item1;
-                            //SecretMessage = tcpStego.Item2;
-
-                            SeqNumberRemote = 0; //we dont know, need to be received
-                            AckNumberRemote = SeqNumberLocal + 1; //because we know what to expect
+                            AddInfoMessage(String.Format("CLIENT: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+                            tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
                         }
 
                         if (TCPphrase.Equals("SYN ACK"))
                         {
-                            AddInfoMessage("TCP SYN ACK should never show in client");
-                            tcpLayer.ControlBits = TcpControlBits.Synchronize | TcpControlBits.Acknowledgment;
-                            //SeqNumberRemote = received ACK from SYN packet
-                            //AckNumberRemote = 0;
-                            //SeqNumberLocal = NetStandard.GetSynOrAckRandNumber() OR NetSteganography.SetContent4Tcp()
-                            //AckNumberLocal = SeqNumberRemote + 1;
+                            AddInfoMessage("TCP SYN ACK - never show in client");
                         }
 
-                        //ACK SYNACK
                         if (TCPphrase.Equals("ACK SYNACK"))
                         {
-                            if (SeqNumberRemote != null)
+                            AddInfoMessage("ACK SYNACK is happen");
+
+                            if (SeqNumberRemote == null)
                             {
-                                tcpLayer.ControlBits = TcpControlBits.Acknowledgment;
-                                tcpLayer.SequenceNumber = AckNumberRemote;
-                                tcpLayer.AcknowledgmentNumber = (uint)SeqNumberRemote + 1; //retyping, because using null value in NetStandard.WaitForTcpAck()
+                                AddInfoMessage("ACK SYNACK SeqNumRem is null");
+                                break;
                             }
-                            else
-                            {
-                                AddInfoMessage("ACK SYNACK error, ACK not reveived");
-                            }
+
+                            //SeqNumberRemote - arrived and rewrited in waiting method
+                            AckNumberRemote = SeqNumberLocal + 1; //arrived
+                            SeqNumberLocal = AckNumberRemote; //outgoing
+                            AckNumberLocal = (uint)SeqNumberRemote + 1;
+
+                            AddInfoMessage(String.Format("CLIENT: ACK SYNACK seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+                            tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                         }
 
-                        //DATA    
+                        //DATA
                         DnsLayer dnsLayer = NetStandard.GetDnsHeaderLayer(0);
                         if (TCPphrase.Equals("DATA"))
-                        {                            
+                        {
+                            tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment | TcpControlBits.Push | TcpControlBits.Urgent);
+
+                            int usedbits = 16;
+                            string partOfSecret = SecretMessage.Remove(usedbits, SecretMessage.Length - usedbits);
+                            UInt16 value = Convert.ToUInt16(partOfSecret, 2);
+                            SecretMessage = SecretMessage.Remove(0, usedbits);
+                            dnsLayer = NetStandard.GetDnsHeaderLayer(value);
+
+                            //size recounted lower
+
+                            /*
                             if (SeqNumberRemote == null)
                             {
                                 AddInfoMessage("DATA error");
@@ -235,7 +240,9 @@ namespace SteganoNetLib
                             tcpLayer.SequenceNumber = AckNumberRemote;
                             tcpLayer.AcknowledgmentNumber = (uint)SeqNumberRemote + (uint)dnsLayer.Length; //retyping, because using null value in NetStandard.WaitForTcpAck()
                             AddInfoMessage("Lenght is: " + dnsLayer.Length);
+                            */
                         }
+
 
                         //DATA ACK
 
@@ -248,112 +255,169 @@ namespace SteganoNetLib
                         layers.Add(tcpLayer);
                         if (TCPphrase.Equals("DATA"))
                         {
-                            layers.Add(dnsLayer);
+                            //layers.Add(dnsLayer);
                         }
                         DelayInMs = delayGeneral;
-                    }
 
 
 
-                    //protection if not enought layers from selection
-                    if (layers.Count < 3)
-                    {
-                        //TODO layers need to be correctly ordered! Cannot append L2 to end...
-
-                        if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
+                        //protection if not enought layers from selection
+                        if (layers.Count < 3)
                         {
-                            AddInfoMessage("Added L2 in last step");
-                            layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
-                            DelayInMs = delayGeneral;
+                            //TODO layers need to be correctly ordered! Cannot append L2 to end...
+
+                            if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
+                            {
+                                AddInfoMessage("Added L2 in last step");
+                                layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
+                                DelayInMs = delayGeneral;
+                            }
+
+                            if (!layers.OfType<IpV4Layer>().Any())
+                            {
+                                AddInfoMessage("Added L3 IP in last step");
+                                IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
+                                layers.Add(ipV4LayerTMP);
+                                DelayInMs = delayGeneral;
+                            }
+
+                            if (!layers.OfType<IcmpEchoLayer>().Any())
+                            {
+                                AddInfoMessage("Added L3 ICMP in last step");
+                                Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
+                                layers.Add(icmpStegoTMP.Item1);
+                                DelayInMs = delayIcmp;
+                            }
                         }
 
-                        if (!layers.OfType<IpV4Layer>().Any())
+                        AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
+                        if (SecretMessage.Length == 0)
                         {
-                            AddInfoMessage("Added L3 IP in last step");
-                            IpV4Layer ipV4LayerTMP = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3
-                            layers.Add(ipV4LayerTMP);
-                            DelayInMs = delayGeneral;
+                            AddInfoMessage(String.Format("All message departured, you can stop the process by pressing ESC")); //TODO it's confusing when is running from GUI
+                            Terminate = true;
                         }
 
-                        if (!layers.OfType<IcmpEchoLayer>().Any())
+                        //build packet and send
+                        PacketBuilder builder = new PacketBuilder(layers);
+                        Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
+                        communicator.SendPacket(packet);
+
+                        if (layers.OfType<TcpLayer>().Any())  //procedures of TCP states handling
                         {
-                            AddInfoMessage("Added L3 ICMP in last step");
-                            Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
-                            layers.Add(icmpStegoTMP.Item1);
-                            DelayInMs = delayIcmp;
-                        }
-                    }
+                            uint SeqNumberRemotePrevious = (uint)SeqNumberRemote; //backup in case of null
 
-                    AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
-                    if (SecretMessage.Length == 0)
-                    {
-                        AddInfoMessage(String.Format("All message departured, you can stop the process by pressing ESC")); //TODO it's confusing when is running from GUI
-                        Terminate = true;
-                    }
-
-                    //build packet and send
-                    PacketBuilder builder = new PacketBuilder(layers);
-                    Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
-                    communicator.SendPacket(packet);
-
-                    if (layers.OfType<TcpLayer>().Any())  //procedures of TCP states handling
-                    {
-                        if (!TCPphrase.Equals("ACK SYNACK") && !TCPphrase.Equals("ACK FINACK")) //last phrases of handshake are not confirmed...
-                        {
-                            AddInfoMessage(String.Format("Waiting up to {0} s for TCP ACK", NetStandard.TcpTimeoutInMs / 1000));
-                            AddInfoMessage(String.Format("DEBUG: Phrase {0} Expected Ack: {1}", TCPphrase, AckNumberRemote));
-
-                            if(TCPphrase.Equals("SYN"))
-                            { 
-                                SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value                        
-                            }
-                            else
+                            if (TCPphrase.Equals("SYN")) //waits
                             {
-                                SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Acknowledgment); //in ack is expected value                        
+                                AddInfoMessage(String.Format("SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+                                AddInfoMessage(String.Format("Waiting up to {0} s for TCP ACK, expected {1}", NetStandard.TcpTimeoutInMs / 1000, AckNumberRemote));
+                                SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value                            
                             }
-                        
 
-
-                            if (SeqNumberRemote == null)
+                            if (TCPphrase.Equals("SYN ACK")) //waits
                             {
-                                AddInfoMessage("TCP ACK not received!");
-                                //TODO resent! Do not change TCPPhrase
-                                continue;
+                                AddInfoMessage(String.Format("SYN ACK seq: {0}, ack: {1}, seqr {2}, ackr {3} - never shows", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
                             }
-                            else
+
+                            if (TCPphrase.Equals("ACK SYNACK"))
                             {
-                                TCPphrase = NetStandard.GetTcpNextPhrase(TCPphrase, "c");
+                                AddInfoMessage(String.Format("ACK SYNACK seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
                             }
 
                             if (TCPphrase.Equals("DATA"))
                             {
                                 uint payloadsize = (uint)packet.Ethernet.IpV4.Tcp.PayloadLength;
-                                SeqNumberLocal += payloadsize; //expected value from oposite side
-                                AddInfoMessage("Sended data of " + payloadsize);
+                                //counting size
+
+                                AddInfoMessage(String.Format("DATA seq: {0}, ack: {1}, seqr {2}, ackr {3}, pay: {4}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote, payloadsize));
+                                AddInfoMessage(String.Format("Waiting up to {0} s for TCP ACK", NetStandard.TcpTimeoutInMs / 1000));
+
+                                //SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Acknowledgment); //in ack is expected value                        
+                                SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal); //in ack is expected value
+                                                                                                                                                                 //different seq number
                             }
+
+                            if (TCPphrase.Equals("ACK")) //DATA ACK
+                            {
+                                AddInfoMessage(String.Format("ACK seq: {0}, ack: {1}, seqr {2}, ackr {3} SHOULD NOT BE HERE REPLY", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+                                //in ack is expected value
+                                //SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Acknowledgment);
+                            }
+
+
+                            //rest of states...
+
+                            if (SeqNumberRemote == null)
+                            {
+                                SeqNumberRemote = SeqNumberRemotePrevious;
+                                //DO NOT MOVE PHRASE via GetTcpNextPhrase()
+                                AddInfoMessage(String.Format("TCP ACK not received! seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+                            }
+                            else
+                            {
+                                TCPphrase = NetStandard.GetTcpNextPhrase(TCPphrase, "c");
+                                AddInfoMessage("Changing to phrase " + TCPphrase + "\r\n----");
+                            }
+
+                            /*
+                            if (!TCPphrase.Equals("ACK SYNACK") && !TCPphrase.Equals("ACK FINACK")) //last phrases of handshake are not confirmed...
+                            {
+                                AddInfoMessage(String.Format("Waiting up to {0} s for TCP ACK", NetStandard.TcpTimeoutInMs / 1000));
+                                AddInfoMessage(String.Format("DEBUG: Phrase {0} Expected Ack: {1}", TCPphrase, AckNumberRemote));
+
+                                if (TCPphrase.Equals("SYN"))
+                                {
+                                    SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value                        
+                                }
+                                else
+                                {
+                                    SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Acknowledgment); //in ack is expected value                        
+                                }
+
+                                if (SeqNumberRemote == null)
+                                {
+                                    AddInfoMessage("TCP ACK not received!");
+                                    //TODO resent! Do not change TCPPhrase
+                                    continue;
+                                }
+                                else
+                                {
+                                    TCPphrase = NetStandard.GetTcpNextPhrase(TCPphrase, "c");
+                                }
+
+                                if (TCPphrase.Equals("DATA"))
+                                {
+                                    uint payloadsize = (uint)packet.Ethernet.IpV4.Tcp.PayloadLength;
+                                    SeqNumberLocal += payloadsize; //expected value from oposite side
+                                    AddInfoMessage("Sended data of " + payloadsize);
+                                }
+                            }
+                            else
+                            {
+                                AddInfoMessage("Phrase changing from: " + TCPphrase);
+                                TCPphrase = NetStandard.GetTcpNextPhrase(TCPphrase, "c");
+                                AddInfoMessage("Phrase changing to: " + TCPphrase);
+                            }
+                            */
+
+                            AddInfoMessage("Current phrase is " + TCPphrase);
+                            //TODO should have their own waiting if needed...
+
+
                         }
                         else
                         {
-                            AddInfoMessage("Phrase changing from: " + TCPphrase);
-                            TCPphrase = NetStandard.GetTcpNextPhrase(TCPphrase, "c");
-                            AddInfoMessage("Phrase changing to: " + TCPphrase);
+                            communicator.SendPacket(packet);
+                            System.Threading.Thread.Sleep(DelayInMs); //waiting for sending next one for everyone except TCP
                         }
 
-
-
-                        AddInfoMessage("Current phrase is " + TCPphrase);
-                        //TODO should have their own waiting if needed...
                     }
-                    else
-                    {
-                        communicator.SendPacket(packet);
-                        System.Threading.Thread.Sleep(DelayInMs); //waiting for sending next one for everyone except TCP
-                    }
-
                 }
                 while (!Terminate || SecretMessage.Length != 0);
 
+
             }
+
+
         }
 
         public bool ArePrerequisitiesDone()

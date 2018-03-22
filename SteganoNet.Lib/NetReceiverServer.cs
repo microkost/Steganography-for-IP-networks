@@ -214,23 +214,38 @@ namespace SteganoNetLib
             List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
             {
-                //connection enstablishing 
-                if (tcp.ControlBits == TcpControlBits.Synchronize) //receive SYN
+                //REMOTE IS WHAT ARRIVED
+                //LOCAL IS WHAT IS OUTGOING
+
+                //receive SYN
+                if (tcp.ControlBits == TcpControlBits.Synchronize) 
                 {
                     AddInfoMessage("Replying with TCP SYN/ACK...");
-                    SeqNumberRemote = tcp.SequenceNumber;
-                    AckNumberRemote = 0;
-                    SeqNumberLocal = NetStandard.GetSynOrAckRandNumber() + 11 * 11; //TODO properly
+
+                    SeqNumberRemote = tcp.SequenceNumber; //arrived
+                    AckNumberRemote = tcp.AcknowledgmentNumber; //not used
+                    SeqNumberLocal = 5000; //TODO STEGO
                     AckNumberLocal = SeqNumberRemote + 1;
 
-                    //SeqNumberBase = SeqNumberLocal; //setting value is enstablished connection, setting to null is terminating
-                    //AckNumberBase = AckNumberLocal;
-                    //AckNumberLocal++;
-
+                    AddInfoMessage(String.Format("SERVER: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
                     TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
                     SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
                 }
 
+                //SYN ACK
+                if (tcp.ControlBits == (TcpControlBits.Synchronize | TcpControlBits.Acknowledgment))
+                {
+                    SeqNumberRemote = AckNumberLocal; //arrived
+                    AckNumberRemote = SeqNumberLocal; //arrived
+                    SeqNumberLocal = AckNumberLocal; //outgoing
+                    AckNumberLocal = AckNumberRemote + 1; //outgoing
+
+                    AddInfoMessage(String.Format("SERVER: SYNACK seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
+                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
+                }
+
+                /*
                 //connection enstablished
                 if ((tcp.ControlBits & TcpControlBits.Acknowledgment) > 0) //&& (SeqNumberLocal - SeqNumberBase == 1)) //receive ACK //&& (AckNumberLocal - AckNumberBase == 1)s
                 {
@@ -238,14 +253,15 @@ namespace SteganoNetLib
                     //return;
                     //save some values?
                 }
+                */
 
+                /*
                 //receive DATA
-                if (tcp.ControlBits == TcpControlBits.None)
+                if (tcp.ControlBits == TcpControlBits.Push)
                 {
                     AddInfoMessage(">>Data section");
                     SeqNumberLocal = AckNumberRemote;
                     AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
-
                     //SettextBoxDebug(">>Adding TCP..."); //before first adding check PSH: Push Function
                     //StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
 
@@ -253,6 +269,7 @@ namespace SteganoNetLib
                     TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                     SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
                 }
+                */
 
                 //terminating connection
                 if (tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
@@ -269,7 +286,7 @@ namespace SteganoNetLib
 
                     //SeqNumberBase = null; //reset enstablished connection
                     //leave method
-                }                             
+                }
             }
 
             /*
