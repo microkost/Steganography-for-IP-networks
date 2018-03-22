@@ -138,7 +138,7 @@ namespace SteganoNet.UI.Console
                 }
                 else
                 {
-                    //ipRemote = ipSource;
+                    ipRemote = ipSource;
                     System.Console.WriteLine("\tSkipped detailed configuration info.\n");
                 }
 
@@ -225,6 +225,8 @@ namespace SteganoNet.UI.Console
                                 messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
                                 break;
                             }
+
+                            //TODO parsing of -h HELP parameter which shows details...
                     }
                     System.Console.WriteLine(String.Format("\t{0} value: {1}", args[i - 1], args[i])); //show what arrived, not what is in variables
                 }
@@ -246,8 +248,8 @@ namespace SteganoNet.UI.Console
             if (String.Equals("s", role)) //its server
             {
                 //prepare server
-                //NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote); //old way
-                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
+                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote); //old way
+                //NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
                 rs.StegoUsedMethodIds = stegoMethods;
 
                 //prepare thread for server

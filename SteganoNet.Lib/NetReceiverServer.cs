@@ -59,7 +59,7 @@ namespace SteganoNetLib
             StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
-            Messages.Enqueue("L> Server created...");
+            Messages.Enqueue("Server created...");
             this.FirstRun = true;
         }
 
@@ -67,7 +67,7 @@ namespace SteganoNetLib
         {
             if (!ArePrerequisitiesDone()) //check values in properties //TODO finalize implementation!
             {
-                AddInfoMessage("L> Server is not ready to start, check initialization values...");
+                AddInfoMessage("Server is not ready to start, check initialization values...");
                 return;
             }
 
@@ -76,12 +76,12 @@ namespace SteganoNetLib
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
-                AddInfoMessage(String.Format("L> Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
+                AddInfoMessage(String.Format("Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
 
                 string filter = "";
                 if (IsListenedSameInterface)
                 {
-                    AddInfoMessage("L> Debug: listening same device"); //cannot apply filter which cutting off (reply) packets from same interface
+                    AddInfoMessage("Debug: listening same device"); //cannot apply filter which cutting off (reply) packets from same interface
                     filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
                 }
                 else
@@ -94,11 +94,12 @@ namespace SteganoNetLib
                 {
                     //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
                     communicator.SetFilter(filter); // Compile and set the filter
+                    AddInfoMessage("Traffic filter applied successfully");
                 }
                 catch
                 {
                     //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
-                    AddInfoMessage("L> Traffic filter was not applied, because it have wrong format.");
+                    AddInfoMessage("Traffic filter was not applied, because it have wrong format.");
                 }
 
                 do // Retrieve the packets
@@ -136,7 +137,7 @@ namespace SteganoNetLib
                     }
                 } while (!Terminate);
 
-                AddInfoMessage(String.Format("L> Message is assembling from {0} packets", StegoPackets.Count));
+                AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
                 //AddInfoMessagee(String.Format("Secret in this session: {0}\n", GetSecretMessage(StegoPackets))); //result of steganography
                 //StegoPackets.Clear();                
                 return;
@@ -150,7 +151,7 @@ namespace SteganoNetLib
             //call proper parsing method from stego library
             //get answer packet and send it
 
-            AddInfoMessage("L> received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+            AddInfoMessage("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
 
             //same lenght is usually same stego stream
             if (PacketSize != packet.Length) //temporary recognizing of different streams
@@ -175,7 +176,7 @@ namespace SteganoNetLib
             }
             catch (Exception ex)
             {
-                AddInfoMessage("L> packet discarted, " + ex.Message.ToString());
+                AddInfoMessage("Packet discarted, " + ex.Message.ToString());
                 return;
             }
 
@@ -217,26 +218,31 @@ namespace SteganoNetLib
                 if (tcp.ControlBits == TcpControlBits.Synchronize) //receive SYN
                 {
                     AddInfoMessage("Replying with TCP SYN/ACK...");
+                    SeqNumberRemote = tcp.SequenceNumber;
+                    AckNumberRemote = 0;
                     SeqNumberLocal = NetStandard.GetSynOrAckRandNumber() + 11 * 11; //TODO properly
-                    AckNumberLocal = SeqNumberRemote;
-                    SeqNumberBase = SeqNumberLocal; //setting value is enstablished connection, setting to null is terminating
-                    AckNumberBase = AckNumberLocal;
-                    AckNumberLocal++;
+                    AckNumberLocal = SeqNumberRemote + 1;
+
+                    //SeqNumberBase = SeqNumberLocal; //setting value is enstablished connection, setting to null is terminating
+                    //AckNumberBase = AckNumberLocal;
+                    //AckNumberLocal++;
 
                     TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
                     SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
                 }
 
                 //connection enstablished
-                if ((tcp.ControlBits & TcpControlBits.Acknowledgment) > 0 && (SeqNumberLocal - SeqNumberBase == 1) && (AckNumberLocal - AckNumberBase == 1)) //receive ACK
+                if ((tcp.ControlBits & TcpControlBits.Acknowledgment) > 0) //&& (SeqNumberLocal - SeqNumberBase == 1)) //receive ACK //&& (AckNumberLocal - AckNumberBase == 1)s
                 {
                     AddInfoMessage(">>Handshake complete!");
                     //return;
+                    //save some values?
                 }
 
                 //receive DATA
                 if (tcp.ControlBits == TcpControlBits.None)
                 {
+                    AddInfoMessage(">>Data section");
                     SeqNumberLocal = AckNumberRemote;
                     AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
 
@@ -261,7 +267,7 @@ namespace SteganoNetLib
                     //TODO? SEND ALSO FIN ACK
                     //TODO wait for ACK, ideally
 
-                    SeqNumberBase = null; //reset enstablished connection
+                    //SeqNumberBase = null; //reset enstablished connection
                     //leave method
                 }                             
             }

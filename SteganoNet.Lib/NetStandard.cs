@@ -10,13 +10,19 @@ using PcapDotNet.Packets;
 using System.Collections.Generic;
 using PcapDotNet.Packets.Icmp;
 using System.Diagnostics;
+using PcapDotNet.Packets.Dns;
 
 namespace SteganoNetLib
 {
     public static class NetStandard
     {
         //class is separated by ISO-OSI RM model layers
-        private static Random rand = new Random(); //TCP legal values        
+
+        //timers public saved to DelayInMs when used                
+        public const int TcpTimeoutInMs = 20000; //gap between all packets in miliseconds
+
+        public static List<String> TCPphrases = new List<string> { "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }; //TCP legal
+        private static Random rand = new Random(); //TCP legal values                
 
         //---------L2------------------------------------------------------------------------------------------------------------
 
@@ -83,7 +89,7 @@ namespace SteganoNetLib
                 Identification = 1,
                 Options = IpV4Options.None,
                 Ttl = 128
-            };            
+            };
             return ipv4Vrstva;
         }
 
@@ -224,7 +230,7 @@ namespace SteganoNetLib
 
             uint seqNumberLocal = (sequenceNumber == 65535) ? GetSynOrAckRandNumber() : sequenceNumber;
             uint ackNumberLocal = (acknowledgmentNumber == 65535) ? GetSynOrAckRandNumber() : acknowledgmentNumber;
-            
+
             TcpLayer tcpLayer = new TcpLayer
             {
                 SourcePort = sourcePort,
@@ -257,7 +263,7 @@ namespace SteganoNetLib
             //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
             uint generatedNum = (ushort)rand.Next(0, 65535);
 
-            //TODO REMOVE?
+            //TODO REMOVE
             while (generatedNum % 11 == 0) //mod 11 is magic which distinguish stego from camouflage
             {
                 generatedNum = (ushort)rand.Next(0, 65535);
@@ -281,7 +287,7 @@ namespace SteganoNetLib
                     }
                 }
 
-                if (sw.ElapsedMilliseconds > 20000) //timeout break
+                if (sw.ElapsedMilliseconds > TcpTimeoutInMs) //timeout break
                 {
                     sw.Stop();
                     return null;
@@ -289,19 +295,52 @@ namespace SteganoNetLib
             }
         }
 
-        internal static string GetTcpPreviousPhrase(string TCPphrase)
+        public static string GetTcpNextPhrase(string phraseCurrent, string role = "c") //based on role and current phrase return next one...
         {
-            List<String> TCPphrases = new List<string>{ "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" };
+            if (!TCPphrases.Contains(phraseCurrent)) //protection if someone sends some mess
+                return phraseCurrent;
 
-            if (!TCPphrases.Contains(TCPphrase)) //protection
-                return TCPphrase;
-                        
-            if (TCPphrase.Equals("SYN ACK")) { return "SYN"; }; //previous
-            if (TCPphrase.Equals("ACK SYNACK")) { return "SYN ACK"; }; //previous
+            //phraseCurrent string is case sensitive
+            //{ "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }
 
-            //TODO MORE
+            if (role.ToLower().StartsWith("c")) //client states
+            {
+                if (phraseCurrent.Equals("SYN")) { return "ACK SYNACK"; };
+                if (phraseCurrent.Equals("ACK SYNACK")) { return "DATA"; };
+                if (phraseCurrent.Equals("DATA")) { return "DATA"; };
+                if (phraseCurrent.Equals("FIN")) { return "ACK FINACK"; };
+            }
 
-            return TCPphrase;
+            if (role.ToLower().StartsWith("s")) //server states
+            {
+                throw new NotImplementedException("Server states not done yet");
+            }
+
+            return phraseCurrent;
+        }
+
+
+        //---------L7------------------------------------------------------------------------------------------------------------
+        public static DnsLayer GetDnsHeaderLayer(ushort id) //+hardcoded IP
+        {
+            DnsLayer dnsVrstva = new DnsLayer();        //knowledge in RFC1035, layers: Header AND (Question OR Answer OR Authority OR Additional)
+            dnsVrstva.Id = id;                          //16 bit identifier assigned by the program; is copied to the corresponding reply
+            dnsVrstva.IsResponse = false;               //message is a query(0), or a response(1).
+            dnsVrstva.OpCode = DnsOpCode.Query;         //specifies kind of query in this message. This value is set by the originator of a query and copied into the response.
+            dnsVrstva.IsAuthoritativeAnswer = true;     //responding name server is an  authority for the domain name in question section.
+            dnsVrstva.IsTruncated = false;              //was shortened than permitted value on the channel
+            dnsVrstva.IsRecursionDesired = true;        //may be set in a query and is copied into the response; name server try to pursue the query recursively
+            dnsVrstva.IsRecursionAvailable = true;      //this be is set or cleared in a response
+            dnsVrstva.FutureUse = false;                //Must be zero in all queries and responses. (3 bits)
+            dnsVrstva.IsAuthenticData = true;
+            dnsVrstva.IsCheckingDisabled = false;
+            dnsVrstva.ResponseCode = DnsResponseCode.NoError;   //4 bit field  as part of responses //Values 6-15 Reserved for future use.
+            dnsVrstva.Queries = null;
+            dnsVrstva.Answers = null;
+            dnsVrstva.Authorities = null;
+            dnsVrstva.Additionals = null;
+            dnsVrstva.DomainNameCompressionMode = DnsDomainNameCompressionMode.Nothing; //should be suspicious, original = All
+            return dnsVrstva;
         }
     }
 }
