@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using PcapDotNet.Packets.Dns;
 using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.Transport;
@@ -45,7 +46,7 @@ namespace SteganoNetLib
              * 8xx > other methods like time channel
              * 
              * dash '-' is splitter for parsing capacity size of method! Always at the end with size and unit ' - 100b' for 100 bits in method
-             * inform user about settings in [] brackets like delay
+             * inform user about settings in [] brackets like exact delay if possible (constants)
              */
 
             //for details read file MethodDescription.txt, keep it updated if changing following list!
@@ -53,21 +54,22 @@ namespace SteganoNetLib
             {
                 { 301, "IP Type of service / DiffServ (agresive) - 8b" },
                 { 302, "IP Type of service / DiffServ - 2b" },
-                { 303, String.Format("IP Identification [delay {0} s] - 16b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000) },
+                { 303, String.Format("IP Identification [delay {0} s] - 16b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000) }, //adding exact time value to the name
 
                 { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
                 { 333, "ICMP ping (Identifier) - 16b" },
                 { 335, "ICMP ping (Sequence number) - 16b" },
-                
-                { 451, "TCP (standard) - 0b" }, //TODO
-                { 453, "TCP (ISN) - 32b" }, //TODO
 
-                { 701, "DNS (standard) - 0b" } //TODO
+                //{ 451, "TCP (standard) - 0b" }, //TODO
+                //{ 453, "TCP (ISN) - 32b" }, //TODO
+
+                { 701, String.Format("DNS request (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
+                { 703, "DNS request (transaction id) - 16b" }
 
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
                 //TODO TTL usage or similar (count TTL and use some value under as rest...)
             };
-            
+
             return listOfStegoMethods; //DO NOT DYNAMICAL MODIFY THAT LIST DURING RUNNING
         }
 
@@ -159,7 +161,7 @@ namespace SteganoNetLib
                             {
                                 sc.AddInfoMessage("3IP: method " + methodId + " it's first or reseted run");
                                 try
-                                {                                    
+                                {
                                     string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
                                     //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
                                     //Fragmentation = IpV4Fragmentation.None, //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
@@ -347,7 +349,7 @@ namespace SteganoNetLib
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
-                   //case 337: icmp.Payload = "";
+                        //case 337: icmp.Payload = "";
                 }
             }
 
@@ -395,6 +397,80 @@ namespace SteganoNetLib
 
         //-L5---L7-------------------------------------------------------------------------------------------------------------
 
-        //application layer methods
+        public static Tuple<DnsLayer, string> SetContent7Dns(DnsLayer dns, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null) //SENDER
+        {
+            if (dns == null) { return null; } //extra protection
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                switch (methodId)
+                {
+                    case 701: //DNS clean //SENDER
+                        {
+                            sc.AddInfoMessage("7DNS: legacy method " + methodId);
+                            dns.Id = (ushort)rand.Next(0, 65535);
+                            break;
+                        }
+                    case 703: //DNS (transaction id) //SENDER
+                        {
+                            sc.AddInfoMessage("7DNS: method " + methodId);
+                            const int usedbits = 16;
+                            try
+                            {
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                dns.Id = Convert.ToUInt16(partOfSecret, 2);
+                                secret = secret.Remove(0, usedbits);
+                            }
+                            catch
+                            {
+                                if (secret.Length != 0)
+                                {
+                                    dns.Id = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    secret = secret.Remove(0, secret.Length);
+                                }
+                                return new Tuple<DnsLayer, string>(dns, secret); //nothing more          
+                            }
+                            break;
+                        }
+                }
+            }
+            return new Tuple<DnsLayer, string>(dns, secret);
+        }
+
+        public static string GetContent7Dns(DnsDatagram dns, List<int> stegoUsedMethodIds, NetReceiverServer rs = null) //RECEIVER
+        {
+            if (dns == null) { return null; } //extra protection
+            List<string> BlocksOfSecret = new List<string>();
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                switch (methodId)
+                {
+                    case 331: //ICMP (pure) RECEIVER
+                        {
+                            rs.AddInfoMessage("3ICMP: method (no stehanography included)" + methodId); //add number of received bits in this iteration
+                            break;
+                        }
+                    case 333: //ICMP (Identifier) RECEIVER
+                        {
+                            rs.AddInfoMessage("3ICMP: method " + methodId);
+                            string binvalue = Convert.ToString(dns.Id, 2);
+                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                        //application layer methods
+                }
+            }
+
+            if (BlocksOfSecret.Count != 0) //providing value output
+            {
+                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+            }
+            else
+            {
+                return null;
+            }
+        }
     }
 }
+

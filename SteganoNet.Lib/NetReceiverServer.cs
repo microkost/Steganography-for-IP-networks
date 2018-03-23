@@ -200,6 +200,7 @@ namespace SteganoNetLib
             if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
             {
                 messageCollector.Append(NetSteganography.GetContent3Icmp(icmp, StegoUsedMethodIds, this));
+                //if EchoRequest then...
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
@@ -210,6 +211,7 @@ namespace SteganoNetLib
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
+            /*
             //TCP methods
             List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
@@ -245,7 +247,7 @@ namespace SteganoNetLib
                     SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
                 }
 
-                /*
+                
                 //connection enstablished
                 if ((tcp.ControlBits & TcpControlBits.Acknowledgment) > 0) //&& (SeqNumberLocal - SeqNumberBase == 1)) //receive ACK //&& (AckNumberLocal - AckNumberBase == 1)s
                 {
@@ -253,7 +255,7 @@ namespace SteganoNetLib
                     //return;
                     //save some values?
                 }
-                */
+                
                 
                 //receive DATA
                 if (tcp.ControlBits == TcpControlBits.Push)
@@ -286,14 +288,18 @@ namespace SteganoNetLib
                     //leave method
                 }
             }
-
-            /*
-            //DNS methods
-            else if (dns != null && dns.IsValid && String.Equals(StegoMethod, Lib.listOfStegoMethods[4])) //DNS
-            {
-                AddInfoMessage("DNS...");
-            }
             */
+
+
+            //DNS methods
+            List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
+            if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains))
+            {
+                messageCollector.Append(NetSteganography.GetContent7Dns(dns, StegoUsedMethodIds, this));
+                //TODO should test if port 53 is listening + receiving
+                SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, 53, PortRemote, dns));
+
+            }            
 
             StegoBinary.Add(messageCollector); //storing just binary messages
                                                //StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)

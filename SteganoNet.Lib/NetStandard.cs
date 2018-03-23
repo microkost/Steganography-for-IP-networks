@@ -203,7 +203,6 @@ namespace SteganoNetLib
             udpLayer.DestinationPort = destinationPort;
             udpLayer.Checksum = null; // Will be filled automatically
             udpLayer.CalculateChecksumValue = true;
-
             return udpLayer;
         }
 
@@ -321,26 +320,60 @@ namespace SteganoNetLib
 
 
         //---------L7------------------------------------------------------------------------------------------------------------
-        public static DnsLayer GetDnsHeaderLayer(ushort id) //+hardcoded IP
+        public static DnsLayer GetDnsHeaderLayer(ushort id = 65535)
         {
-            DnsLayer dnsVrstva = new DnsLayer();        //knowledge in RFC1035, layers: Header AND (Question OR Answer OR Authority OR Additional)
-            dnsVrstva.Id = id;                          //16 bit identifier assigned by the program; is copied to the corresponding reply
-            dnsVrstva.IsResponse = false;               //message is a query(0), or a response(1).
-            dnsVrstva.OpCode = DnsOpCode.Query;         //specifies kind of query in this message. This value is set by the originator of a query and copied into the response.
-            dnsVrstva.IsAuthoritativeAnswer = true;     //responding name server is an  authority for the domain name in question section.
-            dnsVrstva.IsTruncated = false;              //was shortened than permitted value on the channel
-            dnsVrstva.IsRecursionDesired = true;        //may be set in a query and is copied into the response; name server try to pursue the query recursively
-            dnsVrstva.IsRecursionAvailable = true;      //this be is set or cleared in a response
-            dnsVrstva.FutureUse = false;                //Must be zero in all queries and responses. (3 bits)
-            dnsVrstva.IsAuthenticData = true;
-            dnsVrstva.IsCheckingDisabled = false;
-            dnsVrstva.ResponseCode = DnsResponseCode.NoError;   //4 bit field  as part of responses //Values 6-15 Reserved for future use.
-            dnsVrstva.Queries = null;
-            dnsVrstva.Answers = null;
-            dnsVrstva.Authorities = null;
-            dnsVrstva.Additionals = null;
-            dnsVrstva.DomainNameCompressionMode = DnsDomainNameCompressionMode.Nothing; //should be suspicious, original = All
-            return dnsVrstva;
+            if(id == 65535)
+            {
+                id = (ushort)rand.Next(0, 65535);
+            }
+
+            //knowledge in RFC1035 >>> layers: Header AND (Question OR Answer OR Authority OR Additional)
+            DnsLayer dnsLayer = new DnsLayer 
+            {
+                Id = id,                          //16 bit identifier assigned by the program; is copied to the corresponding reply
+                IsResponse = false,               //message is a query(0), or a response(1).
+                OpCode = DnsOpCode.Query,         //specifies kind of query in this message. This value is set by the originator of a query and copied into the response.
+                IsAuthoritativeAnswer = true,     //responding name server is an  authority for the domain name in question section.
+                IsTruncated = false,              //was shortened than permitted value on the channel
+                IsRecursionDesired = true,        //may be set in a query and is copied into the response; name server try to pursue the query recursively
+                IsRecursionAvailable = true,      //this be is set or cleared in a response
+                FutureUse = false,                //Must be zero in all queries and responses. (3 bits)
+                IsAuthenticData = true,
+                IsCheckingDisabled = false,
+                ResponseCode = DnsResponseCode.NoError,   //4 bit field  as part of responses //Values 6-15 Reserved for future use.
+                Queries = null,
+                Answers = null,
+                Authorities = null,
+                Additionals = null,
+                DomainNameCompressionMode = DnsDomainNameCompressionMode.Nothing //should be suspicious, original = All
+            };        
+            return dnsLayer;
+        }        
+
+        public static DnsQueryResourceRecord GetDnsQuery(string domainName, DnsType type = DnsType.A)
+        {
+            return new DnsQueryResourceRecord(new DnsDomainName(domainName), type, DnsClass.Internet);
+            //DnsType = code of the query (A/CNAME...) https://en.wikipedia.org/wiki/List_of_DNS_record_types
+        }
+
+        public static List<Layer> GetDnsPacket(MacAddress macAddressLocal, MacAddress macAddressRemote, IpV4Address ipLocalListening, IpV4Address ipRemoteSpeaker, ushort portLocal, ushort portRemote, DnsDatagram dns)
+        {
+            if (dns == null) { return null; } //extra protection
+
+            //create legacy "datagram" which is going to be sent back
+            List<Layer> layers = new List<Layer>(); //list of used layers
+            layers.Add(GetEthernetLayer(macAddressLocal, macAddressRemote)); //L2
+            layers.Add(GetIpV4Layer(ipLocalListening, ipRemoteSpeaker));
+            layers.Add(GetUdpLayer(portLocal, portRemote));
+            
+            DnsLayer dnsLayer = GetDnsHeaderLayer(dns.Id);
+
+            //TODO solve answers
+            akpjdfhpgbnpadgn;
+
+            layers.Add(dnsLayer);
+
+            return (layers);
         }
     }
 }

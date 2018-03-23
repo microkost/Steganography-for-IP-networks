@@ -3,6 +3,9 @@ using PcapDotNet.Packets.Ethernet;
 using PcapDotNet.Packets.IpV4;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace SteganoNetLib
 {
@@ -12,13 +15,13 @@ namespace SteganoNetLib
         public static IList<LivePacketDevice> allDevices = LivePacketDevice.AllLocalMachine; //list of available devices               
 
         public static PacketDevice GetSelectedDevice(IpV4Address ipOfInterface)
-        {           
+        {
             string tmpIp = ipOfInterface.ToString(); //nessesary for lookup method below
-                 
+
             foreach (LivePacketDevice lpd in allDevices)
-            {                
+            {
                 foreach (DeviceAddress nonparsed in lpd.Addresses)
-                {                    
+                {
                     string[] words = nonparsed.ToString().Split(' ');
 
                     if (String.Equals(words[2], tmpIp)) //should be more effective by filtering IPv6 out
@@ -45,10 +48,10 @@ namespace SteganoNetLib
         public static List<Tuple<string, string>> GetIPv4addressesAndDescriptionLocal() //pair of strings ipv4 and description for UI
         {
             List<Tuple<string, string>> result = new List<Tuple<string, string>>();
-            foreach(string ipv4add in GetIPv4addressesLocal()) //get list of local IPv4 addresses from other method
+            foreach (string ipv4add in GetIPv4addressesLocal()) //get list of local IPv4 addresses from other method
             {
                 PacketDevice pd = GetSelectedDevice(new IpV4Address(ipv4add));
-                if(pd == null)
+                if (pd == null)
                     continue; //test //TODO ternary...
 
                 result.Add(new Tuple<string, string>(ipv4add, pd.Description));
@@ -75,7 +78,7 @@ namespace SteganoNetLib
 
                     if (words[1] == "Internet")
                     {
-                        result.Add(words[2]);                        
+                        result.Add(words[2]);
                     }
                 }
             }
@@ -86,6 +89,69 @@ namespace SteganoNetLib
         //L4
 
         //L7
+        public static List<string> GetDomainsForDnsRequest(bool fromStatic = false)
+        {
+            List<string> domainsToRequest = new List<string>();
+
+            if (!fromStatic)
+            {
+                try //source: https://stackoverflow.com/questions/206323/how-to-execute-command-line-in-c-get-std-out-results
+                {
+                    //getting DNS hostnames from local DNS cache
+
+                    Process p = new Process();
+                    // Redirect the output stream of the child process.
+                    p.StartInfo.UseShellExecute = false;
+                    p.StartInfo.RedirectStandardOutput = true;
+                    p.StartInfo.FileName = "powershell.exe";
+                    p.StartInfo.Arguments = "Get-DNSClientCache | select name";
+                    p.Start();
+                    // Do not wait for the child process to exit before
+                    // reading to the end of its redirected stream.
+                    // p.WaitForExit();
+                    // Read the output stream first and then wait.
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit();
+
+                    string[] stringSeparators = new string[] { "\r\n" };
+                    string[] parsedDirty = output.Split(stringSeparators, StringSplitOptions.None);
+
+                    foreach (string s in parsedDirty) //checking and cleaning of strings
+                    {
+                        //saving only those which are looking like domain name...
+                        string domainName = s.Trim();
+                        Regex regex = new Regex("^((http://)|(https://))*([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,6}[/]*", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
+                        MatchCollection mc = regex.Matches(domainName);
+                        foreach (Match m in mc)
+                        {
+                            domainsToRequest.Add(domainName);
+                        }
+                    }
+
+                    if (domainsToRequest.Count < 1) //just in case
+                    {
+                        fromStatic = true;
+                    }
+                }
+                catch
+                {
+                    fromStatic = true;
+                }
+            }
+
+            if (fromStatic) //hardcoded solution
+            {
+                domainsToRequest = new List<String>() { "vsb.cz", "seznam.cz", "google.com", "yahoo.com", "github.com", "jamk.fi", "uwasa.fi", "microsoft.com", "yr.no", "googlecast.com" };
+            }
+
+            return (from dtr in domainsToRequest select dtr).Distinct().ToList(); //if ducplicate then remove one of them
+        }
+
+        public static bool CheckURLValid(this string source)
+        {
+            Uri uriResult;
+            return Uri.TryCreate(source, UriKind.Absolute, out uriResult) && uriResult.Scheme == Uri.UriSchemeHttp;
+        }
 
     }
 }

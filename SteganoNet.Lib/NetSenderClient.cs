@@ -25,6 +25,7 @@ namespace SteganoNetLib
         public const int delayGeneral = 100; //gap between all packets in miliseconds
         public const int delayIcmp = 500; //gap for ICMP requests (default 1000)
         public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
+        public const int delayDns = 600;
 
         //network public parametres
         public ushort PortRemote { get; set; }
@@ -40,6 +41,7 @@ namespace SteganoNetLib
         private int DelayInMs { get; set; } //how long to wait between iterations
 
         //network private parametres = methods value keepers 
+        static Random rnd = new Random();
         private Stopwatch Timer { get; set; } //IP identification timer
         private bool FirstRun { get; set; } //IP identification decision bit
         private ushort IpIdentification { get; set; } //IP identification value field
@@ -52,6 +54,7 @@ namespace SteganoNetLib
         private bool isEnstablishedTCP { get; set; }
         private bool isTerminatingTCP { get; set; }
         private bool isAckNeededTCP { get; set; }
+        private List<String> DomainsToAsk { get; set; } //dns domains
 
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
@@ -75,6 +78,7 @@ namespace SteganoNetLib
             isEnstablishedTCP = false;
             isTerminatingTCP = false;
             isAckNeededTCP = false;
+            DomainsToAsk = null;
             AddInfoMessage("Client created...");
         }
 
@@ -89,6 +93,12 @@ namespace SteganoNetLib
 
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            
+
+            if (StegoUsedMethodIds.Any(NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()).Contains)) //if current methods contains DNS method ids.
+            {
+                //if something with dns is used then prepare list of distinct domain names, running one
+                DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false);
+            }
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
@@ -242,32 +252,21 @@ namespace SteganoNetLib
                     List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains))
                     {
-                        //create own UDP
+                        UdpLayer udpLayer = NetStandard.GetUdpLayer(PortLocal, 53); //sublayer
+                        layers.Add(udpLayer);
 
-                        DnsLayer dnsLayer = NetStandard.GetDnsHeaderLayer(0);
-                        int usedbits = 16;
-                        try
-                        {
-                            string partOfSecret = SecretMessage.Remove(usedbits, SecretMessage.Length - usedbits);
-                            UInt16 value = Convert.ToUInt16(partOfSecret, 2);
-                            SecretMessage = SecretMessage.Remove(0, usedbits);
-                            dnsLayer = NetStandard.GetDnsHeaderLayer(value);
-                            AddInfoMessage("DNS size: " + dnsLayer.Length);
-                        }
-                        catch
-                        {
-                            if (SecretMessage.Length != 0)
-                            {                                
-                                UInt16 value = Convert.ToByte(SecretMessage.PadLeft(usedbits, '0'), 2);
-                                dnsLayer = NetStandard.GetDnsHeaderLayer(value);
-                                AddInfoMessage("DNS size: " + dnsLayer.Length);                                
-                            }                            
-                        }
-                        
+                        DnsLayer dnsLayer = new DnsLayer(); //create standard DNS layer
+                        string oneDomain = DomainsToAsk[rnd.Next(DomainsToAsk.Count)]; //get random item from list, not unique
+                        dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetStandard.GetDnsQuery(oneDomain) }; //TODO randomly change DnsType
+
+                        Tuple<DnsLayer, string> dnsStego = NetSteganography.SetContent7Dns(dnsLayer, StegoUsedMethodIds, SecretMessage, this);
+                        dnsLayer = dnsStego.Item1; //save layer containing steganography
+                        SecretMessage = dnsStego.Item2; //save rest of unsended bites                     
+                        layers.Add(dnsLayer);
+                        DelayInMs = delayDns;
                         //payloadLayerTuple = new Tuple<object, Type>(dnsLayer, typeof(DnsLayer));
-                        isAckNeededTCP = true;
+                        //isAckNeededTCP = true;
                         //skip if TCP (DNS is not!)
-                        layers.Add(dnsLayer); 
                     }
 
                     //HTTP methods
@@ -314,7 +313,7 @@ namespace SteganoNetLib
 
                     //TCP methods are used...
                     if (isAckNeededTCP)
-                    {   
+                    {
                         /*
                         if (payloadLayerTuple.Item2 == typeof(DnsLayer))
                         {
