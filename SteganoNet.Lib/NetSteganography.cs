@@ -25,6 +25,9 @@ namespace SteganoNetLib
         public const int TcpRangeStart = 450;
         public const int TcpRangeEnd = 499;
 
+        public const int DnsRangeStart = 700;
+        public const int DnsRangeEnd = 729;
+
         private static Random rand = new Random();
         private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage        
         private static string Identification = ""; //receiver's holding value place
@@ -57,7 +60,9 @@ namespace SteganoNetLib
                 { 335, "ICMP ping (Sequence number) - 16b" },
                 
                 { 451, "TCP (standard) - 0b" }, //TODO
-                { 453, "TCP (sequence) - 32b" } //TODO
+                { 453, "TCP (ISN) - 32b" }, //TODO
+
+                { 701, "DNS (standard) - 0b" } //TODO
 
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
                 //TODO TTL usage or similar (count TTL and use some value under as rest...)

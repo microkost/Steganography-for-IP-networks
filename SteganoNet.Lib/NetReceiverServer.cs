@@ -254,8 +254,7 @@ namespace SteganoNetLib
                     //save some values?
                 }
                 */
-
-                /*
+                
                 //receive DATA
                 if (tcp.ControlBits == TcpControlBits.Push)
                 {
@@ -269,7 +268,6 @@ namespace SteganoNetLib
                     TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                     SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
                 }
-                */
 
                 //terminating connection
                 if (tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
