@@ -1,0 +1,54 @@
+--------------------------------------------------------------------------------
+301: Type of Service:  8 bits "aggresive"
+https://tools.ietf.org/html/rfc791#page-11
+      Bits 0-2:  Precedence.
+      Bit    3:  0 = Normal Delay,      1 = Low Delay.
+      Bits   4:  0 = Normal Throughput, 1 = High Throughput.
+      Bits   5:  0 = Normal Relibility, 1 = High Relibility.
+      Bit  6-7:  Reserved for Future Use.
+         0     1     2     3     4     5     6     7
+      +-----+-----+-----+-----+-----+-----+-----+-----+
+      |                 |     |     |     |     |     |
+      |   PRECEDENCE    |  D  |  T  |  R  |  0  |  0  |
+      |                 |     |     |     |     |     |
+      +-----+-----+-----+-----+-----+-----+-----+-----+
+        Precedence
+          111 - Network Control
+          110 - Internetwork Control
+          101 - CRITIC/ECP
+          100 - Flash Override
+          011 - Flash
+          010 - Immediate
+          001 - Priority
+          000 - Routine
+--------------------------------------------------------------------------------
+302: same as 301 but using only 2 bits
+		used: Bit  6-7:  Reserved for Future Use.
+--------------------------------------------------------------------------------
+303: https://tools.ietf.org/html/rfc6864
+     RFC 6864 updated RFC’s 791, 1122, and 2003 to clarify the definition of the IPv4 ID field.
+		Atomic datagrams: (DF==1)&&(MF==0)&&(frag_offset==0)
+        Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+        The IPv4 ID field is thus meaningful only for non-atomic datagrams
+		Sources emitting non-atomic datagrams MUST NOT repeat IPv4 ID values within one MDL for a given source address/destination address/protocol tuple.
+		does not repeat within the maximum datagram lifetime (MDL) [RFC791] [RFC1122] which is typically interpreted as two minutes
+--------------------------------------------------------------------------------
+331 alias constant IcmpGenericPing: no steganography, implemented according to RFC
+--------------------------------------------------------------------------------
+333: using ICMP Identifier 16bit field in EchoRequest (ping) datagram. 
+	Not conflicting with method 335, when selected then left Sequence number untouched.	
+--------------------------------------------------------------------------------
+335: using ICMP Sequence number 16 bit field in EchoRequest (ping) datagram.
+	Not conflicting with method 333.
+	Sequence number is increasing during transmission => should be used only once.
+--------------------------------------------------------------------------------
+4xx: TCP
+--------------------------------------------------------------------------------
+4xx: TCP
+--------------------------------------------------------------------------------
+701: no steganography, implemented according to RFC
+--------------------------------------------------------------------------------
+703: using DNS ID field from https://www.ietf.org/rfc/rfc1035.txt
+ID A 16 bit identifier assigned by the program that generates any kind of query. This identifier is copied
+the corresponding reply and can be used by the requester to match up replies to outstanding queries.
+--------------------------------------------------------------------------------
