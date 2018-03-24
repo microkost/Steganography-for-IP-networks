@@ -251,8 +251,7 @@ public static class NetworkMethodsStandard
                 //TODO WARNING implement
             }
 
-            IPAddress address;
-            if (host != null && IPAddress.TryParse(host.AddressList[0].ToString(), out address))
+            if (host != null && IPAddress.TryParse(host.AddressList[0].ToString(), out IPAddress address))
             {
                 switch (address.AddressFamily)
                 {

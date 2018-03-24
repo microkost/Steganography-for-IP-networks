@@ -17,14 +17,14 @@ namespace SteganoNet.UI.Console
             //*select role (server / client)
             //*select network interface
             //*choose network parametres
-            //*choose steganographic method
+            //*choose steganographic method (TODO:
             //*add instance of client or server (debug and testing purposes), end if
             //run
             //view immediate info
             //stop
             //analyze results
 
-            bool SimplifyConfigWhenDebug = true; //skips ports and IP address for developing
+            bool SimplifyConfigWhenDebug = false; //skips ports and IP address for developing
             bool isHumanDriving = true; //skip asking when is runned from parametres
 
             System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
@@ -68,13 +68,24 @@ namespace SteganoNet.UI.Console
                 }
 
                 //local IP
-                ipSource = ConsoleTools.SelectInterface(); //interactive
-                System.Console.WriteLine("");
+                ipSource = ConsoleTools.SelectInterface(); //interactive                
+
+                System.Console.Write("\n\tDo you want to run opposite node on same device for testing? (y/n) ");
+                runSame = System.Console.ReadLine();
+                if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
+                {
+                    SimplifyConfigWhenDebug = true;
+                }
+                else
+                {
+                    SimplifyConfigWhenDebug = false; //different device needs at least to ask for IP...
+                }
 
                 if (!SimplifyConfigWhenDebug)
                 {
                     //local port                
-                    System.Console.Write(String.Format("\tEnter source port: should it be {0}? (y or enter / number) ", portSource));
+                    string portRole = String.Equals("c", role) ? "source" : "listening"; //dont make user confused about inserted item                    
+                    System.Console.Write(String.Format("\tEnter {0} port: should it be {1}? (y or enter / number) ", portRole, portSource));
                     string portSourceNotParsed = System.Console.ReadLine();
                     if (portSourceNotParsed.StartsWith("y") || String.IsNullOrWhiteSpace(portSourceNotParsed)) //not default answer
                     {
@@ -139,7 +150,8 @@ namespace SteganoNet.UI.Console
                 else
                 {
                     ipRemote = ipSource;
-                    System.Console.WriteLine("\tSkipped detailed configuration info.\n");
+                    System.Console.WriteLine("\tSkipped detailed configuration info.");
+                    System.Console.WriteLine(String.Format("\t\tLocal: {0}:{1}, Remote: {2}:{3}\n", ipSource, portSource, ipRemote, portRemote));
                 }
 
                 stegoMethods = ConsoleTools.SelectStegoMethods(); //which methods are used (interactive)                                
@@ -235,8 +247,7 @@ namespace SteganoNet.UI.Console
             //offers running another window with client or server
             if (!runSame.StartsWith("n")) //runSame is difeerent than n (asking for first time)
             {
-                System.Console.Write("\nDo you want to run opposite node on same device for testing? (y/n) ");
-                runSame = System.Console.ReadLine();
+                //question for same device was here //TODO remove this text
                 if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
                 {
                     string roleToRun = (role.StartsWith("c")) ? "s" : "c";
@@ -248,8 +259,8 @@ namespace SteganoNet.UI.Console
             if (String.Equals("s", role)) //its server
             {
                 //prepare server
-                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote); //old way
-                //NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
+                //NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote); //old way
+                NetReceiverServer rs = new NetReceiverServer(ipSource, portSource);
                 rs.StegoUsedMethodIds = stegoMethods;
 
                 //prepare thread for server

@@ -19,19 +19,21 @@ namespace SteganoNetLib
         public volatile bool Terminate = false; //finishing endless speaking
         public List<int> StegoUsedMethodIds { get; set; }
         public string SecretMessage { get; set; }
-        public Queue<string> Messages { get; set; } //status and debug info
+        public Queue<string> Messages { get; set; } //status and debug info        
 
         //timers public saved to DelayInMs when used                
-        public const int delayGeneral = 100; //gap between all packets in miliseconds
-        public const int delayIcmp = 500; //gap for ICMP requests (default 1000)
+        public const int delayGeneral = 200; //gap between all packets in miliseconds
+        public const int delayIcmp = 1000; //gap for ICMP requests (default 1000)
         public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
         public const int delayDns = 600;
 
         //network public parametres
         public ushort PortRemote { get; set; }
+        public ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
         public ushort PortLocal { get; set; }
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
+
 
         //internal properties based on re-typed public
         private PacketDevice selectedDevice = null;
@@ -96,8 +98,10 @@ namespace SteganoNetLib
 
             if (StegoUsedMethodIds.Any(NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()).Contains)) //if current methods contains DNS method ids.
             {
-                //if something with dns is used then prepare list of distinct domain names, running one
+                //if something with dns is used then prepare list of distinct domain names, running once                
                 DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false);
+                AddInfoMessage("DNS is going to be used. Prepared " + DomainsToAsk.Count + " to request");
+                AddInfoMessage("DNS will ask port " + PortRemoteDns + ", otherwise is remote port " + PortRemote);
             }
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -252,18 +256,23 @@ namespace SteganoNetLib
                     List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains))
                     {
-                        UdpLayer udpLayer = NetStandard.GetUdpLayer(PortLocal, 53); //sublayer
-                        layers.Add(udpLayer);
+                        UdpLayer udpLayer = NetStandard.GetUdpLayer(PortLocal, PortRemoteDns); //using 53 hardcoded!
+                        layers.Add(udpLayer); //udp is carrying layer
 
-                        DnsLayer dnsLayer = new DnsLayer(); //create standard DNS layer
+                        //create standard DNS request layer
+                        DnsLayer dnsLayer = new DnsLayer();
+                        if (DomainsToAsk.Count == 0) { DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false); }
                         string oneDomain = DomainsToAsk[rnd.Next(DomainsToAsk.Count)]; //get random item from list, not unique
+                        dnsLayer.IsQuery = true;
                         dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetStandard.GetDnsQuery(oneDomain) }; //TODO randomly change DnsType
 
+                        //insert steganography changing pre-build layer
                         Tuple<DnsLayer, string> dnsStego = NetSteganography.SetContent7Dns(dnsLayer, StegoUsedMethodIds, SecretMessage, this);
                         dnsLayer = dnsStego.Item1; //save layer containing steganography
-                        SecretMessage = dnsStego.Item2; //save rest of unsended bites                     
+                        SecretMessage = dnsStego.Item2; //save rest of unsended bites
                         layers.Add(dnsLayer);
                         DelayInMs = delayDns;
+
                         //payloadLayerTuple = new Tuple<object, Type>(dnsLayer, typeof(DnsLayer));
                         //isAckNeededTCP = true;
                         //skip if TCP (DNS is not!)
@@ -350,11 +359,12 @@ namespace SteganoNetLib
                     }
                     else
                     {
-                        AddInfoMessage("Not TCP methods sending...");
+                        //AddInfoMessage("Not TCP methods sending...");
                         //build packet and send
                         PacketBuilder builder = new PacketBuilder(layers);
                         Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
                         communicator.SendPacket(packet);
+                        System.Threading.Thread.Sleep(DelayInMs);
                     }
 
 

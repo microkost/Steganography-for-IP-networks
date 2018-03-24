@@ -22,6 +22,7 @@ namespace SteganoNetLib
 
         //network parametres
         public ushort PortLocal { get; set; } //PortListening //obviously not used
+        //add local DNS 
         public ushort PortRemote { get; set; } //PortOfRemoteHost
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
@@ -53,7 +54,7 @@ namespace SteganoNetLib
             this.PortRemote = portRemote;
             this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpLocalListening);
             this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpRemoteSpeaker); //use gateway mac
-            IsListenedSameInterface = (IpLocalListening.Equals(IpRemoteSpeaker)) ? true : false; //local debug mode?
+            IsListenedSameInterface = (IpLocalListening.Equals(IpRemoteSpeaker)) ? true : false; //local debug mode
 
             //bussiness ctor
             StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
@@ -184,6 +185,14 @@ namespace SteganoNetLib
             NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
                                                                             //remember source => Do not run this method for non steganography sources!
 
+
+            bool addressWasChangedFromDefault = false;
+            if (IpRemoteSpeaker.ToString().Equals("0.0.0.0"))
+            {
+                IpRemoteSpeaker = ip.Source;
+                addressWasChangedFromDefault = true;
+            }
+
             StringBuilder messageCollector = new StringBuilder(); //for appending answers
 
             //IP methods
@@ -192,7 +201,6 @@ namespace SteganoNetLib
             {
                 messageCollector.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
                 //SendReplyPacket(null) => pure IP is not responding 
-                //TODO if ever added async processing then save also timestamp for assembling messages back in order!
             }
 
             //ICMP methods
@@ -200,7 +208,7 @@ namespace SteganoNetLib
             if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
             {
                 messageCollector.Append(NetSteganography.GetContent3Icmp(icmp, StegoUsedMethodIds, this));
-                //if EchoRequest then...
+                //if EchoRequest not needed because typeof(icmp) == IcmpEchoDatagram
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
@@ -304,6 +312,11 @@ namespace SteganoNetLib
             StegoBinary.Add(messageCollector); //storing just binary messages
                                                //StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
 
+            if(addressWasChangedFromDefault) //returning IP address to generic
+            {
+                IpRemoteSpeaker = new IpV4Address("0.0.0.0");
+            }
+
             return;
         }
 
@@ -312,11 +325,23 @@ namespace SteganoNetLib
             //do actual method list contains keys from "database"?
             if (StegoUsedMethodIds.Intersect(NetSteganography.GetListStegoMethodsIdAndKey().Keys).Any() == false)
             {
+                AddInfoMessage("Error! Provided keys are not in list of valid keys.");
                 return false;
             }
 
-            //different test, remoteIP and portRemote are not accepted since its not neeeded
+            if (IpLocalListening == null || IpRemoteSpeaker == null)
+            {
+                AddInfoMessage("Error! IP addresses are wrongly initialized.");
+                return false;
+            }
+
+            if (IpRemoteSpeaker.ToString().Equals("0.0.0.0"))
+            {
+                AddInfoMessage("Warning! Server is listening on all interfaces (reply ip address is parsed from arriving packet).");
+            }
+
             //TODO use iplementation from Client...
+            //different test, remoteIP and portRemote are not accepted since its not neeeded
             //TODO ip, ports, ...
             //TODO use version from NetSenderClient
 
@@ -395,7 +420,8 @@ namespace SteganoNetLib
 
             if (layers.Count < 3) //TODO should use complex test of content as client method
             {
-                AddInfoMessage("L> Warning: Count of layers in reply packet is low! ");
+                AddInfoMessage("Error! Count of layers in reply packet is low! Not sent.");
+                return;
             }
 
             PacketBuilder builder = new PacketBuilder(layers);
@@ -405,6 +431,10 @@ namespace SteganoNetLib
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
                 communicator.SendPacket(packet);
+
+                string nameOflayer = layers.Last().ToString();
+                //should somehow inform for which packet is replying... Parse layers and show non L2 nor L3
+                AddInfoMessage("Reply datagram sent from server (" + nameOflayer + ").");
             }
             return;
 

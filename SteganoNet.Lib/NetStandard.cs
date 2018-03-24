@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using PcapDotNet.Packets.Icmp;
 using System.Diagnostics;
 using PcapDotNet.Packets.Dns;
+using PcapDotNet.Base;
+using System.Text;
 
 namespace SteganoNetLib
 {
@@ -322,13 +324,13 @@ namespace SteganoNetLib
         //---------L7------------------------------------------------------------------------------------------------------------
         public static DnsLayer GetDnsHeaderLayer(ushort id = 65535)
         {
-            if(id == 65535)
+            if (id == 65535)
             {
                 id = (ushort)rand.Next(0, 65535);
             }
 
             //knowledge in RFC1035 >>> layers: Header AND (Question OR Answer OR Authority OR Additional)
-            DnsLayer dnsLayer = new DnsLayer 
+            DnsLayer dnsLayer = new DnsLayer
             {
                 Id = id,                          //16 bit identifier assigned by the program; is copied to the corresponding reply
                 IsResponse = false,               //message is a query(0), or a response(1).
@@ -346,14 +348,34 @@ namespace SteganoNetLib
                 Authorities = null,
                 Additionals = null,
                 DomainNameCompressionMode = DnsDomainNameCompressionMode.Nothing //should be suspicious, original = All
-            };        
+            };
             return dnsLayer;
-        }        
+        }
 
         public static DnsQueryResourceRecord GetDnsQuery(string domainName, DnsType type = DnsType.A)
         {
             return new DnsQueryResourceRecord(new DnsDomainName(domainName), type, DnsClass.Internet);
             //DnsType = code of the query (A/CNAME...) https://en.wikipedia.org/wiki/List_of_DNS_record_types
+        }
+
+        public static DnsDataResourceRecord GetDnsAnswer(DnsDomainName domainName, DnsType type, string ipaddressOrText)
+        {
+            int ttl = 3600;
+            if (type == DnsType.A)
+            {
+                if (IPAddress.TryParse(ipaddressOrText, out IPAddress address))
+                {
+                    return new DnsDataResourceRecord(domainName, DnsType.A, DnsClass.Internet, ttl, new DnsResourceDataIpV4(new IpV4Address(address.ToString())));
+                }
+            }
+            else if (type == DnsType.Txt)
+            {
+                return new DnsDataResourceRecord(domainName, DnsType.Txt, DnsClass.Internet, ttl, new DnsResourceDataText(new[] { new DataSegment(Encoding.ASCII.GetBytes(ipaddressOrText)) }.AsReadOnly()));
+            }
+
+            //TODO more types
+
+            return null;
         }
 
         public static List<Layer> GetDnsPacket(MacAddress macAddressLocal, MacAddress macAddressRemote, IpV4Address ipLocalListening, IpV4Address ipRemoteSpeaker, ushort portLocal, ushort portRemote, DnsDatagram dns)
@@ -365,15 +387,54 @@ namespace SteganoNetLib
             layers.Add(GetEthernetLayer(macAddressLocal, macAddressRemote)); //L2
             layers.Add(GetIpV4Layer(ipLocalListening, ipRemoteSpeaker));
             layers.Add(GetUdpLayer(portLocal, portRemote));
-            
-            DnsLayer dnsLayer = GetDnsHeaderLayer(dns.Id);
 
-            //TODO solve answers
-            akpjdfhpgbnpadgn;
+            DnsLayer dnsLayer = GetDnsHeaderLayer(dns.Id);
+            if (dns.IsQuery) //if its DNS request...
+            {
+                dnsLayer.IsResponse = true;
+                List<DnsDataResourceRecord> answers = new List<DnsDataResourceRecord>(); //used for collecting answers if they came in list
+                foreach (DnsQueryResourceRecord query in dns.Queries)
+                {
+                    answers.Add(NetStandard.GetDnsAnswer(query.DomainName, query.DnsType, GetDnsIpFromHostnameReal(query.DomainName.ToString()).ToString()));
+                    //TODO answer for IPv6                                       
+                }
+            }
+
+            //TODO more answers possible
 
             layers.Add(dnsLayer);
-
             return (layers);
+        }
+
+        public static IpV4Address GetDnsIpFromHostnameReal(string hostname) //oficial DNS service, returns sample in case of failure //simplifying
+        {
+            IPHostEntry host;
+            try
+            {
+                host = Dns.GetHostEntry(hostname);
+            }
+            catch
+            {
+                host = null; //TODO WARNING implement
+            }
+
+            if (host != null && IPAddress.TryParse(host.AddressList[0].ToString(), out IPAddress address))
+            {
+                switch (address.AddressFamily)
+                {
+                    case System.Net.Sockets.AddressFamily.InterNetwork:
+                        break;
+                    default:
+                        address = IPAddress.Parse("208.67.222.222");
+                        break;
+                }
+            }
+            else
+            {
+                address = System.Net.IPAddress.Parse("208.67.222.222"); //openDNS IP
+            }
+
+            return new IpV4Address(address.ToString()); //like a pro, sry
         }
     }
 }

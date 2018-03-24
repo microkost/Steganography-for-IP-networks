@@ -395,7 +395,7 @@ namespace SteganoNetLib
 
         //get content
 
-        //-L5---L7-------------------------------------------------------------------------------------------------------------
+        //-L5-to-L7------------------------------------------------------------------------------------------------------------
 
         public static Tuple<DnsLayer, string> SetContent7Dns(DnsLayer dns, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null) //SENDER
         {
@@ -407,7 +407,7 @@ namespace SteganoNetLib
                 {
                     case 701: //DNS clean //SENDER
                         {
-                            sc.AddInfoMessage("7DNS: legacy method " + methodId);
+                            sc.AddInfoMessage("7DNS: legacy method " + methodId + " (no data removed)");
                             dns.Id = (ushort)rand.Next(0, 65535);
                             break;
                         }

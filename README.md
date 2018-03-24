@@ -29,6 +29,7 @@ TODO https://github.com/RichardLitt/standard-readme
 * -methods: 301,302
 * -runsame: n
 * -message: "secret message"
+It's recomended to set ip & ipremote values properly, even px. server doesn't need t because it helps recognize scenario (or better exclude local debugging). Solution is accepting all parametres even it's not using them like message on server.
 
 ## Notes
 * IPv4 only
