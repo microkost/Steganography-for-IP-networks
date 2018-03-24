@@ -20,8 +20,9 @@ namespace SteganoNetLib
     {
         //class is separated by ISO-OSI RM model layers
 
-        //timers public saved to DelayInMs when used                
+        //timers public copy to DelayInMs when used and then executed
         public const int TcpTimeoutInMs = 20000; //gap between all packets in miliseconds
+        public const int DnsTimeoutInMs = NetSenderClient.delayDns*2; //how long to wait for official DNS answer
 
         public static List<String> TCPphrases = new List<string> { "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }; //TCP legal
         private static Random rand = new Random(); //TCP legal values                
@@ -361,16 +362,20 @@ namespace SteganoNetLib
         public static DnsDataResourceRecord GetDnsAnswer(DnsDomainName domainName, DnsType type, string ipaddressOrText)
         {
             int ttl = 3600;
-            if (type == DnsType.A)
+            if (type == DnsType.A || type == DnsType.Aaaa) //warning: mixing types
             {
                 if (IPAddress.TryParse(ipaddressOrText, out IPAddress address))
                 {
-                    return new DnsDataResourceRecord(domainName, DnsType.A, DnsClass.Internet, ttl, new DnsResourceDataIpV4(new IpV4Address(address.ToString())));
+                    return new DnsDataResourceRecord(domainName, type, DnsClass.Internet, ttl, new DnsResourceDataIpV4(new IpV4Address(address.ToString())));
                 }
             }
-            else if (type == DnsType.Txt)
+            else if (type == DnsType.Txt) //why
             {
                 return new DnsDataResourceRecord(domainName, DnsType.Txt, DnsClass.Internet, ttl, new DnsResourceDataText(new[] { new DataSegment(Encoding.ASCII.GetBytes(ipaddressOrText)) }.AsReadOnly()));
+            }
+            else
+            {
+                return new DnsDataResourceRecord(domainName, DnsType.Any, DnsClass.Internet, ttl, new DnsResourceDataAnything(DataSegment.Empty));
             }
 
             //TODO more types
@@ -393,11 +398,34 @@ namespace SteganoNetLib
             {
                 dnsLayer.IsResponse = true;
                 List<DnsDataResourceRecord> answers = new List<DnsDataResourceRecord>(); //used for collecting answers if they came in list
+                dnsLayer.Queries = dns.Queries; //include original request
                 foreach (DnsQueryResourceRecord query in dns.Queries)
                 {
-                    answers.Add(NetStandard.GetDnsAnswer(query.DomainName, query.DnsType, GetDnsIpFromHostnameReal(query.DomainName.ToString()).ToString()));
+                    Stopwatch sw = new Stopwatch(); //for timeout of DNS request
+                    sw.Start();
+                    IpV4Address iptranslated = new IpV4Address();
+
+                    bool waitForDns = true; ;
+                    while (waitForDns)
+                    {
+                        iptranslated = GetDnsIpFromHostnameReal(query.DomainName.ToString());
+                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs) //timeout break
+                        {
+                            sw.Stop();
+                            waitForDns = false;
+                            if (iptranslated.ToString().Equals(""))
+                            {
+                                iptranslated = new IpV4Address("208.67.220.220"); //backup answer
+                                break;
+                            }
+                        }
+                    }
+                   
+                    answers.Add(NetStandard.GetDnsAnswer(query.DomainName, query.DnsType, iptranslated.ToString()));
+
                     //TODO answer for IPv6                                       
                 }
+                dnsLayer.Answers = answers;
             }
 
             //TODO more answers possible

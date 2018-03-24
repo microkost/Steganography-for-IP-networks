@@ -25,7 +25,7 @@ namespace SteganoNetLib
         public const int delayGeneral = 200; //gap between all packets in miliseconds
         public const int delayIcmp = 1000; //gap for ICMP requests (default 1000)
         public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
-        public const int delayDns = 600;
+        public const int delayDns = 3000;
 
         //network public parametres
         public ushort PortRemote { get; set; }
@@ -272,6 +272,8 @@ namespace SteganoNetLib
                         SecretMessage = dnsStego.Item2; //save rest of unsended bites
                         layers.Add(dnsLayer);
                         DelayInMs = delayDns;
+
+                        //Should wait for anwer... waitforDnsAnwer = true;
 
                         //payloadLayerTuple = new Tuple<object, Type>(dnsLayer, typeof(DnsLayer));
                         //isAckNeededTCP = true;

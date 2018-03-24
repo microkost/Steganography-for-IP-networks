@@ -330,7 +330,7 @@ namespace SteganoNetLib
             {
                 switch (methodId)
                 {
-                    case 331: //ICMP (pure) RECEIVER
+                    case IcmpGenericPing: //ICMP (pure) RECEIVER
                         {
                             rs.AddInfoMessage("3ICMP: method (no stehanography included)" + methodId); //add number of received bits in this iteration
                             break;
@@ -363,10 +363,9 @@ namespace SteganoNetLib
             }
         }
 
-
         //-L4------------------------------------------------------------------------------------------------------------------
 
-        //udp layer methods - skipped
+        //udp layer methods - skipped by assigment
 
         //TCP layer methods
         public static Tuple<TcpLayer, string> SetContent4Tcp(TcpLayer tcp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
@@ -446,19 +445,18 @@ namespace SteganoNetLib
             {
                 switch (methodId)
                 {
-                    case 331: //ICMP (pure) RECEIVER
+                    case 701: //DNS (pure) RECEIVER
                         {
-                            rs.AddInfoMessage("3ICMP: method (no stehanography included)" + methodId); //add number of received bits in this iteration
+                            rs.AddInfoMessage("7DNS: method (no stehanography included)" + methodId);
                             break;
                         }
-                    case 333: //ICMP (Identifier) RECEIVER
+                    case 703: //DNS (Id) RECEIVER
                         {
-                            rs.AddInfoMessage("3ICMP: method " + methodId);
+                            rs.AddInfoMessage("7DNS: method " + methodId);
                             string binvalue = Convert.ToString(dns.Id, 2);
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
-                        }
-                        //application layer methods
+                        }                        
                 }
             }
 
@@ -471,6 +469,8 @@ namespace SteganoNetLib
                 return null;
             }
         }
+
+        //other application layer methods
     }
 }
 

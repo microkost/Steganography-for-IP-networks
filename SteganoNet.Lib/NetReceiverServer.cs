@@ -22,7 +22,7 @@ namespace SteganoNetLib
 
         //network parametres
         public ushort PortLocal { get; set; } //PortListening //obviously not used
-        //add local DNS 
+        public ushort PortLocalDns = 53; //where to expect "fake" DNS service
         public ushort PortRemote { get; set; } //PortOfRemoteHost
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
@@ -55,6 +55,7 @@ namespace SteganoNetLib
             this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpLocalListening);
             this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpRemoteSpeaker); //use gateway mac
             IsListenedSameInterface = (IpLocalListening.Equals(IpRemoteSpeaker)) ? true : false; //local debug mode
+            //IsListenedSameInterface = (IpLocalListening.Equals("0.0.0.0")) ? true : false; //local debug mode
 
             //bussiness ctor
             StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
@@ -78,17 +79,19 @@ namespace SteganoNetLib
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
                 AddInfoMessage(String.Format("Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
+                AddInfoMessage(String.Format("Settings: Local: {0}:{1}, Remote: {2}:{3}\n", IpLocalListening, PortLocal, IpRemoteSpeaker, PortRemote));
 
                 string filter = "";
                 if (IsListenedSameInterface)
                 {
-                    AddInfoMessage("Debug: listening same device"); //cannot apply filter which cutting off (reply) packets from same interface
-                    filter = String.Format("tcp port {0} or icmp or udp port 53 and not src port 53", PortLocal);
+                    AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                    
+                    filter = String.Format("tcp port {0} or icmp or udp port {1} and not src port {2}", PortLocal, PortLocalDns, PortLocalDns);
                 }
                 else
                 {
                     //cut off replies from same interface
-                    filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port 53 and not src port 53)", IpLocalListening, PortLocal);
+                    filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port {2} and not src port {3})", IpLocalListening, PortLocal, PortLocalDns, PortLocalDns);
+                    //TODO should also include IP filter when is known
                 }
 
                 try
@@ -191,6 +194,7 @@ namespace SteganoNetLib
             {
                 IpRemoteSpeaker = ip.Source;
                 addressWasChangedFromDefault = true;
+                //TODO do the same with port, when TCP / UDP then important
             }
 
             StringBuilder messageCollector = new StringBuilder(); //for appending answers
@@ -304,15 +308,14 @@ namespace SteganoNetLib
             if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains))
             {
                 messageCollector.Append(NetSteganography.GetContent7Dns(dns, StegoUsedMethodIds, this));
-                //TODO should test if port 53 is listening + receiving
-                SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, 53, PortRemote, dns));
+                PortLocal = PortLocalDns; //TODO should test if port "53" is listening + receiving                
+                PortRemote = (PortRemote == 0) ? udp.SourcePort : PortRemote; //if local port is not specified, save it from incoming                               
+                SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, dns));
+            }
 
-            }            
+            StegoBinary.Add(messageCollector);                                              
 
-            StegoBinary.Add(messageCollector); //storing just binary messages
-                                               //StegoPackets.Add(new Tuple<Packet, List<int>>(packet, StegoUsedMethodIds)); //storing full packet (maybe outdated)
-
-            if(addressWasChangedFromDefault) //returning IP address to generic
+            if (addressWasChangedFromDefault) //returning IP address to generic
             {
                 IpRemoteSpeaker = new IpV4Address("0.0.0.0");
             }

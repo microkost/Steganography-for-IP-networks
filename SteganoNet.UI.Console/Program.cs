@@ -17,7 +17,7 @@ namespace SteganoNet.UI.Console
             //*select role (server / client)
             //*select network interface
             //*choose network parametres
-            //*choose steganographic method (TODO:
+            //*choose steganographic method (TODO: ask for related details like timers)
             //*add instance of client or server (debug and testing purposes), end if
             //run
             //view immediate info
@@ -151,9 +151,9 @@ namespace SteganoNet.UI.Console
                 {
                     ipRemote = ipSource;
                     System.Console.WriteLine("\tSkipped detailed configuration info.");
-                    System.Console.WriteLine(String.Format("\t\tLocal: {0}:{1}, Remote: {2}:{3}\n", ipSource, portSource, ipRemote, portRemote));
                 }
 
+                System.Console.WriteLine(String.Format("\tSettings: Local: {0}:{1}, Remote: {2}:{3}\n", ipSource, portSource, ipRemote, portRemote));
                 stegoMethods = ConsoleTools.SelectStegoMethods(); //which methods are used (interactive)                                
             }
             else //skip the wizard, source from parametres
@@ -218,7 +218,17 @@ namespace SteganoNet.UI.Console
                         case "-methods":
                             {
                                 i++;
-                                int[] nums = Array.ConvertAll(args[i].Split(','), int.Parse);
+                                int[] nums = null;
+                                try
+                                {
+                                    nums = Array.ConvertAll(args[i].Split(','), int.Parse);
+                                }
+                                catch
+                                {
+                                    nums = new int[] { NetSteganography.IcmpGenericPing };
+                                    System.Console.WriteLine("\tERROR! Parsing of received methods failed (wrong string). Added only method: " + NetSteganography.IcmpGenericPing);
+                                }
+
                                 stegoMethods = nums.ToList();
                                 break;
                             }
@@ -320,7 +330,7 @@ namespace SteganoNet.UI.Console
                 senderClientThread.Start();
 
                 //client activity output
-                isHumanDriving = true; //TODO debug only
+                isHumanDriving = true; //TODO debug only CHANGE!!!
                 if (isHumanDriving)
                 {
                     System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods) / 1000));
@@ -336,7 +346,7 @@ namespace SteganoNet.UI.Console
                 }
                 else
                 {
-                    //do not show output but leave some time for run of sending thread
+                    //do not show output and leave some time for run sending thread
                     int sleepTime = ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods);
                     System.Console.WriteLine(String.Format("\nOutput suppressed, waiting {0} s ({1} min) for end...", sleepTime / 1000, sleepTime / 1000 / 60));
                     Thread.Sleep(sleepTime);

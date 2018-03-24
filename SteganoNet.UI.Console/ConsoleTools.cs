@@ -96,6 +96,7 @@ namespace SteganoNet.UI.Console
             int transportsNeeded = bitsInMessage / channelSize;
 
             //TODO how much time is needed - take from NetSenderClient public values...
+            //TODO parse NetSteganography methods strings " - Xb"
 
             /* wireshark log:            
                750,859650   packet 1
