@@ -6,8 +6,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Tests", "Stegano
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.Console", "SteganoNet.UI.Console\SteganoNet.UI.Console.csproj", "{34905160-5786-46D9-8E86-890E771707E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Lib", "SteganoNet.Lib\SteganoNet.Lib.csproj", "{69B9B5AB-0918-4F12-8B28-8AA350ABE800}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5508D41E-D97B-4811-A1C1-2F12FAFD2BA7}"
 	ProjectSection(SolutionItems) = preProject
 		MethodDescription.txt = MethodDescription.txt
@@ -17,6 +15,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.WinForms", "SteganoNet.UI.WinForms\SteganoNet.UI.WinForms.csproj", "{842DB534-8D1A-4394-A14D-D956E79C64B5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.WinForms.old", "SteganoNet.UI.WinForms.old\SteganoNet.UI.WinForms.old.csproj", "{B26C4612-00A4-49CC-B994-B56B45F6C676}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.Lib", "SteganoNet.Lib\SteganoNet.Lib.csproj", "{69B9B5AB-0918-4F12-8B28-8AA350ABE800}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -52,18 +52,6 @@ Global
 		{34905160-5786-46D9-8E86-890E771707E3}.Release|x64.Build.0 = Release|Any CPU
 		{34905160-5786-46D9-8E86-890E771707E3}.Release|x86.ActiveCfg = Release|Any CPU
 		{34905160-5786-46D9-8E86-890E771707E3}.Release|x86.Build.0 = Release|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x64.Build.0 = Debug|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x86.ActiveCfg = Debug|x86
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x86.Build.0 = Debug|x86
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|Any CPU.Build.0 = Release|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x64.ActiveCfg = Release|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x64.Build.0 = Release|Any CPU
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.ActiveCfg = Release|x86
-		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.Build.0 = Release|x86
 		{842DB534-8D1A-4394-A14D-D956E79C64B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{842DB534-8D1A-4394-A14D-D956E79C64B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{842DB534-8D1A-4394-A14D-D956E79C64B5}.Debug|x64.ActiveCfg = Debug|x64
@@ -88,6 +76,18 @@ Global
 		{B26C4612-00A4-49CC-B994-B56B45F6C676}.Release|x64.Build.0 = Release|x64
 		{B26C4612-00A4-49CC-B994-B56B45F6C676}.Release|x86.ActiveCfg = Release|x86
 		{B26C4612-00A4-49CC-B994-B56B45F6C676}.Release|x86.Build.0 = Release|x86
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x64.Build.0 = Debug|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x86.ActiveCfg = Debug|x86
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Debug|x86.Build.0 = Debug|x86
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x64.ActiveCfg = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x64.Build.0 = Release|Any CPU
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.ActiveCfg = Release|x86
+		{69B9B5AB-0918-4F12-8B28-8AA350ABE800}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
