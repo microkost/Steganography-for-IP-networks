@@ -145,11 +145,15 @@ namespace SteganoNet.UI.Console
                             System.Console.WriteLine(String.Format("\t\tUsed port is: {0}", portRemote));
                         }
                     }
+                    else
+                    {
+                        portRemote = 0; //when skipped remote configuration then set 0 as port
+                    }
                     System.Console.WriteLine("");
                 }
                 else
                 {
-                    ipRemote = ipSource;
+                    ipRemote = ipSource;                    
                     System.Console.WriteLine("\tSkipped detailed configuration info.");
                 }
 

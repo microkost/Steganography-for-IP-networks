@@ -10,7 +10,16 @@ namespace SteganoNet.UI.Console
     {
         public static string SelectInterface()
         {
-            List<Tuple<string, string>> ipv4localadd = NetDevice.GetIPv4addressesAndDescriptionLocal();
+            List<Tuple<string, string>> ipv4localadd;
+            try
+            {
+                ipv4localadd = NetDevice.GetIPv4addressesAndDescriptionLocal();
+            }
+            catch
+            {
+                //fails in case of missing library PcapDotNet.Core.dll
+                return null;
+            }
             System.Console.WriteLine("\tAvailable interfaces as source: ");
             int interfaceCounter = 0;
             foreach (Tuple<string, string> ip in ipv4localadd)
@@ -28,7 +37,7 @@ namespace SteganoNet.UI.Console
             catch //System.ArgumentOutOfRangeException:
             {
                 if (ipv4localadd.Count <= 0)
-                    return null; //"0.0.0.0";
+                    return null;
                 else
                     return ipv4localadd[0].Item1;
             }
@@ -42,7 +51,7 @@ namespace SteganoNet.UI.Console
                 System.Console.WriteLine("\t>{0}", mm.Messages.Dequeue());
             }
             catch
-            {                
+            {
                 Thread.Sleep(100);
             }
         }

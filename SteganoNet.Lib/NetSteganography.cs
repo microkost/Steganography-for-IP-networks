@@ -59,6 +59,7 @@ namespace SteganoNetLib
                 { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
                 { 333, "ICMP ping (Identifier) - 16b" },
                 { 335, "ICMP ping (Sequence number) - 16b" },
+                //case 337: icmp.Payload = "";               
 
                 //{ 451, "TCP (standard) - 0b" }, //TODO
                 //{ 453, "TCP (ISN) - 32b" }, //TODO
@@ -66,6 +67,9 @@ namespace SteganoNetLib
                 { 701, String.Format("DNS request (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
                 { 703, "DNS request (transaction id) - 16b" }
 
+                //HTTP
+                //pspping principe
+                
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
                 //TODO TTL usage or similar (count TTL and use some value under as rest...)
             };
@@ -314,7 +318,6 @@ namespace SteganoNetLib
                             }
                             break;
                         }
-                        //case 337: icmp.Payload = "";
                 }
             }
 
@@ -349,7 +352,6 @@ namespace SteganoNetLib
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
                         }
-                        //case 337: icmp.Payload = "";
                 }
             }
 
@@ -365,7 +367,7 @@ namespace SteganoNetLib
 
         //-L4------------------------------------------------------------------------------------------------------------------
 
-        //udp layer methods - skipped by assigment
+        //udp layer methods - skipped
 
         //TCP layer methods
         public static Tuple<TcpLayer, string> SetContent4Tcp(TcpLayer tcp, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null)
@@ -374,10 +376,7 @@ namespace SteganoNetLib
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
-                //needs to handle states
-                //SYN
-                //SYN+ACK
-                //ACK
+                //needs to handle states of TCP to read only from proper state like SYN, SYNACK
 
                 switch (methodId)
                 {
@@ -392,7 +391,7 @@ namespace SteganoNetLib
             return new Tuple<TcpLayer, string>(tcp, secret);
         }
 
-        //get content
+        //TODO GetContent4Tcp
 
         //-L5-to-L7------------------------------------------------------------------------------------------------------------
 
@@ -447,7 +446,7 @@ namespace SteganoNetLib
                 {
                     case 701: //DNS (pure) RECEIVER
                         {
-                            rs.AddInfoMessage("7DNS: method (no stehanography included)" + methodId);
+                            rs.AddInfoMessage("7DNS: method " + methodId + " (no stehanography included)");
                             break;
                         }
                     case 703: //DNS (Id) RECEIVER
