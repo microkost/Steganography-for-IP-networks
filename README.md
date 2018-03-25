@@ -21,7 +21,7 @@ information to simulate steganography attack.
 
 ## Install
 * Mandatory [install WinPcap](https://www.winpcap.org/install/default.htm) to your computer
-* System library .Net Framework 4 (Windows 10+ native)
+* System library .Net Framework 4.6.1 and newer (Windows 10 native)
 * Your network driver have to be able run in promicscious mode (try Wireshark for troubleshooting)
 * For testing purposes you can add localhost interface [Microsoft Loopback Adapter to Microsoft KM-TEST Loopback Adapter](https://technet.microsoft.com/en-us/library/cc708322(v=ws.10).aspx) and set ip address for that interface from private IPv4 address range (px. 172.31.31.31)
 
@@ -63,6 +63,7 @@ MsBuild.exe SteganographyFramework.sln /t:Build /m
 * IP steganography (v4)
 * ICMP steganography
 * DNS steganography
+
 Detailed information about used fields at headers and techniques in [technical description](https://github.com/microkost/Steganography-for-IP-networks/blob/master/MethodDescription.txt)
 
 

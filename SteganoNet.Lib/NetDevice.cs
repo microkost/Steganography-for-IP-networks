@@ -18,21 +18,27 @@ namespace SteganoNetLib
         {
             string tmpIp = ipOfInterface.ToString(); //nessesary for lookup method below
 
-            foreach (LivePacketDevice lpd in allDevices)
+            try
             {
-                foreach (DeviceAddress nonparsed in lpd.Addresses)
+                foreach (LivePacketDevice lpd in allDevices)
                 {
-                    string[] words = nonparsed.ToString().Split(' ');
-
-                    if (String.Equals(words[2], tmpIp)) //should be more effective by filtering IPv6 out
+                    foreach (DeviceAddress nonparsed in lpd.Addresses)
                     {
-                        return lpd; //return device with requested IP
+                        string[] words = nonparsed.ToString().Split(' ');
+
+                        if (String.Equals(words[2], tmpIp)) //should be more effective by filtering IPv6 out
+                        {
+                            return lpd; //return device with requested IP
+                        }
                     }
                 }
             }
+            catch
+            {
+                return null; //can be easily tested
+            }
 
             return null; //can be easily tested
-            //return NetDevice.allDevices[0]; //working but very tricky
         }
 
         //L2        
@@ -60,8 +66,8 @@ namespace SteganoNetLib
                 }
                 catch
                 {
-                    //failing when freshly installed WinPcap and not 
-                    //return null;
+                    //failing when PcapDotNet library is missing
+                    result.Add(new Tuple<string, string>("0.0.0.0", "Interface is product of internal error"));
                 }
             }
             return result;
@@ -70,7 +76,7 @@ namespace SteganoNetLib
         public static List<string> GetIPv4addressesLocal() //return available list of IP addresses
         {
             List<String> result = new List<String>(); //TODO should be List<IpV4Address>
-            
+
             try
             {
                 foreach (LivePacketDevice lpd in allDevices)
@@ -94,8 +100,8 @@ namespace SteganoNetLib
             }
             catch
             {
-                result.Add("169.254.0.1"); //btw. highway to hell
-                result.Add("127.0.0.1"); //btw. highway to hell
+                result.Add("0.0.0.0"); //btw. highway to hell
+                //result.Add("169.254.0.1"); //btw. highway to hell
 
                 //TODO implement system listing - not PcapDotNet, BUT this exception happens when: (dependency error)
                 //System.TypeInitializationException: The type initializer for 'SteganoNetLib.NetDevice' threw an exception. --->System.IO.FileNotFoundException: Could not load file or assembly 'PcapDotNet.Core.dll' or one of its dependencies.The specified module could not be found.
@@ -114,7 +120,7 @@ namespace SteganoNetLib
             if (!fromStatic)
             {
                 try //source: https://stackoverflow.com/questions/206323/how-to-execute-command-line-in-c-get-std-out-results
-                {                    
+                {
                     Process p = new Process();
                     p.StartInfo.UseShellExecute = false;
                     p.StartInfo.RedirectStandardOutput = true;

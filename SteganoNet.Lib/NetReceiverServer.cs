@@ -23,7 +23,7 @@ namespace SteganoNetLib
         //network parametres
         public ushort PortLocal { get; set; } //PortListening //obviously not used
         public ushort PortLocalDns = 53; //where to expect "fake" DNS service
-        public ushort PortRemote { get; set; } //PortOfRemoteHost
+        public ushort PortRemote { get; set; } //used mostly for reply
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
 
@@ -54,8 +54,11 @@ namespace SteganoNetLib
             this.PortRemote = portRemote;
             this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpLocalListening);
             this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpRemoteSpeaker); //use gateway mac
-            IsListenedSameInterface = (IpLocalListening.Equals(IpRemoteSpeaker)) ? true : false; //local debug mode
-            //IsListenedSameInterface = (IpLocalListening.Equals("0.0.0.0")) ? true : false; //local debug mode
+
+            //local running mode
+            bool remoteIsSameAsLocal = IpLocalListening.ToString().Equals(IpRemoteSpeaker.ToString());
+            bool remoteIsZero = IpRemoteSpeaker.ToString().Equals("0.0.0.0");
+            IsListenedSameInterface = remoteIsSameAsLocal || remoteIsZero;
 
             //bussiness ctor
             StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
@@ -79,26 +82,25 @@ namespace SteganoNetLib
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
                 AddInfoMessage(String.Format("Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
-                AddInfoMessage(String.Format("Settings: Local: {0}:{1}, Remote: {2}:{3}\n", IpLocalListening, PortLocal, IpRemoteSpeaker, PortRemote));
+                AddInfoMessage(String.Format("Settings: Local: {0}:{1}, Remote: {2}:{3} - server\n", IpLocalListening, PortLocal, IpRemoteSpeaker, PortRemote));
 
                 string filter = "";
                 if (IsListenedSameInterface)
-                {
-                    AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                    
+                {                    
+                    //AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                    
                     filter = String.Format("tcp port {0} or icmp or udp port {1} and not src port {2}", PortLocal, PortLocalDns, PortLocalDns);
                 }
                 else
                 {
-                    //cut off replies from same interface
+                    //cut off replies from same interface - TODO should also include IP filter when is known
                     filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port {2} and not src port {3})", IpLocalListening, PortLocal, PortLocalDns, PortLocalDns);
-                    //TODO should also include IP filter when is known
                 }
 
                 try
                 {
                     //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
                     communicator.SetFilter(filter); // Compile and set the filter
-                    AddInfoMessage("Traffic filter applied successfully");
+                    //AddInfoMessage("Traffic filter applied successfully");
                 }
                 catch
                 {
@@ -142,8 +144,6 @@ namespace SteganoNetLib
                 } while (!Terminate);
 
                 AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
-                //AddInfoMessagee(String.Format("Secret in this session: {0}\n", GetSecretMessage(StegoPackets))); //result of steganography
-                //StegoPackets.Clear();                
                 return;
             }
         }
@@ -172,7 +172,7 @@ namespace SteganoNetLib
             DnsDatagram dns = null;
             try
             {
-                //AddInfoMessage((ip.IsValid) ? "" : "L> packet invalid"); //TODO more testing
+                //AddInfoMessage((ip.IsValid) ? "" : "packet invalid"); //TODO more testing
                 icmp = (ip.Icmp.IsValid) ? (IcmpEchoDatagram)ip.Icmp : null;
                 tcp = (ip.Tcp.IsValid) ? ip.Tcp : null;
                 udp = (ip.Udp.IsValid) ? ip.Udp : null;
@@ -185,12 +185,12 @@ namespace SteganoNetLib
             }
 
             //TODO recognize seting connection + ending...
-            NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
+            //NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
                                                                             //remember source => Do not run this method for non steganography sources!
 
 
             bool addressWasChangedFromDefault = false;
-            if (IpRemoteSpeaker.ToString().Equals("0.0.0.0"))
+            if (IpRemoteSpeaker.ToString().Equals("0.0.0.0")) //we need address for answers!
             {
                 IpRemoteSpeaker = ip.Source;
                 addressWasChangedFromDefault = true;
