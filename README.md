@@ -70,9 +70,9 @@ Detailed information about used fields at headers and techniques in [technical d
 ## Limitations
 * IPv4 only
 * Use in LAN or have reachable IP address to let it work properly (NAT principe)
-* you need to know which steganography methods are not conflicting (you can't use px. TCP and ICMP at the same datagram)
+* you need to **know which** steganography methods **are not conflicting** (you can't use px. ICMP and DNS at the same datagram)
 * project is x86 platform
-* if you are using console app often, you can set SimplifyConfigWhenDebug to false to remove port configuration dialog
+* running on WiFi is sensitive for correct MAC address reading, Ethernet is without troubles
 
 
 ## Developer

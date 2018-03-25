@@ -67,7 +67,9 @@ namespace SteganoNetLib
                 { 701, String.Format("DNS request (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
                 { 703, "DNS request (transaction id) - 16b" }
 
-                //HTTP
+                //HTTP Entity tag headers 
+                //HTTP 7
+
                 //pspping principe
                 
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
@@ -285,7 +287,7 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    icmp.Identifier = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    icmp.Identifier = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
@@ -311,7 +313,7 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    icmp.SequenceNumber = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    icmp.SequenceNumber = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
@@ -335,7 +337,7 @@ namespace SteganoNetLib
                 {
                     case IcmpGenericPing: //ICMP (pure) RECEIVER
                         {
-                            rs.AddInfoMessage("3ICMP: method (no stehanography included)" + methodId); //add number of received bits in this iteration
+                            rs.AddInfoMessage("3ICMP: method " + methodId + " (no stehanography included)"); //add number of received bits in this iteration
                             break;
                         }
                     case 333: //ICMP (Identifier) RECEIVER
