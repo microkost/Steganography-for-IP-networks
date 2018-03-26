@@ -10,6 +10,7 @@ using PcapDotNet.Packets.Dns;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using PcapDotNet.Packets.Http;
 
 namespace SteganoNetLib
 {
@@ -23,6 +24,7 @@ namespace SteganoNetLib
         //network parametres
         public ushort PortLocal { get; set; } //PortListening //obviously not used
         public ushort PortLocalDns = 53; //where to expect "fake" DNS service
+        public ushort PortLocalHttp = 80; //where to expect "fake" HTTP service
         public ushort PortRemote { get; set; } //used mostly for reply
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
@@ -170,6 +172,7 @@ namespace SteganoNetLib
             TcpDatagram tcp = null;
             UdpDatagram udp = null;
             DnsDatagram dns = null;
+            HttpDatagram http = null;
             try
             {
                 //AddInfoMessage((ip.IsValid) ? "" : "packet invalid"); //TODO more testing
@@ -177,6 +180,7 @@ namespace SteganoNetLib
                 tcp = (ip.Tcp.IsValid) ? ip.Tcp : null;
                 udp = (ip.Udp.IsValid) ? ip.Udp : null;
                 dns = (udp.Dns.IsValid) ? udp.Dns : null;
+                http = (tcp.Http.IsValid) ? tcp.Http : null;
             }
             catch (Exception ex)
             {
@@ -222,8 +226,7 @@ namespace SteganoNetLib
                 //making traffic less suspicious by answering, when is ICMP but not defined as ICMP stego method                            
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
-
-            /*
+            
             //TCP methods
             List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
@@ -299,8 +302,7 @@ namespace SteganoNetLib
                     //SeqNumberBase = null; //reset enstablished connection
                     //leave method
                 }
-            }
-            */
+            }            
 
 
             //DNS methods
@@ -311,6 +313,17 @@ namespace SteganoNetLib
                 PortLocal = PortLocalDns; //TODO should test if port "53" is listening + receiving                
                 PortRemote = (PortRemote == 0) ? udp.SourcePort : PortRemote; //if local port is not specified, save it from incoming                               
                 SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, dns));
+            }
+
+            //HTTP methods
+            List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
+            if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
+            {
+                messageCollector.Append(NetSteganography.GetContent7Http(http, StegoUsedMethodIds, this));
+                PortLocal = PortLocalHttp;
+                PortRemote = (PortRemote == 0) ? tcp.SourcePort : PortRemote; //if local port is not specified, save it from incoming                               
+                //tcp
+                SendReplyPacket(NetStandard.GetHttpPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, http));
             }
 
             StegoBinary.Add(messageCollector);                                              

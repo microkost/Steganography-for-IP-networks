@@ -13,6 +13,7 @@ using System.Diagnostics;
 using PcapDotNet.Packets.Dns;
 using PcapDotNet.Base;
 using System.Text;
+using PcapDotNet.Packets.Http;
 
 namespace SteganoNetLib
 {
@@ -249,11 +250,10 @@ namespace SteganoNetLib
             return tcpLayer;
         }
 
-        public static List<Layer> GetTcpReplyPacket(MacAddress MacAddressLocal, MacAddress MacAddressRemote, IpV4Address SourceIP, IpV4Address DestinationIP, TcpLayer tcpLayer)
+        public static List<Layer> GetTcpReplyPacket(MacAddress MacAddressLocal, MacAddress MacAddressRemote, IpV4Address SourceIP, IpV4Address DestinationIP, TcpLayer tcpLayer) //create legacy "datagram" which is going to be sent back
         {
             if (tcpLayer == null) { return null; } //extra protection
-
-            //create legacy "datagram" which is going to be sent back
+            
             List<Layer> layers = new List<Layer>(); //list of used layers
             layers.Add(GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
             layers.Add(GetIpV4Layer(SourceIP, DestinationIP));
@@ -273,26 +273,30 @@ namespace SteganoNetLib
             return generatedNum;
         }
 
-        public static uint? WaitForTcpAck(PcapDotNet.Core.PacketCommunicator communicator, IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
+        public static uint? WaitForTcpAck(IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit = TcpControlBits.Acknowledgment)
         {
-            communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
-            Stopwatch sw = new Stopwatch(); //for timeout
-            sw.Start();
-
-            while (true)
+            PcapDotNet.Core.PacketDevice selectedDevice = NetDevice.GetSelectedDevice(SourceIpV4); //take the selected adapter
+            using (PcapDotNet.Core.PacketCommunicator communicator = selectedDevice.Open(65536, PcapDotNet.Core.PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
-                if (communicator.ReceivePacket(out Packet packet) == PcapDotNet.Core.PacketCommunicatorReceiveResult.Ok && packet.Ethernet.IpV4.Tcp.ControlBits == waitForBit)
-                {
-                    if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == ackNumberExpected) //debug point
-                    {
-                        return packet.Ethernet.IpV4.Tcp.SequenceNumber; //if ACK fits, return SEQ
-                    }
-                }
+                communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
+                Stopwatch sw = new Stopwatch(); //for timeout
+                sw.Start();
 
-                if (sw.ElapsedMilliseconds > TcpTimeoutInMs) //timeout break
+                while (true)
                 {
-                    sw.Stop();
-                    return null;
+                    if (communicator.ReceivePacket(out Packet packet) == PcapDotNet.Core.PacketCommunicatorReceiveResult.Ok && packet.Ethernet.IpV4.Tcp.ControlBits == waitForBit)
+                    {
+                        if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == ackNumberExpected) //debug point
+                        {
+                            return packet.Ethernet.IpV4.Tcp.SequenceNumber; //if ACK fits, return SEQ
+                        }
+                    }
+
+                    if (sw.ElapsedMilliseconds > TcpTimeoutInMs) //timeout break
+                    {
+                        sw.Stop();
+                        return null;
+                    }
                 }
             }
         }
@@ -464,5 +468,34 @@ namespace SteganoNetLib
 
             return new IpV4Address(address.ToString()); //like a pro, sry
         }
-    }
+
+
+
+        //GetHttpPacket
+        public static List<Layer> GetHttpPacket(MacAddress macAddressLocal, MacAddress macAddressRemote, IpV4Address ipLocalListening, IpV4Address ipRemoteSpeaker, ushort portLocal, ushort portRemote, TcpLayer tcplayer, HttpDatagram http)
+        {
+            if (http == null) { return null; } //extra protection
+
+            //create legacy "datagram" which is going to be sent back
+            List<Layer> layers = new List<Layer>(); //list of used layers
+            layers.Add(GetEthernetLayer(macAddressLocal, macAddressRemote)); //L2
+            layers.Add(GetIpV4Layer(ipLocalListening, ipRemoteSpeaker));
+            layers.Add(tcplayer); //its comming prefilled with right values            
+
+            HttpLayer httpLayer = new HttpResponseLayer();
+            if (http.IsRequest)
+            {
+                httpLayer = new HttpResponseLayer //TODO this is just random
+                {
+                    Version = PcapDotNet.Packets.Http.HttpVersion.Version11,
+                    StatusCode = 200,
+                    ReasonPhrase = new DataSegment(Encoding.ASCII.GetBytes("OK")),
+                    Header = new HttpHeader(new HttpContentLengthField(10)),
+                    Body = new Datagram(new byte[10])
+                };                
+            }
+
+            layers.Add(httpLayer);
+            return layers;
+        }
 }

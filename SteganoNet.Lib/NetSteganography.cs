@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using PcapDotNet.Packets.Dns;
+using PcapDotNet.Packets.Http;
 using PcapDotNet.Packets.Icmp;
 using PcapDotNet.Packets.IpV4;
 using PcapDotNet.Packets.Transport;
@@ -28,6 +29,9 @@ namespace SteganoNetLib
 
         public const int DnsRangeStart = 700;
         public const int DnsRangeEnd = 729;
+
+        public const int HttpRangeStart = 730;
+        public const int HttpRangeEnd = 759;
 
         private static Random rand = new Random();
         private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage        
@@ -61,11 +65,13 @@ namespace SteganoNetLib
                 { 335, "ICMP ping (Sequence number) - 16b" },
                 //case 337: icmp.Payload = "";               
 
-                //{ 451, "TCP (standard) - 0b" }, //TODO
+                { 451, "TCP (standard) - 0b" }, //TODO
                 //{ 453, "TCP (ISN) - 32b" }, //TODO
 
                 { 701, String.Format("DNS request (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
-                { 703, "DNS request (transaction id) - 16b" }
+                { 703, "DNS request (transaction id) - 16b" },
+
+                { 731, "HTTP request () - 16b" } //TODO
 
                 //HTTP Entity tag headers 
                 //HTTP 7
@@ -471,7 +477,35 @@ namespace SteganoNetLib
             }
         }
 
-        //other application layer methods
+
+        //SetContent7Http
+
+        public static string GetContent7Http(HttpDatagram http, List<int> stegoUsedMethodIds, NetReceiverServer rs = null)
+        {
+            if (http == null) { return null; } //extra protection
+            List<string> BlocksOfSecret = new List<string>();
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                switch (methodId)
+                {
+                    case 731: //HTTP (pure) RECEIVER
+                        {
+                            rs.AddInfoMessage("7HTTP: method " + methodId + " (no stehanography included)"); //add number of received bits in this iteration
+                            break;
+                        }
+                }
+            }
+
+            if (BlocksOfSecret.Count != 0) //providing value output
+            {
+                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+            }
+            else
+            {
+                return null;
+            }
+        }
     }
 }
 
