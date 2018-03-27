@@ -59,7 +59,7 @@ namespace SteganoNetLib
                 { 301, "IP Type of service / DiffServ (agresive) - 8b" },
                 { 302, "IP Type of service / DiffServ - 2b" },
                 { 303, String.Format("IP Identification [delay {0} s] - 16b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000) }, //adding exact time value to the name
-
+                //---
                 { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
                 { 333, "ICMP ping (Identifier) - 16b" },
                 { 335, "ICMP ping (Sequence number) - 16b" },
@@ -72,13 +72,11 @@ namespace SteganoNetLib
                 { 703, "DNS request (transaction id) - 16b" },
 
                 { 731, "HTTP request () - 16b" } //TODO
-
                 //HTTP Entity tag headers 
-                //HTTP 7
 
-                //pspping principe
-                
+                //pspping principe                
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
+                //https://github.com/PcapDotNet/Pcap.Net/wiki/Pcap.Net-Tutorial-Gathering-Statistics-on-the-network-traffic
                 //TODO TTL usage or similar (count TTL and use some value under as rest...)
             };
 

@@ -23,7 +23,7 @@ namespace SteganoNetLib
 
         //timers public copy to DelayInMs when used and then executed
         public const int TcpTimeoutInMs = 20000; //gap between all packets in miliseconds
-        public const int DnsTimeoutInMs = NetSenderClient.delayDns*2; //how long to wait for official DNS answer
+        public const int DnsTimeoutInMs = NetSenderClient.delayDns * 2; //how long to wait for official DNS answer
 
         public static List<String> TCPphrases = new List<string> { "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }; //TCP legal
         private static Random rand = new Random(); //TCP legal values                
@@ -253,7 +253,7 @@ namespace SteganoNetLib
         public static List<Layer> GetTcpReplyPacket(MacAddress MacAddressLocal, MacAddress MacAddressRemote, IpV4Address SourceIP, IpV4Address DestinationIP, TcpLayer tcpLayer) //create legacy "datagram" which is going to be sent back
         {
             if (tcpLayer == null) { return null; } //extra protection
-            
+
             List<Layer> layers = new List<Layer>(); //list of used layers
             layers.Add(GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2
             layers.Add(GetIpV4Layer(SourceIP, DestinationIP));
@@ -424,7 +424,7 @@ namespace SteganoNetLib
                             }
                         }
                     }
-                   
+
                     answers.Add(NetStandard.GetDnsAnswer(query.DomainName, query.DnsType, iptranslated.ToString()));
 
                     //TODO answer for IPv6                                       
@@ -447,7 +447,7 @@ namespace SteganoNetLib
             }
             catch
             {
-                host = null; //TODO WARNING implement
+                host = null; //TODO WARNING to implement
             }
 
             if (host != null && IPAddress.TryParse(host.AddressList[0].ToString(), out IPAddress address))
@@ -457,30 +457,33 @@ namespace SteganoNetLib
                     case System.Net.Sockets.AddressFamily.InterNetwork:
                         break;
                     default:
-                        address = IPAddress.Parse("208.67.222.222");
+                        address = IPAddress.Parse("208.67.222.222"); //TODO not good hardcoded IP
                         break;
                 }
             }
             else
             {
+                //we probably dont know resolve to everything what is comming...
+                //TODO found how to recognize "can't find X: Non-existent domain" and solve...
                 address = System.Net.IPAddress.Parse("208.67.222.222"); //openDNS IP
             }
 
-            return new IpV4Address(address.ToString()); //like a pro, sry
+            return new IpV4Address(address.ToString()); //TODO - like a pro, sry
         }
 
-
-
         //GetHttpPacket
-        public static List<Layer> GetHttpPacket(MacAddress macAddressLocal, MacAddress macAddressRemote, IpV4Address ipLocalListening, IpV4Address ipRemoteSpeaker, ushort portLocal, ushort portRemote, TcpLayer tcplayer, HttpDatagram http)
+        public static List<Layer> GetHttpPacket(MacAddress macAddressLocal, MacAddress macAddressRemote, IpV4Address ipLocalListening, IpV4Address ipRemoteSpeaker, ushort portLocal, ushort portRemote, TcpLayer tcpLayer, HttpDatagram http)
         {
             if (http == null) { return null; } //extra protection
 
             //create legacy "datagram" which is going to be sent back
             List<Layer> layers = new List<Layer>(); //list of used layers
             layers.Add(GetEthernetLayer(macAddressLocal, macAddressRemote)); //L2
-            layers.Add(GetIpV4Layer(ipLocalListening, ipRemoteSpeaker));
-            layers.Add(tcplayer); //its comming prefilled with right values            
+            layers.Add(GetIpV4Layer(ipLocalListening, ipRemoteSpeaker)); //L3
+
+            //if TcpDatagram tcp == typeOf(TcpDatagram)
+            //TcpLayer tcpLayer = GetTcpLayer(tcp.SourcePort, tcp.DestinationPort, tcp.SequenceNumber, tcp.AcknowledgmentNumber, tcp.ControlBits); //L4
+            layers.Add(tcpLayer); //L4
 
             HttpLayer httpLayer = new HttpResponseLayer();
             if (http.IsRequest)
@@ -492,10 +495,11 @@ namespace SteganoNetLib
                     ReasonPhrase = new DataSegment(Encoding.ASCII.GetBytes("OK")),
                     Header = new HttpHeader(new HttpContentLengthField(10)),
                     Body = new Datagram(new byte[10])
-                };                
+                };
             }
 
             layers.Add(httpLayer);
             return layers;
         }
+    }
 }

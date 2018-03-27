@@ -27,6 +27,7 @@ namespace SteganoNetLib
         public const int delayIcmp = 1000; //gap for ICMP requests (default 1000)
         public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
         public const int delayDns = 3000;
+        public const int delayHttp = 4000;
 
         //network public parametres
         public ushort PortRemote { get; set; }
@@ -57,7 +58,6 @@ namespace SteganoNetLib
         private uint PayloadSizeTCP { get; set; } //for TCP answers
         private bool isTerminatingTCP { get; set; }
         private bool isAckNeededTCP { get; set; }
-
         private bool IsEnstablishedTCP { get; set; }
 
         private List<String> DomainsToAsk { get; set; } //dns domains
@@ -182,85 +182,12 @@ namespace SteganoNetLib
 
                     //UDP methods - not implemented
 
-                    /*
-                    //TCP methods (this block is not adding layer, solving handshake) block at the end is adding TCP
+                    //TCP methods
                     List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
-                    Tuple<object, Type> payloadLayerTuple = null; //for calculating size
                     if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
                     {
-                        //TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
-
-                        if (!isEnstablishedTCP)
-                        {
-                            if (isTerminatingTCP)
-                            {
-                                //TODO terminate
-
-                                //clean status
-                                //isEnstablishedTCP = false;                                
-                                //isTerminatingTCP = false;
-                            }
-
-                            List<Layer> layersLocalCopy1 = layers; //replace previous layers...
-                            List<Layer> layersLocalCopy2 = layers; //replace previous layers...
-
-                            AddInfoMessage("TCP SYN...");
-                            SeqNumberLocal = (uint)1000; //STEGO IN                            
-                            AckNumberLocal = 0; //STEGO IN
-                            SeqNumberRemote = 0; //we dont know
-                            AckNumberRemote = SeqNumberLocal + 1; //we dont know
-                            AddInfoMessage(String.Format("\tC: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
-                            TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
-                            layersLocalCopy1.Add(tcpLayer);
-                            SendPacket(layersLocalCopy1);
-
-                            AckNumberLocal = SeqNumberLocal + 1; //expected value from oposite side
-                            AckNumberRemote = SeqNumberLocal + 1; //because we know it
-                            //HERE
-                            //SeqNumberRemote = NetStandard.WaitForTcpAck(communicator, IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
-                            SeqNumberRemote = AckNumberRemote;                            
-                            if (SeqNumberRemote == null)
-                            {
-                                AddInfoMessage("TCP SYN ACK not received!");
-                                //TODO retransmission
-                                continue;
-                            }
-                            else
-                            {
-                                AddInfoMessage("TCP SYN ACK received.");
-                            }
-
-                            AddInfoMessage("TCP ACK...");
-                            SeqNumberLocal = AckNumberRemote;
-                            AckNumberLocal = (uint)SeqNumberRemote + 1;
-                            AddInfoMessage(String.Format("\tC: DATA seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
-                            tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                            layersLocalCopy2.Add(tcpLayer);
-                            SendPacket(layersLocalCopy2);
-
-                            AddInfoMessage("Client: handshake enstablished...");
-                            isEnstablishedTCP = true;
-                        }
-                        else //isEnstablishedTCP
-                        {
-                            isAckNeededTCP = true;
-                            AddInfoMessage("TCP data ongoing...");
-                            //layer not added when isEnstablishedTCP
-
-                            //do what you want, payload magic
-                            //tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment | TcpControlBits.Push | TcpControlBits.Urgent);
-                            //payload add
-                            //wait for ACK
-                            //uint payloadsize = (uint)packet.Ethernet.IpV4.Tcp.PayloadLength; seqNumberLocal += payloadsize; //expected value from oposite sid
-                        }
+                        //part of HTTP methods
                     }
-                    */
-
-                    //TCP: https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets.Test/HttpTests.cs
-                    //TCP https://github.com/PcapDotNet/Pcap.Net/wiki/Pcap.Net-Tutorial-Sending-Packets
-                    //HTTP https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets/Http/HttpHeader.cs
-                    //HTTP https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets/Http/HttpLayer.cs                           
-                    //HTTP https://github.com/PcapDotNet/Pcap.Net/tree/master/PcapDotNet/src/PcapDotNet.Packets/Http
 
                     //DNS methods
                     List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -281,14 +208,13 @@ namespace SteganoNetLib
                         dnsLayer = dnsStego.Item1; //save layer containing steganography
                         SecretMessage = dnsStego.Item2; //save rest of unsended bites
                         layers.Add(dnsLayer);
-                        DelayInMs = delayDns;
+                        DelayInMs = delayDns; //TODO should wait for answer...
 
-                        //Should wait for anwer... waitforDnsAnwer = true;
-
-                        //payloadLayerTuple = new Tuple<object, Type>(dnsLayer, typeof(DnsLayer));
-                        //isAckNeededTCP = true;
-                        //skip if TCP (DNS is not!)
                     }
+
+                    //HTTP https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets/Http/HttpHeader.cs
+                    //HTTP https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets/Http/HttpLayer.cs                           
+                    //HTTP https://github.com/PcapDotNet/Pcap.Net/tree/master/PcapDotNet/src/PcapDotNet.Packets/Http
 
                     //HTTP methods
                     List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -301,17 +227,16 @@ namespace SteganoNetLib
                             SeqNumberLocal = (uint)1000; //STEGO IN                            
                             AckNumberLocal = 0; //STEGO IN
                             SeqNumberRemote = 0; //we dont know
-                            AckNumberRemote = SeqNumberLocal + 1; //we dont know
-                            AddInfoMessage(String.Format("\tC: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
-                            tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
+                            AckNumberRemote = SeqNumberLocal + 1; //we dont know + 1
 
+                            tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
                             layers.Add(tcpLayer);
-                            IsEnstablishedTCP = MakeTcpHandshake(layers, this);
-                            continue; //since layers are gone                           
+                            IsEnstablishedTCP = MakeTcpHandshake(layers, this); //is updating global properties Seq/AckNumber
+                            continue; //since layers are gone
                         }
                         else //TCP enstablished
                         {
-                            tcpLayer.ControlBits = TcpControlBits.Push;
+                            tcpLayer.ControlBits = TcpControlBits.Push | TcpControlBits.Acknowledgment;
 
                             HttpRequestLayer httpLayer = new HttpRequestLayer
                             {
@@ -321,17 +246,25 @@ namespace SteganoNetLib
                                 Method = new HttpRequestMethod(HttpRequestKnownMethod.Get),
                                 Uri = @"http://pcapdot.net/",
                             };
-
                             //steganography to http
 
-                            //measure size of tcp and update values
+                            //measure size of tcp payload and update values                            
+                            uint payloadsize = (uint)tcpLayer.Length;
+                            SeqNumberLocal += 121;
+                            //SeqNumberLocal += payloadsize;
+
+                            AddInfoMessage("HTTP+TCP DATA: size " + payloadsize);
+
+                            //WAIT for ACK of sended DATA
+                            uint? uselesNumber = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal); //if null
+                            //TODO check sizes if they are fits
 
                             layers.Add(tcpLayer);
                             layers.Add(httpLayer);
                         }
 
 
-                        DelayInMs = delayDns;
+                        DelayInMs = delayHttp;
                     }
 
 
@@ -578,7 +511,7 @@ namespace SteganoNetLib
             return this.Terminate;
         }
 
-        private static bool MakeTcpHandshake(List<Layer> layers, NetSenderClient ns)
+        private static bool MakeTcpHandshake(List<Layer> layers, NetSenderClient ns, bool separateSynAck = false)
         {
             ns.SendPacket(layers);
 
@@ -594,20 +527,25 @@ namespace SteganoNetLib
             else
             {
                 ns.SeqNumberRemote = seqNumHere;
-                ns.AddInfoMessage("TCP SYN ACK received.");                
+                ns.AddInfoMessage("TCP SYN ACK received.");
             }
 
-            //SEND SYN ACK
+            //update values which are going to be used next datagram
             ns.SeqNumberLocal = ns.AckNumberRemote;
             ns.AckNumberLocal = (uint)ns.SeqNumberRemote + 1;
-            //ns.AddInfoMessage(String.Format("\tC: DATA seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
 
-            TcpLayer tcpLayer = (TcpLayer)layers.Last(); //save last layer
-            layers.Remove(layers.Last()); //remove last layer
-            tcpLayer = NetStandard.GetTcpLayer(tcpLayer.SourcePort, tcpLayer.DestinationPort, ns.SeqNumberLocal, ns.AckNumberLocal, TcpControlBits.Acknowledgment);
-            layers.Add(tcpLayer); //readd last layer
-            
-            ns.SendPacket(layers);          
+            if (separateSynAck) //SEND SYN ACK when not in next layer
+            {                               
+                //ns.AddInfoMessage(String.Format("\tC: DATA seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+
+                TcpLayer tcpLayer = (TcpLayer)layers.Last(); //save last layer
+                layers.Remove(layers.Last()); //remove last layer
+                tcpLayer = NetStandard.GetTcpLayer(tcpLayer.SourcePort, tcpLayer.DestinationPort, ns.SeqNumberLocal, ns.AckNumberLocal, TcpControlBits.Acknowledgment);
+                layers.Add(tcpLayer); //readd last layer
+
+                ns.SendPacket(layers);
+            }
+
             return true;
         }
 
