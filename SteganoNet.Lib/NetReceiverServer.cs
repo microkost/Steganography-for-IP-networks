@@ -86,17 +86,17 @@ namespace SteganoNetLib
             {
                 //Parametres: Open the device // portion of the packet to capture // 65536 guarantees that the whole packet will be captured on all the link layers // promiscuous mode // read timeout                
                 AddInfoMessage(String.Format("Listening on {0} = {1}...", IpLocalListening, selectedDevice.Description));
-                AddInfoMessage(String.Format("Settings: Local: {0}:{1}, Remote: {2}:{3} - server\n", IpLocalListening, PortLocal, IpRemoteSpeaker, PortRemote));
+                AddInfoMessage(String.Format("Server settings: Local: {0}:{1}, Remote: {2}:{3}", IpLocalListening, PortLocal, IpRemoteSpeaker, PortRemote));
 
                 string filter = "";
                 if (IsListenedSameInterface)
                 {
-                    //AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                    
+                    //AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface
                     filter = String.Format("tcp port {0} or icmp or udp port {1} and not src port {2}", PortLocal, PortLocalDns, PortLocalDns);
                 }
                 else
                 {
-                    //cut off replies from same interface - TODO should also include IP filter when is known
+                    //cut off replies from same interface
                     filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port {2} and not src port {3})", IpLocalListening, PortLocal, PortLocalDns, PortLocalDns);
                 }
 
@@ -104,7 +104,6 @@ namespace SteganoNetLib
                 {
                     //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
                     communicator.SetFilter(filter); // Compile and set the filter
-                    //AddInfoMessage("Traffic filter applied successfully");
                 }
                 catch
                 {
@@ -129,15 +128,13 @@ namespace SteganoNetLib
                             {
                                 if (packet.IsValid && packet.IpV4 != null) //only IPv4
                                 {
-                                    if (FirstRun) //used for separation of streams based on packet size
+                                    if (FirstRun) //used for separation of streams based on packet size (needs to be done better)
                                     {
                                         PacketSize = packet.Length;
                                         FirstRun = false;
                                     }
 
                                     ProcessIncomingV4Packet(packet);
-                                    //communicator.ReceivePackets(0, ProcessIncomingV4Packet); //problems with returning from this method
-
                                 }
                                 //if (packet.IsValid && packet.IpV6 != null)                                
                                 break;
@@ -154,10 +151,13 @@ namespace SteganoNetLib
 
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
+            //How it works:
             //parse packet to layers
             //recognize and check method (initialize of connection etc...)
             //call proper parsing method from stego library
-            //get answer packet and send it
+            //save stego substring
+            //make answer packet and send it if needed
+            //when is terminated, run reasembling to message
 
             AddInfoMessage("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
 
@@ -169,7 +169,7 @@ namespace SteganoNetLib
             }
 
             //parsing layers for processing            
-            IpV4Datagram ip = packet.Ethernet.IpV4; //TODO add test
+            IpV4Datagram ip = packet.Ethernet.IpV4;
             IcmpEchoDatagram icmp = null;
             TcpDatagram tcp = null;
             UdpDatagram udp = null;
@@ -194,7 +194,6 @@ namespace SteganoNetLib
             //NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString()); //uses list of used IDs as shared secret
             //remember source => Do not run this method for non steganography sources!
 
-
             bool addressWasChangedFromDefault = false;
             if (IpRemoteSpeaker.ToString().Equals("0.0.0.0")) //we need address for answers!
             {
@@ -205,6 +204,7 @@ namespace SteganoNetLib
 
             StringBuilder messageCollector = new StringBuilder(); //for appending answers
 
+
             //IP methods
             List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
@@ -212,6 +212,7 @@ namespace SteganoNetLib
                 messageCollector.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
                 //SendReplyPacket(null) => pure IP is not responding 
             }
+
 
             //ICMP methods
             List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -222,88 +223,20 @@ namespace SteganoNetLib
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
 
+
             //ICMP methods when not expected but ICMP received (pure IP stego etc.)
             if (!StegoUsedMethodIds.Any(icmpSelectionIds.Contains) && icmp != null && icmp.GetType() == typeof(IcmpEchoDatagram))
             {
-                //making traffic less suspicious by answering, when is ICMP but not defined as ICMP stego method                            
+                //making traffic less suspicious by answering to request, when packet is ICMP but not defined as ICMP stego method                            
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
+
 
             //TCP methods
             List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
             {
-                //REMOTE IS WHAT ARRIVED
-                //LOCAL IS WHAT IS OUTGOING
-
-                //receive SYN
-                if (tcp.ControlBits == TcpControlBits.Synchronize)
-                {
-                    AddInfoMessage("Replying with TCP SYN/ACK...");
-
-                    SeqNumberRemote = tcp.SequenceNumber; //arrived
-                    AckNumberRemote = tcp.AcknowledgmentNumber; //not used
-                    SeqNumberLocal = 5000; //TODO STEGO
-                    AckNumberLocal = SeqNumberRemote + 1;
-
-                    AddInfoMessage(String.Format("SERVER: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
-                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
-                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
-                }
-
-                //SYN ACK
-                if (tcp.ControlBits == (TcpControlBits.Synchronize | TcpControlBits.Acknowledgment))
-                {
-                    SeqNumberRemote = AckNumberLocal; //arrived
-                    AckNumberRemote = SeqNumberLocal; //arrived
-                    SeqNumberLocal = AckNumberLocal; //outgoing
-                    AckNumberLocal = AckNumberRemote + 1; //outgoing
-
-                    AddInfoMessage(String.Format("SERVER: SYNACK seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
-                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
-                }
-
-
-                //connection enstablished
-                if ((tcp.ControlBits & TcpControlBits.Acknowledgment) > 0) //&& (SeqNumberLocal - SeqNumberBase == 1)) //receive ACK //&& (AckNumberLocal - AckNumberBase == 1)s
-                {
-                    AddInfoMessage(">>Handshake complete!");
-                    //return;
-                    //save some values?
-                }
-
-
-                //receive DATA
-                if (tcp.ControlBits == TcpControlBits.Push)
-                {
-                    AddInfoMessage(">>Data section");
-                    SeqNumberLocal = AckNumberRemote;
-                    AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
-                    //SettextBoxDebug(">>Adding TCP..."); //before first adding check PSH: Push Function
-                    //StegoPackets.Add(new Tuple<Packet, String>(packet, StegoMethod));
-
-                    //SettextBoxDebug(">>Replying with ACK...");
-                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
-                }
-
-                //terminating connection
-                if (tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
-                {
-                    SeqNumberLocal = AckNumberRemote;
-                    AckNumberLocal = SeqNumberRemote + 1;
-
-                    AddInfoMessage(">>Ending TCP connection with FIN ACK");
-                    TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment);
-                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
-
-                    //TODO? SEND ALSO FIN ACK
-                    //TODO wait for ACK, ideally
-
-                    //SeqNumberBase = null; //reset enstablished connection
-                    //leave method
-                }
+                //TODO running alone is not typical without payload layer => usage in HTTP methods
             }
 
 
@@ -317,31 +250,32 @@ namespace SteganoNetLib
                 SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, dns));
             }
 
+
             //HTTP methods
             List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
             {
-                //update local TCP values
-                SeqNumberRemote = tcp.SequenceNumber; //arrived
-                AckNumberRemote = tcp.AcknowledgmentNumber; //not used
+                //update local TCP values from arriving packet
+                SeqNumberRemote = tcp.SequenceNumber;
+                AckNumberRemote = tcp.AcknowledgmentNumber;
 
-                //ENSTABLISHING+(ENDING)
-                if (tcp.ControlBits == TcpControlBits.Synchronize || (tcp.ControlBits == TcpControlBits.Synchronize | tcp.ControlBits == TcpControlBits.Acknowledgment))
+                if (tcp.ControlBits == TcpControlBits.Synchronize || (tcp.ControlBits == TcpControlBits.Synchronize | tcp.ControlBits == TcpControlBits.Acknowledgment) || tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment))
                 {
-                    //IsEnstablishedTCP = false; //remove?
+                    //enstablishing and terminating branch
 
                     //SYN
                     if (tcp.ControlBits == TcpControlBits.Synchronize && tcp.ControlBits != (TcpControlBits.Synchronize | TcpControlBits.Acknowledgment))
                     {
-                        //canoot be only...!
                         //messageCollector.Append TCP stego
+                        //Pickup stego from that packets
 
-                        AddInfoMessage("Replying with TCP SYN/ACK...");                        
-                        SeqNumberLocal = 5000; //TODO STEGO
-                        //SeqNumberLocal = NetStandard.GetSynOrAckRandNumber();
+                        AddInfoMessage("Replying with TCP SYN/ACK...");
+
+                        SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //replace to static number for debug, could be also steganographic
+                        SeqNumberLocal = 500; //TODO STEGO
                         AckNumberLocal = SeqNumberRemote + 1;
 
-                        //AddInfoMessage(String.Format("SERVER: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
+                        AddInfoMessage(String.Format("SERVER: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
                         SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayer));
                     }
@@ -349,31 +283,56 @@ namespace SteganoNetLib
                     //SYN ACK
                     if (tcp.ControlBits == (TcpControlBits.Synchronize | TcpControlBits.Acknowledgment) && tcp.ControlBits != (TcpControlBits.Synchronize))
                     {
-                        //SeqNumberRemote = AckNumberLocal; //arrived
-                        //AckNumberRemote = SeqNumberLocal; //arrived
-                        SeqNumberLocal = AckNumberLocal; //outgoing
-                        AckNumberLocal = AckNumberRemote + 1; //outgoing
+                        AddInfoMessage("Server should not receive SYN-ACK");
+                        return;
+                        //NOTE (is valid?) Do not process STEGO from that packets because its duplicite...
+                        //SeqNumberLocal = AckNumberLocal; //outgoing
+                        //AckNumberLocal = AckNumberRemote + 1; //outgoing
                         //AddInfoMessage(String.Format("SERVER: SYNACK seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
-                        TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                        SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayer));
+                        //TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
+                        //SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayer));
                     }
 
+                    //ACK below...
+
                     //FIN
+                    if (tcp.ControlBits == TcpControlBits.Fin && tcp.ControlBits != (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
+                    {
+                        //TODO
+                        /*
+                        SeqNumberLocal = AckNumberRemote;
+                        AckNumberLocal = SeqNumberRemote + 1;
 
-                    //FIN ACK
+                        AddInfoMessage(">>Ending TCP connection with FIN ACK");
+                        TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment);
+                        SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
+                        */
+                    }
 
-                    
+                    //FIN ACK                    
+                    if (tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment) && tcp.ControlBits != TcpControlBits.Fin)
+                    {
+                        AddInfoMessage("Server should not receive FIN-ACK");
+                        return;
+                    }
                 }
-                //ENDING
-                else
+                else //ACK, PSH and others...
                 {
-                    //IsEnstablishedTCP = true; //remove
-                    //solve TCP
+                    //standard data handling branch
+                    AddInfoMessage("Server data handling");
+
+                    if(tcp.Payload.Length == 0) //when is just ACK (from SYN/ACK) - do not reply
+                    {
+                        AddInfoMessage("Server received empty ACK");
+                        return;
+                    }
+
+                    //solve TCP for reply
                     SeqNumberLocal = AckNumberRemote;
                     AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
                     TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
 
-                    //solve HTTP
+                    //solve HTTP for reply
                     messageCollector.Append(NetSteganography.GetContent7Http(http, StegoUsedMethodIds, this));
                     PortLocal = PortLocalHttp;
                     PortRemote = (PortRemote == 0) ? tcp.SourcePort : PortRemote; //if local port is not specified, save it from incoming
@@ -381,9 +340,13 @@ namespace SteganoNetLib
                 }
             }
 
+            //more methods
+            //...
+
+            //after methods processing
             StegoBinary.Add(messageCollector);
 
-            if (addressWasChangedFromDefault) //returning IP address to generic
+            if (addressWasChangedFromDefault) //returning global IP address to generic when changed
             {
                 IpRemoteSpeaker = new IpV4Address("0.0.0.0");
             }
@@ -421,7 +384,6 @@ namespace SteganoNetLib
 
         public string GetSecretMessage() //public no-references interface...
         {
-            //return GetSecretMessage(this.StegoPackets);
             return GetSecretMessage(this.StegoBinary);
         }
 
@@ -453,7 +415,7 @@ namespace SteganoNetLib
                 /*
                 //foreach message, foreach word
                 //count non-ascii... ;
-                //if count of non-ascii > word.Count then remove...
+                //if count of non-ascii > wordchar.Count then remove...
                 if(DataOperations.IsASCII(message))
                 {
                     AddInfoMessage("Info: Non ascii message removed from server");
@@ -473,17 +435,6 @@ namespace SteganoNetLib
             return sb.ToString();
         }
 
-        /*
-            public void SendReplyPacket(Packet packet) //universal anwering method
-            {
-                selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
-                using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
-                {
-                    communicator.SendPacket(packet);
-                }
-                return;
-            }
-            */
 
         public void SendReplyPacket(List<Layer> layers) //send answer just from list of layers, building and forwarning the answer
         {
@@ -508,8 +459,8 @@ namespace SteganoNetLib
                 AddInfoMessage("Reply datagram sent from server (" + nameOflayer + ").");
             }
             return;
-
         }
+
 
         public void AddInfoMessage(string txt) //add something to output from everywhere else...
         {
@@ -519,7 +470,9 @@ namespace SteganoNetLib
             this.Messages.Enqueue(txt);
             return;
         }
-        public bool AskTermination() //for handling threads synchronization from UI
+
+
+        public bool AskTermination() //for handling threads synchronization from UI, returns if is terminated or not
         {
             return this.Terminate;
         }

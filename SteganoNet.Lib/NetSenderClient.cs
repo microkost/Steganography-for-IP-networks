@@ -118,6 +118,7 @@ namespace SteganoNetLib
                     List<Layer> layers = new List<Layer>(); //list of used layers
                     layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2                    
 
+
                     //IP methods
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
                     if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
@@ -180,7 +181,9 @@ namespace SteganoNetLib
                         DelayInMs = delayIcmp;
                     }
 
+
                     //UDP methods - not implemented
+
 
                     //TCP methods
                     List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -188,6 +191,7 @@ namespace SteganoNetLib
                     {
                         //part of HTTP methods
                     }
+
 
                     //DNS methods
                     List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -212,9 +216,6 @@ namespace SteganoNetLib
 
                     }
 
-                    //HTTP https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets/Http/HttpHeader.cs
-                    //HTTP https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets/Http/HttpLayer.cs                           
-                    //HTTP https://github.com/PcapDotNet/Pcap.Net/tree/master/PcapDotNet/src/PcapDotNet.Packets/Http
 
                     //HTTP methods
                     List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
@@ -224,19 +225,21 @@ namespace SteganoNetLib
 
                         if (!IsEnstablishedTCP) //let it to make TCP
                         {
-                            SeqNumberLocal = (uint)1000; //STEGO IN                            
+                            SeqNumberLocal = (uint)1000; //STEGO IN
                             AckNumberLocal = 0; //STEGO IN
                             SeqNumberRemote = 0; //we dont know
                             AckNumberRemote = SeqNumberLocal + 1; //we dont know + 1
 
                             tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
                             layers.Add(tcpLayer);
-                            IsEnstablishedTCP = MakeTcpHandshake(layers, this); //is updating global properties Seq/AckNumber
-                            continue; //since layers are gone
+                            IsEnstablishedTCP = MakeTcpHandshake(layers, this, true); //is updating global properties Seq/AckNumber
+                            continue; //since other stego layers are gone
                         }
                         else //TCP enstablished
                         {
-                            tcpLayer.ControlBits = TcpControlBits.Push | TcpControlBits.Acknowledgment;
+                            //TODO SOLVE TERMINATION...
+
+                            tcpLayer.ControlBits = (TcpControlBits.Push | TcpControlBits.Acknowledgment);
 
                             HttpRequestLayer httpLayer = new HttpRequestLayer
                             {
@@ -248,28 +251,31 @@ namespace SteganoNetLib
                             };
                             //steganography to http
 
+                            //TROUBLES SOMEWHERE AROUND...
+
+                            //SEND?? should I wait for ACK, hard to guess the size
+                            //layers.Add(tcpLayer);
+                            //layers.Add(httpLayer);
+                            //SendPacket(layers);
+
                             //measure size of tcp payload and update values                            
-                            uint payloadsize = (uint)tcpLayer.Length;
-                            SeqNumberLocal += 121;
-                            //SeqNumberLocal += payloadsize;
+                            uint payloadsize = (uint)httpLayer.Length;  //TODO?                                                      
+                            SeqNumberLocal += payloadsize;
+                            AckNumberLocal = SeqNumberLocal + payloadsize;
+                            SeqNumberRemote = AckNumberLocal;
+                            //AckNumberRemote = SeqNumberLocal + payloadsize; //we dont know
 
-                            AddInfoMessage("HTTP+TCP DATA: size " + payloadsize);
-
-                            //WAIT for ACK of sended DATA
-                            uint? uselesNumber = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal); //if null
+                            //WAIT for ACK of sended DATA??
+                            //uint? uselesNumber = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal); //if null
                             //TODO check sizes if they are fits
 
-                            layers.Add(tcpLayer);
-                            layers.Add(httpLayer);
+                            AddInfoMessage("HTTP+TCP DATA: size " + payloadsize);
                         }
-
 
                         DelayInMs = delayHttp;
                     }
 
-
-
-                    //smth                                        
+                    //more methods
 
                     //protection methods, if not enought layers from selection
                     if (layers.Count < 3) //TODO RETURN TO 3
@@ -299,7 +305,7 @@ namespace SteganoNetLib
                             DelayInMs = delayIcmp;
                         }
 
-                        //todo TCP protection?
+                        //TODO TCP protection?
                     }
 
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
@@ -522,6 +528,7 @@ namespace SteganoNetLib
             if (seqNumHere == null)
             {
                 ns.AddInfoMessage("TCP SYN ACK not received!");
+                ns.AckNumberRemote -= 1; //remove iteraction to resend
                 return false;
             }
             else
@@ -535,14 +542,13 @@ namespace SteganoNetLib
             ns.AckNumberLocal = (uint)ns.SeqNumberRemote + 1;
 
             if (separateSynAck) //SEND SYN ACK when not in next layer
-            {                               
+            {
                 //ns.AddInfoMessage(String.Format("\tC: DATA seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
 
                 TcpLayer tcpLayer = (TcpLayer)layers.Last(); //save last layer
                 layers.Remove(layers.Last()); //remove last layer
                 tcpLayer = NetStandard.GetTcpLayer(tcpLayer.SourcePort, tcpLayer.DestinationPort, ns.SeqNumberLocal, ns.AckNumberLocal, TcpControlBits.Acknowledgment);
                 layers.Add(tcpLayer); //readd last layer
-
                 ns.SendPacket(layers);
             }
 

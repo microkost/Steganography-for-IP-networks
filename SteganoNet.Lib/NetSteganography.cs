@@ -62,19 +62,17 @@ namespace SteganoNetLib
                 //---
                 { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
                 { 333, "ICMP ping (Identifier) - 16b" },
-                { 335, "ICMP ping (Sequence number) - 16b" },
-                //case 337: icmp.Payload = "";               
-
-                { 451, "TCP (standard) - 0b" }, //TODO
+                { 335, "ICMP ping (Sequence number) - 16b" }, //is actually changing all the time               
+                //---
+                //{ 451, "TCP (standard) - 0b" }, //TODO
                 //{ 453, "TCP (ISN) - 32b" }, //TODO
-
-                { 701, String.Format("DNS request (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
+                //---
+                { 701, String.Format("DNS request (standard over DNS) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
                 { 703, "DNS request (transaction id) - 16b" },
-
-                { 731, "HTTP request () - 16b" } //TODO
+                //---
+                { 731, "HTTP GET (over TCP) - 16b" } //TODO
                 //HTTP Entity tag headers 
-
-                //pspping principe                
+                        
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
                 //https://github.com/PcapDotNet/Pcap.Net/wiki/Pcap.Net-Tutorial-Gathering-Statistics-on-the-network-traffic
                 //TODO TTL usage or similar (count TTL and use some value under as rest...)
