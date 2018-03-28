@@ -17,7 +17,7 @@ namespace SteganoNet.UI.Console
             }
             catch
             {
-                System.Console.WriteLine("\tError! Probaly missing library PcapDotNet.Core.dll");
+                System.Console.WriteLine("\tError! Library PcapDotNet.Core.dll is missing dependencies (msvcr100.dll + msvcp100.dll)");
                 return null;
             }
 

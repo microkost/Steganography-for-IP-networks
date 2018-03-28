@@ -62,7 +62,7 @@ namespace SteganoNet.UI.Console
 
                 if (!role.StartsWith("c") && !role.StartsWith("s"))
                 {
-                    System.Console.Write("\tWrong selection, correct are 'c'lient or 's'erver\n\t\tPress Any Key to Exit...");
+                    System.Console.Write("\tWrong selection, correct are 'c'lient or 's'erver\n\t\tPress Any Key to Exit... ");
                     System.Console.ReadKey();
                     return;
                 }
