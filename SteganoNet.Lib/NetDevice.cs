@@ -72,7 +72,7 @@ namespace SteganoNetLib
             }
             catch
             {
-                //failing when PcapDotNet library is failing
+                //failing when PcapDotNet library is failing OR running on virtual machine
                 if (ipv4AddresesLocal.Count < 1)
                 {
                     result.Add(new Tuple<string, string>("0.0.0.0", "Interface is product of internal error"));
@@ -116,10 +116,9 @@ namespace SteganoNetLib
             }
             catch
             {
-                try
-                {
-                    //system listing - not PcapDotNet, BUT this exception happens when problem with PcapDotNet libraries                    
-                    var host = Dns.GetHostEntry(Dns.GetHostName());
+                try //system listing - not PcapDotNet 
+                {                    
+                    var host = Dns.GetHostEntry(Dns.GetHostName()); //this is not tested!
                     foreach (var ip in host.AddressList)
                     {
                         if (ip.AddressFamily == AddressFamily.InterNetwork)
@@ -132,6 +131,7 @@ namespace SteganoNetLib
                 catch
                 {
                     result.Add("0.0.0.0"); //highway to hell
+                    result.Add("127.0.0.1"); //highway to hell
                     result.Add("169.254.0.1"); //highway to hell                                       
                 }
             }

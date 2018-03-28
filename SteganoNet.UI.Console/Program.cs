@@ -68,10 +68,10 @@ namespace SteganoNet.UI.Console
                 }
 
                 //local IP
-                ipSource = ConsoleTools.SelectInterface(); //interactive                
+                ipSource = ConsoleTools.SelectInterface(); //interactive selection           
                 if(ipSource == null)
                 {
-                    System.Console.Write("\nNo network interface found! Program cannot continue. \n\tPress Any Key to Exit...");
+                    System.Console.Write("\n\tNo network interface found! Program cannot continue.\n\t\tPress Any Key to Exit...");
                     System.Console.ReadKey();
                     return;
                 }

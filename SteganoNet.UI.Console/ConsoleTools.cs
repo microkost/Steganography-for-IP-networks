@@ -1,4 +1,5 @@
 ﻿using System;
+using PcapDotNet.Core;
 using System.Collections.Generic;
 using SteganoNetLib;
 using System.Threading;
@@ -15,9 +16,9 @@ namespace SteganoNet.UI.Console
             {
                 ipv4localadd = NetDevice.GetIPv4addressesAndDescriptionLocal();
             }
-            catch
-            {
-                System.Console.WriteLine("\tError! Library PcapDotNet.Core.dll is missing dependencies (msvcr100.dll + msvcp100.dll)");
+            catch //System.TypeInitializationException
+            {                
+                System.Console.WriteLine("\tError! Library PcapDotNet.Core.dll is missing dependencies (msvcr100.dll + msvcp100.dll).\n\tOr you are running this app on VIRTUAL machine where is NOT supported.");
                 return null;
             }
 
