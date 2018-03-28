@@ -340,7 +340,7 @@ namespace SteganoNetLib
                         AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength); //acknowledgement number has increased by the length of the payload
                         TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                         SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayerReply)); //acking
-                        return;
+                        //return;
                     }
                   
                     //TODO troubles with lower layers payload steganography

@@ -17,9 +17,10 @@ namespace SteganoNet.UI.Console
             }
             catch
             {
-                //fails in case of missing library PcapDotNet.Core.dll
+                System.Console.WriteLine("\tError! Probaly missing library PcapDotNet.Core.dll");
                 return null;
             }
+
             System.Console.WriteLine("\tAvailable interfaces as source: ");
             int interfaceCounter = 0;
             foreach (Tuple<string, string> ip in ipv4localadd)
@@ -36,10 +37,12 @@ namespace SteganoNet.UI.Console
             }
             catch //System.ArgumentOutOfRangeException:
             {
+                System.Console.WriteLine("No interface found in this computer! Cannot continue...");
+
                 if (ipv4localadd.Count <= 0)
                     return null;
                 else
-                    return ipv4localadd[0].Item1;
+                    return ipv4localadd[0].Item1;                
             }
         }
 

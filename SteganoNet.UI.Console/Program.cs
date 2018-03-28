@@ -69,6 +69,12 @@ namespace SteganoNet.UI.Console
 
                 //local IP
                 ipSource = ConsoleTools.SelectInterface(); //interactive                
+                if(ipSource == null)
+                {
+                    System.Console.Write("\nNo network interface found! Program cannot continue. \n\tPress Any Key to Exit...");
+                    System.Console.ReadKey();
+                    return;
+                }
 
                 System.Console.Write("\n\tDo you want to run opposite node on same device for testing? (y/n) ");
                 runSame = System.Console.ReadLine();

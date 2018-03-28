@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 
 namespace SteganoNetLib
@@ -54,22 +56,36 @@ namespace SteganoNetLib
         public static List<Tuple<string, string>> GetIPv4addressesAndDescriptionLocal() //pair of strings ipv4 and description for UI
         {
             List<Tuple<string, string>> result = new List<Tuple<string, string>>();
-            foreach (string ipv4add in GetIPv4addressesLocal()) //get list of local IPv4 addresses from other method
+            List<string> ipv4AddresesLocal = GetIPv4addressesLocal();
+
+            try
             {
-                try
+                foreach (string ipv4add in ipv4AddresesLocal) //get list of local IPv4 addresses from other method
                 {
                     PacketDevice pd = GetSelectedDevice(new IpV4Address(ipv4add));
                     if (pd == null)
+                    { 
                         continue; //TODO TEST!
-
+                    }
                     result.Add(new Tuple<string, string>(ipv4add, pd.Description));
                 }
-                catch
+            }
+            catch
+            {
+                //failing when PcapDotNet library is failing
+                if (ipv4AddresesLocal.Count < 1)
                 {
-                    //failing when PcapDotNet library is missing
                     result.Add(new Tuple<string, string>("0.0.0.0", "Interface is product of internal error"));
                 }
+                else
+                {
+                    foreach (string ipv4add in ipv4AddresesLocal)
+                    {
+                        result.Add(new Tuple<string, string>(ipv4add, "no description available, backup method used"));
+                    }
+                }
             }
+
             return result;
         }
 
@@ -100,11 +116,24 @@ namespace SteganoNetLib
             }
             catch
             {
-                result.Add("0.0.0.0"); //btw. highway to hell
-                //result.Add("169.254.0.1"); //btw. highway to hell
-
-                //TODO implement system listing - not PcapDotNet, BUT this exception happens when: (dependency error)
-                //System.TypeInitializationException: The type initializer for 'SteganoNetLib.NetDevice' threw an exception. --->System.IO.FileNotFoundException: Could not load file or assembly 'PcapDotNet.Core.dll' or one of its dependencies.The specified module could not be found.
+                try
+                {
+                    //system listing - not PcapDotNet, BUT this exception happens when problem with PcapDotNet libraries                    
+                    var host = Dns.GetHostEntry(Dns.GetHostName());
+                    foreach (var ip in host.AddressList)
+                    {
+                        if (ip.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            result.Add(ip.ToString());
+                        }
+                    }
+                    System.Console.WriteLine("Backup solution applied, listing IP addreses localy.");
+                }
+                catch
+                {
+                    result.Add("0.0.0.0"); //highway to hell
+                    result.Add("169.254.0.1"); //highway to hell                                       
+                }
             }
 
             return result;

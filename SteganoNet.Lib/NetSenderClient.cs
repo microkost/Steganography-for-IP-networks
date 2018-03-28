@@ -236,6 +236,7 @@ namespace SteganoNetLib
                     List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
                     {
+                        AddInfoMessage("-C-L-I-E-N-T--------------------------------");
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
 
                         if (!IsEnstablishedTCP) //let it to make TCP
@@ -255,7 +256,6 @@ namespace SteganoNetLib
                             //TODO SOLVE TERMINATION...
 
                             tcpLayer.ControlBits = (TcpControlBits.Push | TcpControlBits.Acknowledgment);
-
                             HttpRequestLayer httpLayer = new HttpRequestLayer
                             {
                                 Version = HttpVersion.Version11,
@@ -264,20 +264,25 @@ namespace SteganoNetLib
                                 Method = new HttpRequestMethod(HttpRequestKnownMethod.Get),
                                 Uri = @"http://pcapdot.net/",
                             };
+
                             //steganography to http
                             try //TMP REMOVING some DATA
                             {
-                                SecretMessage = SecretMessage.Remove(0, 16);
+                                SecretMessage = SecretMessage.Remove(0, 100);
                             }
-                            catch { }
+                            catch
+                            {
+                                SecretMessage = SecretMessage.Remove(0, SecretMessage.Length/2);
+                            }
 
                             layers.Add(tcpLayer);
                             layers.Add(httpLayer);
                             uint tcpPayloadSize = (uint)SendPacket(layers); //sending packet now, not at the end of method due to waiting for ack...                             
                             SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.
 
-                            
+
                             //WAIT for ACK of sended DATA
+                            tcpLayer.ControlBits = TcpControlBits.None;
                             //Having received some bytes of data from the server, the client increases its acknowledgement number from 1 to 1449.
                             SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal);
                             if (SeqNumberRemote == null)
@@ -288,7 +293,7 @@ namespace SteganoNetLib
                             {
                                 AddInfoMessage("ACK updated");
                                 AckNumberLocal = (uint)SeqNumberRemote;
-                            }    
+                            }
                             
 
                             if (SecretMessage.Length == 0)
@@ -304,6 +309,7 @@ namespace SteganoNetLib
 
                             DelayInMs = delayHttp;
                             System.Threading.Thread.Sleep(DelayInMs*2);
+                            layers.Clear();
                             continue;
                         }
                     }
@@ -355,11 +361,7 @@ namespace SteganoNetLib
                     System.Threading.Thread.Sleep(DelayInMs);
                 }
                 while (!Terminate || SecretMessage.Length != 0);
-
-
             }
-
-
         }
 
         public bool ArePrerequisitiesDone()
