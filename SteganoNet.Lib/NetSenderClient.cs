@@ -265,7 +265,7 @@ namespace SteganoNetLib
                                 Uri = @"http://pcapdot.net/",
                             };
                             //steganography to http
-                            try //TMP REMOVING DATA
+                            try //TMP REMOVING some DATA
                             {
                                 SecretMessage = SecretMessage.Remove(0, 16);
                             }
@@ -273,21 +273,23 @@ namespace SteganoNetLib
 
                             layers.Add(tcpLayer);
                             layers.Add(httpLayer);
+                            uint tcpPayloadSize = (uint)SendPacket(layers); //sending packet now, not at the end of method due to waiting for ack...                             
+                            SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.
 
-                            //sending packet now, not at the end of method due to waiting for ack... 
-                            int tcpPayloadSize = SendPacket(layers);
-
-                            //measure size of tcp payload and update values                            
-                            uint payloadsize = (uint)tcpPayloadSize; //(uint)tcpLayer.Length;  //TODO? PayloadLength
-                            SeqNumberLocal += payloadsize;
-                            AckNumberLocal = SeqNumberLocal + payloadsize;
-                            SeqNumberRemote = AckNumberLocal;
-                            //AckNumberRemote = SeqNumberLocal + payloadsize; //we dont know
-                            AddInfoMessage("HTTP+TCP DATA: size " + payloadsize + " size real: " + tcpPayloadSize);
-
-                            //WAIT for ACK of sended DATA??
-                            //uint? uselesNumber = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal); //if null
-                            //TODO check sizes if they are fits
+                            
+                            //WAIT for ACK of sended DATA
+                            //Having received some bytes of data from the server, the client increases its acknowledgement number from 1 to 1449.
+                            SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal);
+                            if (SeqNumberRemote == null)
+                            {
+                                AddInfoMessage("Problem with receiving...");
+                            }
+                            else
+                            {
+                                AddInfoMessage("ACK updated");
+                                AckNumberLocal = (uint)SeqNumberRemote;
+                            }    
+                            
 
                             if (SecretMessage.Length == 0)
                             {
@@ -297,9 +299,11 @@ namespace SteganoNetLib
                                 Terminate = true;
                             }
 
+                            AddInfoMessage("HTTP+TCP DATA sent of size " + tcpPayloadSize);
                             AddInfoMessage(String.Format("{0} bits of TCP left to send", SecretMessage.Length));
+
                             DelayInMs = delayHttp;
-                            System.Threading.Thread.Sleep(DelayInMs);
+                            System.Threading.Thread.Sleep(DelayInMs*2);
                             continue;
                         }
                     }

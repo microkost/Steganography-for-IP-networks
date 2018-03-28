@@ -255,10 +255,12 @@ namespace SteganoNetLib
             //HTTP methods
             List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
-            {
+            {                
                 //update local TCP values from arriving packet
                 SeqNumberRemote = tcp.SequenceNumber;
                 AckNumberRemote = tcp.AcknowledgmentNumber;
+
+                AddInfoMessage("-S-E-R-V-E-R--------------------------------");
 
                 if (tcp.ControlBits == TcpControlBits.Synchronize || (tcp.ControlBits == TcpControlBits.Synchronize | tcp.ControlBits == TcpControlBits.Acknowledgment) || tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment))
                 {
@@ -322,23 +324,30 @@ namespace SteganoNetLib
                     //standard data handling branch
                     AddInfoMessage("Server data handling");
 
-                    if (tcp.Payload.Length == 0) //when is just ACK (from SYN/ACK) - do not reply
+                    if (tcp.Payload.Length == 0) //when is just ACK (after SYN/ACK)
                     {
-                        AddInfoMessage("Server received empty message when payload expected, waiting for retransmission..."); //do not react = retransmision
-                        return;
+                        AddInfoMessage("Server: ACK received"); 
+                        //TODO some check if have right value...
+                        return; //no reaction to that datagram
                     }
 
-                    //solve TCP for ACK of data
-                    SeqNumberLocal = AckNumberRemote;
-                    AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
-                    TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayerReply)); //acking
+                    if(tcp.ControlBits == (TcpControlBits.Push | TcpControlBits.Acknowledgment)) //ACK of received data
+                    {
+                        AddInfoMessage("Server: PSH received, ACK outgoing...");
+                        //solve TCP for ACK of just data receiving
+                        //This ACK packet is sent by the server solely to acknowledge the data sent by the client while upper layers process the HTTP request.
+                        SeqNumberLocal = AckNumberRemote; //the server's sequence number remains
+                        AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength); //acknowledgement number has increased by the length of the payload
+                        TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
+                        SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayerReply)); //acking
+                        return;
+                    }
+                  
+                    //TODO troubles with lower layers payload steganography
 
-                    //solve TCP
-                    //SeqNumberLocal
-                    //AckNumberLocal
-                    //The acknowledgment number field is nonzero while the ACK flag is not set
-                    TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, 0, TcpControlBits.Push);
+                    //solve TCP for DATA push (actual reply to http request)
+                    //SeqNumberLocal and AckNumberLocal is still same, since none of its packets prior to this one have carried a payload                    
+                    TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, (TcpControlBits.Push | TcpControlBits.Acknowledgment));
 
                     //solve HTTP for reply
                     messageCollector.Append(NetSteganography.GetContent7Http(http, StegoUsedMethodIds, this));
