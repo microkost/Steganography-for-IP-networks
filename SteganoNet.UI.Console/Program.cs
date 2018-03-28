@@ -336,7 +336,7 @@ namespace SteganoNet.UI.Console
                 if (isHumanDriving)
                 {
                     System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods) / 1000));
-                    System.Console.WriteLine("\nShowing client running information. Press ESC to stop when message is received.");
+                    System.Console.WriteLine("Showing client running information. Press ESC to stop when message is received.");
                     do
                     {
                         while (!System.Console.KeyAvailable)

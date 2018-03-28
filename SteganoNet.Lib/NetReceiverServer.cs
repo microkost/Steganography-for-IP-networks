@@ -199,6 +199,7 @@ namespace SteganoNetLib
             {
                 IpRemoteSpeaker = ip.Source;
                 addressWasChangedFromDefault = true;
+                AddInfoMessage("Reply IP was changed from 0.0.0.0 to " + IpRemoteSpeaker.ToString());
                 //TODO do the same with port, when TCP / UDP then important
             }
 
@@ -321,16 +322,23 @@ namespace SteganoNetLib
                     //standard data handling branch
                     AddInfoMessage("Server data handling");
 
-                    if(tcp.Payload.Length == 0) //when is just ACK (from SYN/ACK) - do not reply
+                    if (tcp.Payload.Length == 0) //when is just ACK (from SYN/ACK) - do not reply
                     {
-                        AddInfoMessage("Server received empty ACK");
+                        AddInfoMessage("Server received empty message when payload expected, waiting for retransmission..."); //do not react = retransmision
                         return;
                     }
 
-                    //solve TCP for reply
+                    //solve TCP for ACK of data
                     SeqNumberLocal = AckNumberRemote;
                     AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
-                    TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
+                    TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
+                    SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayerReply)); //acking
+
+                    //solve TCP
+                    //SeqNumberLocal
+                    //AckNumberLocal
+                    //The acknowledgment number field is nonzero while the ACK flag is not set
+                    TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, 0, TcpControlBits.Push);
 
                     //solve HTTP for reply
                     messageCollector.Append(NetSteganography.GetContent7Http(http, StegoUsedMethodIds, this));
@@ -340,8 +348,10 @@ namespace SteganoNetLib
                 }
             }
 
+
             //more methods
             //...
+
 
             //after methods processing
             StegoBinary.Add(messageCollector);

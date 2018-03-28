@@ -83,6 +83,7 @@ Detailed information about used fields at headers and techniques in [technical d
 ## Future ideas
 * more methods - anytime
 * multiplatformity by converting to .NetCore, now dependent on [PcapDotNet](https://github.com/PcapDotNet/Pcap.Net/) framework lock.
+* improve [console wizard](https://medium.com/@tonerdo/a-better-keyboard-input-experience-for-net-console-apps-73a24f09cd0e) for humans
 
 
 ## Disclaimer

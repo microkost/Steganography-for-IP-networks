@@ -263,13 +263,8 @@ namespace SteganoNetLib
         public static uint GetSynOrAckRandNumber() //for generating random SYN and ACK numbers
         {
             //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
+            //TODO remove...
             uint generatedNum = (ushort)rand.Next(0, 65535);
-
-            //TODO REMOVE
-            while (generatedNum % 11 == 0) //mod 11 is magic which distinguish stego from camouflage
-            {
-                generatedNum = (ushort)rand.Next(0, 65535);
-            }
             return generatedNum;
         }
 

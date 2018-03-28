@@ -92,7 +92,7 @@ namespace SteganoNet.UI.Console
             return selectedMethodsID;
         }
 
-        internal static int HowLongIsTransferInMs(string messageEncrypted, List<int> stegoMethods)
+        public static int HowLongIsTransferInMs(string messageEncrypted, List<int> stegoMethods)
         {
             //how many bits have messageEncrypted
             int bitsInMessage = DataOperations.MessageASCIItoBitLenght(messageEncrypted);
