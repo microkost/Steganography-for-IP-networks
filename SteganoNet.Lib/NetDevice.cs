@@ -52,6 +52,42 @@ namespace SteganoNetLib
             return new MacAddress("84:2B:2B:23:8C:AB");
         }
 
+        public static MacAddress? GetLocalMacAddress(IpV4Address ipv4Address) //getting local mac address from powershell
+        {
+            try
+            {
+                Process p = new Process();
+                p.StartInfo.UseShellExecute = false;
+                p.StartInfo.RedirectStandardOutput = true;
+                p.StartInfo.FileName = "powershell.exe";
+                p.StartInfo.Arguments = String.Format("Get-WmiObject win32_networkadapterconfiguration | Where-Object {{$_.IPAddress -eq '{0}'}} | select macaddress", ipv4Address.ToString());
+                p.Start();
+
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit();
+                
+                string[] stringSeparators = new string[] { "\r\n" };
+                string[] parsedDirty = output.Split(stringSeparators, StringSplitOptions.None);
+
+                List<MacAddress> macList = new List<MacAddress>();
+                foreach (string s in parsedDirty) //checking and cleaning of strings
+                {                    
+                    string mac = s.Trim();
+                    Regex regex = new Regex("^(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}|(?:[0-9a-fA-F]{2}-){5}[0-9a-fA-F]{2}|(?:[0-9a-fA-F]{2}){5}[0-9a-fA-F]{2}$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
+                    MatchCollection mc = regex.Matches(mac); //saving only those which are looking like mac...
+                    foreach (Match m in mc)
+                    {
+                        macList.Add(new MacAddress(mac));
+                    }
+                }                
+                return macList.First();                
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         //L3
         public static List<Tuple<string, string>> GetIPv4addressesAndDescriptionLocal() //pair of strings ipv4 and description for UI
         {
@@ -64,7 +100,7 @@ namespace SteganoNetLib
                 {
                     PacketDevice pd = GetSelectedDevice(new IpV4Address(ipv4add));
                     if (pd == null)
-                    { 
+                    {
                         continue; //TODO TEST!
                     }
                     result.Add(new Tuple<string, string>(ipv4add, pd.Description));
@@ -117,7 +153,7 @@ namespace SteganoNetLib
             catch
             {
                 try //system listing - not PcapDotNet 
-                {                    
+                {
                     var host = Dns.GetHostEntry(Dns.GetHostName()); //this is not tested!
                     foreach (var ip in host.AddressList)
                     {

@@ -399,6 +399,7 @@ namespace SteganoNetLib
 
         //-L5-to-L7------------------------------------------------------------------------------------------------------------
 
+        //L7-dns
         public static Tuple<DnsLayer, string> SetContent7Dns(DnsLayer dns, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null) //SENDER
         {
             if (dns == null) { return null; } //extra protection
@@ -459,7 +460,7 @@ namespace SteganoNetLib
                             string binvalue = Convert.ToString(dns.Id, 2);
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
                             break;
-                        }                        
+                        }
                 }
             }
 
@@ -474,7 +475,49 @@ namespace SteganoNetLib
         }
 
 
-        //SetContent7Http
+        //L7-http
+        internal static Tuple<HttpLayer, string> SetContent7Http(HttpLayer http, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc)
+        {
+            if (http == null) { return null; } //extra protection
+
+            foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
+            {
+                switch (methodId)
+                {
+                    case 731: //HTTP clean //SENDER
+                        {
+                            sc.AddInfoMessage("7HTTP: legacy method " + methodId + " (no data removed)");                            
+                            break;
+                        }
+                    case 732: //HTTP
+                        {                            
+                            sc.AddInfoMessage("7HTTP: method " + methodId);
+                            const int usedbits = 16;
+                            try
+                            {
+                                /*
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                dns.Id = Convert.ToUInt16(partOfSecret, 2);
+                                secret = secret.Remove(0, usedbits);
+                                */
+                            }
+                            catch
+                            {
+                                /*
+                                if (secret.Length != 0)
+                                {
+                                    dns.Id = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    secret = secret.Remove(0, secret.Length);
+                                }
+                                return new Tuple<DnsLayer, string>(dns, secret); //nothing more          
+                                */
+                            }
+                            break;
+                        }
+                }
+            }
+            return new Tuple<HttpLayer, string>(http, secret);
+        }
 
         public static string GetContent7Http(HttpDatagram http, List<int> stegoUsedMethodIds, NetReceiverServer rs = null)
         {
@@ -487,7 +530,8 @@ namespace SteganoNetLib
                 {
                     case 731: //HTTP (pure) RECEIVER
                         {
-                            rs.AddInfoMessage("7HTTP: method " + methodId + " (no stehanography included)"); //add number of received bits in this iteration
+                            rs.AddInfoMessage("7HTTP: method " + methodId);
+
                             break;
                         }
                 }

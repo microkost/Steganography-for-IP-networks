@@ -49,31 +49,46 @@ namespace SteganoNetLib
                 ipAddressInterface = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip                
             }
 
-            try //source: https://stephenhaunts.com/2014/01/06/getting-the-mac-address-for-a-machine-on-the-network/
+            try
             {
-                byte[] macAddr = new byte[6];
-                uint macAddrLen = (uint)macAddr.Length;
-                string[] str = new string[(int)macAddrLen]; //bit too classic C but working...
-
-                if (SendARP(StringIPToInt(ipAddressInterface.ToString()), 0, macAddr, ref macAddrLen) != 0)
+                var mac = NetDevice.GetLocalMacAddress(ipAddressInterface);
+                if (mac != null)
                 {
-                    //if requested MAC is not found, ask for MAC address of system default gateway
-                    if (SendARP(StringIPToInt(GetDefaultGateway().ToString()), 0, macAddr, ref macAddrLen) != 0)
-                    {
-                        //if still not valid then return smth universal
-                        return NetDevice.GetRandomMacAddress();
-                    }
+                    return new MacAddress(mac.ToString());
                 }
-                for (int i = 0; i < macAddrLen; i++)
+                else
                 {
-                    str[i] = macAddr[i].ToString("x2");
+                    throw new Exception();
                 }
-
-                return new MacAddress(string.Join(":", str).ToUpper()); //get L2 destination address for inserted IP address                
             }
             catch
             {
-                return NetDevice.GetRandomMacAddress();
+                try //source: https://stephenhaunts.com/2014/01/06/getting-the-mac-address-for-a-machine-on-the-network/
+                {
+                    byte[] macAddr = new byte[6];
+                    uint macAddrLen = (uint)macAddr.Length;
+                    string[] str = new string[(int)macAddrLen]; //bit too classic C but working...
+
+                    if (SendARP(StringIPToInt(ipAddressInterface.ToString()), 0, macAddr, ref macAddrLen) != 0)
+                    {
+                        //if requested MAC is not found, ask for MAC address of system default gateway
+                        if (SendARP(StringIPToInt(GetDefaultGateway().ToString()), 0, macAddr, ref macAddrLen) != 0)
+                        {
+                            //if still not valid then return smth universal
+                            return NetDevice.GetRandomMacAddress();
+                        }
+                    }
+                    for (int i = 0; i < macAddrLen; i++)
+                    {
+                        str[i] = macAddr[i].ToString("x2");
+                    }
+
+                    return new MacAddress(string.Join(":", str).ToUpper()); //get L2 destination address for inserted IP address    
+                }
+                catch
+                {
+                    return NetDevice.GetRandomMacAddress();
+                }
             }
         }
 

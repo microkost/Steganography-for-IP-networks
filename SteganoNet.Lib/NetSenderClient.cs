@@ -33,6 +33,7 @@ namespace SteganoNetLib
 
         //network public parametres
         public ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
+        public ushort PortRemoteHttp = 80; //where to expect "fake" HTTP webserver
         public ushort PortRemote { get; set; }
         public ushort PortLocal { get; set; }
         public MacAddress MacAddressLocal { get; set; }
@@ -114,12 +115,13 @@ namespace SteganoNetLib
             SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            
 
-            if (StegoUsedMethodIds.Any(NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()).Contains)) //if current methods contains DNS method ids.
-            {
-                //if something with dns is used then prepare list of distinct domain names, running once                
-                DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false);
-                AddInfoMessage("DNS is going to be used. Prepared " + DomainsToAsk.Count + " to request");
+            //get list of domain names in advance if they are going to be used
+            if (StegoUsedMethodIds.Any(NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()).Contains) || StegoUsedMethodIds.Any(NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()).Contains))
+            {                
+                DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false); //if something with dns or http is used then prepare list of distinct domain names, running once
+                AddInfoMessage("DNS or HTTP is going to be used. Prepared " + DomainsToAsk.Count + " to request");
                 AddInfoMessage("DNS will ask port " + PortRemoteDns + ", otherwise is remote port " + PortRemote);
+                AddInfoMessage("HTTP will ask port " + PortRemoteHttp + ", otherwise is remote port " + PortRemote);
             }
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -241,14 +243,14 @@ namespace SteganoNetLib
 
                         if (!IsEnstablishedTCP) //let it to make TCP
                         {
-                            SeqNumberLocal = (uint)1000; //STEGO IN
-                            AckNumberLocal = 0; //STEGO IN
+                            SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //(uint)1000; //STEGO IN
+                            AckNumberLocal = NetStandard.GetSynOrAckRandNumber(); //0; //STEGO IN
                             SeqNumberRemote = 0; //we dont know
                             AckNumberRemote = SeqNumberLocal + 1; //we dont know + 1
 
                             tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
                             layers.Add(tcpLayer);
-                            IsEnstablishedTCP = MakeTcpHandshake(layers, this, true); //is updating global properties Seq/AckNumber
+                            IsEnstablishedTCP = MakeTcpHandshake(layers, TcpControlBits.Synchronize, true, this); //is updating global properties Seq/AckNumber
                             continue; //since other stego layers are gone
                         }
                         else //TCP enstablished
@@ -256,33 +258,42 @@ namespace SteganoNetLib
                             //TODO SOLVE TERMINATION...
 
                             tcpLayer.ControlBits = (TcpControlBits.Push | TcpControlBits.Acknowledgment);
-                            HttpRequestLayer httpLayer = new HttpRequestLayer
+
+                            //build default http layer
+                            if (DomainsToAsk.Count == 0) { DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false); }
+                            HttpLayer httpLayer = new HttpRequestLayer //overload!
                             {
                                 Version = HttpVersion.Version11,
-                                Header = new HttpHeader(new HttpContentLengthField(11)),
-                                Body = new Datagram(Encoding.ASCII.GetBytes("hello world")),
+                                Header = new HttpHeader(new HttpHeader(new HttpContentLengthField(80))), //size of Body = new Datagram
                                 Method = new HttpRequestMethod(HttpRequestKnownMethod.Get),
-                                Uri = @"http://pcapdot.net/",
+                                Body = new Datagram(Encoding.ASCII.GetBytes("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0\r\n")), //useless like that
+                                Uri = DomainsToAsk[rnd.Next(DomainsToAsk.Count)],
+
+                                /*
+                                Hypertext Transfer Protocol
+                                GET / HTTP/1.1\r\n
+                                Host: seznam.cz\r\n
+                                User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0\r\n
+                                Accept: text/html,application/xhtml+xml,application/xml;q=0.9,
+                                Accept-Language: en-US,en;q=0.5\r\n
+                                Accept-Encoding: gzip, deflate\r\n
+                                Cookie: WeatherLocality=CESKA_REPUBLIKA; __gfp_64b=ecgllgR.OpbmtMTpTBZoi.OhNHng9e7twDehTYFhZVv.Y7; sid=1152332457643858978\r\n
+                                Connection: keep-alive\r\n
+                                Upgrade-Insecure-Requests: 1\r\n
+                                [Full request URI: http://seznam.cz/]
+                                */
                             };
 
-                            //steganography to http
-                            try //TMP REMOVING some DATA
-                            {
-                                SecretMessage = SecretMessage.Remove(0, 100);
-                            }
-                            catch
-                            {
-                                SecretMessage = SecretMessage.Remove(0, SecretMessage.Length/2);
-                            }
+                            Tuple<HttpLayer, string> httpStego = NetSteganography.SetContent7Http(httpLayer, StegoUsedMethodIds, SecretMessage, this);
+                            httpLayer = httpStego.Item1; //save layer containing steganography
+                            SecretMessage = httpStego.Item2; //save rest of unsended bites
 
                             layers.Add(tcpLayer);
                             layers.Add(httpLayer);
                             uint tcpPayloadSize = (uint)SendPacket(layers); //sending packet now, not at the end of method due to waiting for ack...                             
                             SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.
 
-
                             //WAIT for ACK of sended DATA
-                            tcpLayer.ControlBits = TcpControlBits.None;
                             //Having received some bytes of data from the server, the client increases its acknowledgement number from 1 to 1449.
                             SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal);
                             if (SeqNumberRemote == null)
@@ -294,22 +305,28 @@ namespace SteganoNetLib
                                 AddInfoMessage("ACK updated");
                                 AckNumberLocal = (uint)SeqNumberRemote;
                             }
-                            
 
+                            //terminating
                             if (SecretMessage.Length == 0)
                             {
-                                AddInfoMessage("TCP is Terminating");
-                                //send termination packet
-                                //MakeTcpHandshakeEnd()
                                 Terminate = true;
+                                AddInfoMessage("TCP is Terminating");
+
+                                //send termination packet
+                                tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Fin);
+                                layers.Add(tcpLayer);
+                                IsEnstablishedTCP = MakeTcpHandshake(layers, TcpControlBits.Fin, true, this); //is updating global properties Seq/AckNumber
                             }
 
-                            AddInfoMessage("HTTP+TCP DATA sent of size " + tcpPayloadSize);
-                            AddInfoMessage(String.Format("{0} bits of TCP left to send", SecretMessage.Length));
+                            AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize));
 
                             DelayInMs = delayHttp;
-                            System.Threading.Thread.Sleep(DelayInMs*2);
+                            System.Threading.Thread.Sleep(DelayInMs);
+
+                            tcpLayer = null;
+                            httpLayer = null;
                             layers.Clear();
+
                             continue;
                         }
                     }
@@ -426,31 +443,34 @@ namespace SteganoNetLib
             return this.Terminate;
         }
 
-        private static bool MakeTcpHandshake(List<Layer> layers, NetSenderClient ns, bool separateSynAck)
+        private static bool MakeTcpHandshake(List<Layer> layers, TcpControlBits tcpOperation, bool separateSynOrFinAck, NetSenderClient ns)
         {
             ns.SendPacket(layers);
+
+            //tcpOperation is TcpControlBits.Synchronize or TcpControlBits.Fin => one method for terminating and enstablishing
+            string whatIsHappening = (tcpOperation == TcpControlBits.Synchronize) ? "SYN" : "FIN";
 
             ns.AckNumberLocal = ns.SeqNumberLocal + 1; //expected value from oposite side
             ns.AckNumberRemote = ns.SeqNumberLocal + 1; //because we know it
 
-            uint? seqNumHere = NetStandard.WaitForTcpAck(ns.IpOfInterface, ns.IpOfRemoteHost, ns.PortLocal, ns.PortRemote, ns.AckNumberRemote, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment); //in ack is expected value
+            uint? seqNumHere = NetStandard.WaitForTcpAck(ns.IpOfInterface, ns.IpOfRemoteHost, ns.PortLocal, ns.PortRemote, ns.AckNumberRemote, tcpOperation | TcpControlBits.Acknowledgment); //in ack is expected value
             if (seqNumHere == null)
             {
-                ns.AddInfoMessage("TCP SYN ACK not received!");
+                ns.AddInfoMessage("TCP " + whatIsHappening + " ACK not received!");
                 ns.AckNumberRemote -= 1; //remove iteraction to resend
                 return false;
             }
             else
             {
                 ns.SeqNumberRemote = seqNumHere;
-                ns.AddInfoMessage("TCP SYN ACK received.");
+                ns.AddInfoMessage("TCP " + whatIsHappening + " ACK received.");
             }
 
             //update values which are going to be used next datagram
             ns.SeqNumberLocal = ns.AckNumberRemote;
             ns.AckNumberLocal = (uint)ns.SeqNumberRemote + 1;
 
-            if (separateSynAck) //SEND SYN ACK when not in next layer
+            if (separateSynOrFinAck) //SEND SYN/FIN ACK when not in next layer
             {
                 TcpLayer tcpLayer = (TcpLayer)layers.Last(); //save last layer
                 layers.Remove(layers.Last()); //remove last layer
@@ -458,14 +478,11 @@ namespace SteganoNetLib
                 layers.Add(tcpLayer); //readd last layer
                 int packetSize = ns.SendPacket(layers);
 
-                if (packetSize != (ns.AckNumberLocal - ns.SeqNumberRemote - 1))
-                {
-                    ns.AddInfoMessage("ACK WILL FAIL");
-                }
+                //TODO some test of sizes and numbers... like if (packetSize != (ns.AckNumberLocal - ns.SeqNumberRemote - 1))
             }
 
             return true;
-        }
+        }       
 
         public int SendPacket(List<Layer> layers) //send just from list of layers, building and forwarning the answer
         {

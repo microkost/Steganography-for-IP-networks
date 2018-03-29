@@ -17,12 +17,12 @@ namespace SteganoNetLib
     public class NetReceiverServer : INetNode
     {
         //steganography parametres
-        public volatile bool Terminate = false; //ends listening        
+        public volatile bool Terminate = false; //ends listening otherwise endless       
         public List<int> StegoUsedMethodIds { get; set; }
         public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
 
         //network parametres
-        public ushort PortLocal { get; set; } //PortListening //obviously not used
+        public ushort PortLocal { get; set; } //portListening
         public ushort PortLocalDns = 53; //where to expect "fake" DNS service
         public ushort PortLocalHttp = 80; //where to expect "fake" HTTP service
         public ushort PortRemote { get; set; } //used mostly for reply
@@ -43,9 +43,6 @@ namespace SteganoNetLib
         private uint AckNumberRemote { get; set; } //for TCP answers
         private uint SeqNumberLocal { get; set; } //for TCP answers
         private uint SeqNumberRemote { get; set; } //for TCP answers
-        private uint? SeqNumberBase { get; set; } //for TCP answers
-        private uint AckNumberBase { get; set; } //for TCP answers
-        private bool IsEnstablishedTCP { get; set; }
 
 
         public NetReceiverServer(string ipLocalListening, ushort portLocal, string ipRemoteString = "0.0.0.0", ushort portRemote = 0)
@@ -67,7 +64,6 @@ namespace SteganoNetLib
             StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
-            IsEnstablishedTCP = false;
             Messages.Enqueue("Server created...");
             this.FirstRun = true;
         }
