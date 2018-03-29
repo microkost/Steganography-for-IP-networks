@@ -93,13 +93,12 @@ namespace SteganoNetLib
             //bussiness ctor            
             Messages = new Queue<string>();
             Timer = new Stopwatch();
-            this.FirstRun = true;
             DelayInMs = delayGeneral;
-            SeqNumberLocal = 0; //TODO change to constant here and inside GetTcpLayer()
-            AckNumberLocal = 0; //TODO change to constant here and inside GetTcpLayer()
-            IsEnstablishedTCP = false; //TCP flow control
-            IsTerminatingTCP = false; //TCP flow control
-            DomainsToAsk = null; //DNS+HTTP
+            this.FirstRun = true;
+            SeqNumberLocal = 0;
+            AckNumberLocal = 0;
+            IsEnstablishedTCP = false; //TCP flow control            
+            DomainsToAsk = null; //DNS + HTTP layers
             AddInfoMessage("Client created...");
         }
 
@@ -117,7 +116,7 @@ namespace SteganoNetLib
 
             //get list of domain names in advance if they are going to be used
             if (StegoUsedMethodIds.Any(NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()).Contains) || StegoUsedMethodIds.Any(NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()).Contains))
-            {                
+            {
                 DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false); //if something with dns or http is used then prepare list of distinct domain names, running once
                 AddInfoMessage("DNS or HTTP is going to be used. Prepared " + DomainsToAsk.Count + " to request");
                 AddInfoMessage("DNS will ask port " + PortRemoteDns + ", otherwise is remote port " + PortRemote);
@@ -241,23 +240,25 @@ namespace SteganoNetLib
                         AddInfoMessage("-C-L-I-E-N-T--------------------------------");
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
 
-                        if (!IsEnstablishedTCP) //let it to make TCP
+                        if (!IsEnstablishedTCP) //make TCP session
                         {
-                            SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //(uint)1000; //STEGO IN
-                            AckNumberLocal = NetStandard.GetSynOrAckRandNumber(); //0; //STEGO IN
+                            SeqNumberLocal = NetStandard.GetSynOrAckRandNumber();
+                            AckNumberLocal = NetStandard.GetSynOrAckRandNumber();
                             SeqNumberRemote = 0; //we dont know
                             AckNumberRemote = SeqNumberLocal + 1; //we dont know + 1
 
                             tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
+                            //TODO STEGO IN steganography
+
                             layers.Add(tcpLayer);
                             IsEnstablishedTCP = MakeTcpHandshake(layers, TcpControlBits.Synchronize, true, this); //is updating global properties Seq/AckNumber
                             continue; //since other stego layers are gone
                         }
                         else //TCP enstablished
-                        {
-                            //TODO SOLVE TERMINATION...
-
+                        {                           
                             tcpLayer.ControlBits = (TcpControlBits.Push | TcpControlBits.Acknowledgment);
+
+                            //TODO idea: should sent standard DNS request when DNS not in methods and its not, because you cant combine DNS and HTTP to one datagram
 
                             //build default http layer
                             if (DomainsToAsk.Count == 0) { DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false); }
@@ -310,16 +311,19 @@ namespace SteganoNetLib
                             if (SecretMessage.Length == 0)
                             {
                                 Terminate = true;
-                                AddInfoMessage("TCP is Terminating");
+                                AddInfoMessage("TCP is terminating");
 
-                                //send termination packet
+                                //do TCP unhandskake                                
                                 tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Fin);
                                 layers.Add(tcpLayer);
-                                IsEnstablishedTCP = MakeTcpHandshake(layers, TcpControlBits.Fin, true, this); //is updating global properties Seq/AckNumber
+                                bool sucessfull = MakeTcpHandshake(layers, TcpControlBits.Fin, true, this); //is updating global properties Seq/AckNumber
+                                if (sucessfull)
+                                {
+                                    continue;
+                                }
                             }
 
                             AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize));
-
                             DelayInMs = delayHttp;
                             System.Threading.Thread.Sleep(DelayInMs);
 
@@ -334,10 +338,8 @@ namespace SteganoNetLib
                     //more methods
 
                     //protection methods, if not enought layers from selection
-                    if (layers.Count < 3) //TODO RETURN TO 3
+                    if (layers.Count < 3)
                     {
-                        //TODO layers need to be correctly ordered! Cannot append L2 to end...
-
                         if (!layers.OfType<EthernetLayer>().Any()) //if not contains Etherhetnet layer object
                         {
                             AddInfoMessage("Added L2 in last step");
@@ -361,7 +363,7 @@ namespace SteganoNetLib
                             DelayInMs = delayIcmp;
                         }
 
-                        //TODO TCP protection?
+                        //TODO layers need to be correctly ordered! Cannot append L2 to end...
                     }
 
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
@@ -414,7 +416,7 @@ namespace SteganoNetLib
                 selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
                 using (PacketCommunicator communicatorTMP = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
                 {
-                    //try to use provide interface, if IP is not valid then it makes error... 
+                    //try to use provided interface, if IP is not valid then it makes error... 
                 }
             }
             catch
@@ -482,9 +484,9 @@ namespace SteganoNetLib
             }
 
             return true;
-        }       
+        }
 
-        public int SendPacket(List<Layer> layers) //send just from list of layers, building and forwarning the answer
+        public int SendPacket(List<Layer> layers) //send just from list of layers, building and forwarding the answer; returns value of that packet
         {
             if (layers == null) { return 0; } //extra protection
 
@@ -501,13 +503,20 @@ namespace SteganoNetLib
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now);
                     communicator.SendPacket(packet);
-                    return packet.Ethernet.IpV4.Tcp.PayloadLength;
+                    try
+                    {
+                        return packet.Ethernet.IpV4.Tcp.PayloadLength;
+                    }
+                    catch
+                    {                        
+                        return 0; //packet is not TCP, we probably dont need to know the size
+                    }
                 }
             }
             catch
             {
                 AddInfoMessage("Error: Packet was NOT send due to error!");
-                return 0; //extra protection
+                return -1; //TCP have uint, makes bigger error
             }
         }
     }

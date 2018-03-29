@@ -265,13 +265,12 @@ namespace SteganoNetLib
                     //SYN
                     if (tcp.ControlBits == TcpControlBits.Synchronize && tcp.ControlBits != (TcpControlBits.Synchronize | TcpControlBits.Acknowledgment))
                     {
-                        //messageCollector.Append TCP stego
-                        //Pickup stego from that packets
+                        //TODO messageCollector.Append TCP stego
+                        //TODO pickup stego from that TCP packet!!!
 
                         AddInfoMessage("Replying with TCP SYN/ACK...");
-
                         SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //replace to static number for debug, could be also steganographic
-                        SeqNumberLocal = 500; //TODO STEGO
+                        SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //TODO STEGO
                         AckNumberLocal = SeqNumberRemote + 1;
 
                         AddInfoMessage(String.Format("SERVER: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
@@ -297,7 +296,12 @@ namespace SteganoNetLib
                     //FIN
                     if (tcp.ControlBits == TcpControlBits.Fin && tcp.ControlBits != (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
                     {
-                        //TODO
+
+
+                        slkajdbfgojasgfbousjbfiuoFB
+                            AND DO RESPONDS TO REQUESTS
+
+                        //TODO neve FIN
                         /*
                         SeqNumberLocal = AckNumberRemote;
                         AckNumberLocal = SeqNumberRemote + 1;

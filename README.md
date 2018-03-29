@@ -72,7 +72,7 @@ Detailed information about used fields at headers and techniques in [technical d
 * Use in LAN or have reachable IP address to let it work properly (NAT principe)
 * you need to **know which** steganography methods **are not conflicting** (you can't use px. ICMP and DNS at the same datagram)
 * project is x86 platform
-* not running on Virtual Machine, needs physical PC for unknown reason
+* not running on Virtual Machine, needs physical PC for unknown reason (VmWare troubles, Azure/Hyper-V troubles, VirtualBox OK)
 * running on WiFi is sensitive for correct MAC address reading, Ethernet is without troubles
 
 

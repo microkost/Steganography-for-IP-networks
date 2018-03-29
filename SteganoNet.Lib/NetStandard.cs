@@ -51,23 +51,23 @@ namespace SteganoNetLib
 
             try
             {
-                var mac = NetDevice.GetLocalMacAddress(ipAddressInterface);
+                var mac = NetDevice.GetLocalMacAddress(ipAddressInterface); //first ask local device for mac based on IP
                 if (mac != null)
                 {
                     return new MacAddress(mac.ToString());
                 }
                 else
                 {
-                    throw new Exception();
+                    throw new Exception(); //is not local IP
                 }
             }
-            catch
+            catch //or ask via ARP (L2)
             {
                 try //source: https://stephenhaunts.com/2014/01/06/getting-the-mac-address-for-a-machine-on-the-network/
                 {
                     byte[] macAddr = new byte[6];
                     uint macAddrLen = (uint)macAddr.Length;
-                    string[] str = new string[(int)macAddrLen]; //bit too classic C but working...
+                    string[] str = new string[(int)macAddrLen]; //a bit too classic C but working...
 
                     if (SendARP(StringIPToInt(ipAddressInterface.ToString()), 0, macAddr, ref macAddrLen) != 0)
                     {
@@ -75,7 +75,7 @@ namespace SteganoNetLib
                         if (SendARP(StringIPToInt(GetDefaultGateway().ToString()), 0, macAddr, ref macAddrLen) != 0)
                         {
                             //if still not valid then return smth universal
-                            return NetDevice.GetRandomMacAddress();
+                            return NetDevice.GetRandomMacAddress(); //problem on 802.11 alias WiFi
                         }
                     }
                     for (int i = 0; i < macAddrLen; i++)
@@ -85,9 +85,18 @@ namespace SteganoNetLib
 
                     return new MacAddress(string.Join(":", str).ToUpper()); //get L2 destination address for inserted IP address    
                 }
-                catch
+                catch //everything fails
                 {
-                    return NetDevice.GetRandomMacAddress();
+                    try 
+                    {
+                        //ask for MAC address of local gateway
+                        return GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString()));
+                    }
+                    catch
+                    {
+                        //no idea, just something valid
+                        return NetDevice.GetRandomMacAddress(); //problem on 802.11 alias WiFi
+                    }
                 }
             }
         }
