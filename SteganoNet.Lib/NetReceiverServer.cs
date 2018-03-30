@@ -276,6 +276,8 @@ namespace SteganoNetLib
                         AddInfoMessage(String.Format("SERVER: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize | TcpControlBits.Acknowledgment);
                         SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayer));
+
+                        //TODO CHECK FIN METHOD, using same
                     }
 
                     //SYN ACK
@@ -283,12 +285,6 @@ namespace SteganoNetLib
                     {
                         AddInfoMessage("Server should not receive SYN-ACK");
                         return;
-                        //NOTE (is valid?) Do not process STEGO from that packets because its duplicite...
-                        //SeqNumberLocal = AckNumberLocal; //outgoing
-                        //AckNumberLocal = AckNumberRemote + 1; //outgoing
-                        //AddInfoMessage(String.Format("SERVER: SYNACK seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
-                        //TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                        //SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayer));
                     }
 
                     //ACK below...
@@ -296,20 +292,15 @@ namespace SteganoNetLib
                     //FIN
                     if (tcp.ControlBits == TcpControlBits.Fin && tcp.ControlBits != (TcpControlBits.Fin | TcpControlBits.Acknowledgment)) //receive FIN or FIN ACK
                     {
-
-
-                        slkajdbfgojasgfbousjbfiuoFB
-                            AND DO RESPONDS TO REQUESTS
-
-                        //TODO neve FIN
-                        /*
+                        //TODO FINISH and test
+                        AddInfoMessage("Replying with TCP FIN/ACK...");
                         SeqNumberLocal = AckNumberRemote;
-                        AckNumberLocal = SeqNumberRemote + 1;
-
-                        AddInfoMessage(">>Ending TCP connection with FIN ACK");
+                        AckNumberLocal = SeqNumberRemote + 1;                                                                                            
                         TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment);
                         SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
-                        */
+
+                        AddInfoMessage("I am self terminating...");
+                        Terminate = true;
                     }
 
                     //FIN ACK                    

@@ -70,7 +70,8 @@ namespace SteganoNetLib
                 { 701, String.Format("DNS request (standard over DNS) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
                 { 703, "DNS request (transaction id) - 16b" },
                 //---
-                { 731, "HTTP GET (over TCP) - 16b" } //TODO
+                { 731, "HTTP GET (over TCP) - 16b" }, //TODO
+                { 733, "HTTP GET randomly - 16b" }, //TODO
                 //HTTP Entity tag headers 
                         
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
@@ -489,28 +490,24 @@ namespace SteganoNetLib
                             sc.AddInfoMessage("7HTTP: legacy method " + methodId + " (no data removed)");                            
                             break;
                         }
-                    case 732: //HTTP
+                    case 733: //HTTP random, edit
                         {                            
                             sc.AddInfoMessage("7HTTP: method " + methodId);
-                            const int usedbits = 16;
+                            const int usedbits = 200;                            
                             try
-                            {
-                                /*
+                            {                                
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                dns.Id = Convert.ToUInt16(partOfSecret, 2);
-                                secret = secret.Remove(0, usedbits);
-                                */
+                                
+                                secret = secret.Remove(0, usedbits);                                
                             }
                             catch
-                            {
-                                /*
+                            {                                
                                 if (secret.Length != 0)
                                 {
-                                    dns.Id = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    //dns.Id = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
                                     secret = secret.Remove(0, secret.Length);
                                 }
-                                return new Tuple<DnsLayer, string>(dns, secret); //nothing more          
-                                */
+                                return new Tuple<HttpLayer, string>(http, secret); //nothing more                                         
                             }
                             break;
                         }

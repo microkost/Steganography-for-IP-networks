@@ -237,7 +237,9 @@ namespace SteganoNetLib
                     List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
                     {
-                        AddInfoMessage("-C-L-I-E-N-T--------------------------------");
+                        //wireshark debug filter (ip.addr == 1.1.1.1 or ip.addr == 1.1.1.2) and (tcp or http)
+
+                        AddInfoMessage("-C-L-I-E-N-T--------------------------------");                        
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
 
                         if (!IsEnstablishedTCP) //make TCP session
@@ -310,6 +312,10 @@ namespace SteganoNetLib
                             //terminating
                             if (SecretMessage.Length == 0)
                             {
+                                //remove last layers since they are in list, not very safe => TODO better
+                                layers.Remove(layers.Last()); //remove HTTP
+                                layers.Remove(layers.Last()); //remove TCP
+
                                 Terminate = true;
                                 AddInfoMessage("TCP is terminating");
 
