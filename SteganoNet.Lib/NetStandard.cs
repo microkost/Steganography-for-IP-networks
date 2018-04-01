@@ -87,7 +87,7 @@ namespace SteganoNetLib
                 }
                 catch //everything fails
                 {
-                    try 
+                    try
                     {
                         //ask for MAC address of local gateway
                         return GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString()));
@@ -284,6 +284,7 @@ namespace SteganoNetLib
             layers.Add(tcpLayer);
             return (layers);
         }
+
         public static uint GetSynOrAckRandNumber() //for generating random SYN and ACK numbers
         {
             //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
@@ -319,31 +320,6 @@ namespace SteganoNetLib
                 }
             }
         }
-
-        public static string GetTcpNextPhrase(string phraseCurrent, string role = "c") //based on role and current phrase return next one...
-        {
-            if (!TCPphrases.Contains(phraseCurrent)) //protection if someone sends some mess
-                return phraseCurrent;
-
-            //phraseCurrent string is case sensitive
-            //{ "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }
-
-            if (role.ToLower().StartsWith("c")) //client states
-            {
-                if (phraseCurrent.Equals("SYN")) { return "ACK SYNACK"; };
-                if (phraseCurrent.Equals("ACK SYNACK")) { return "DATA"; };
-                if (phraseCurrent.Equals("DATA")) { return "DATA"; };
-                if (phraseCurrent.Equals("FIN")) { return "ACK FINACK"; };
-            }
-
-            if (role.ToLower().StartsWith("s")) //server states
-            {
-                throw new NotImplementedException("Server states not done yet");
-            }
-
-            return phraseCurrent;
-        }
-
 
         //---------L7------------------------------------------------------------------------------------------------------------
         public static DnsLayer GetDnsHeaderLayer(ushort id = 65535)
@@ -507,7 +483,7 @@ namespace SteganoNetLib
             HttpLayer httpLayer = new HttpResponseLayer();
             if (http.IsRequest)
             {
-                httpLayer = new HttpResponseLayer //TODO this is just random
+                httpLayer = new HttpResponseLayer
                 {
                     Version = PcapDotNet.Packets.Http.HttpVersion.Version11,
                     StatusCode = 200,
@@ -515,10 +491,14 @@ namespace SteganoNetLib
                     Header = new HttpHeader(new HttpContentLengthField(10)),
                     Body = new Datagram(new byte[10])
                 };
+
+                //TODO implement some better answers...
             }
 
             layers.Add(httpLayer);
             return layers;
         }
+
+
     }
 }

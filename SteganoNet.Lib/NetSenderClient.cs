@@ -239,7 +239,7 @@ namespace SteganoNetLib
                     {
                         //wireshark debug filter (ip.addr == 1.1.1.1 or ip.addr == 1.1.1.2) and (tcp or http)
 
-                        AddInfoMessage("-C-L-I-E-N-T--------------------------------");                        
+                        AddInfoMessage("-C-L-I-E-N-T--------------------------------");
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
 
                         if (!IsEnstablishedTCP) //make TCP session
@@ -257,9 +257,8 @@ namespace SteganoNetLib
                             continue; //since other stego layers are gone
                         }
                         else //TCP enstablished
-                        {                           
+                        {
                             tcpLayer.ControlBits = (TcpControlBits.Push | TcpControlBits.Acknowledgment);
-
                             //TODO idea: should sent standard DNS request when DNS not in methods and its not, because you cant combine DNS and HTTP to one datagram
 
                             //build default http layer
@@ -305,9 +304,33 @@ namespace SteganoNetLib
                             }
                             else
                             {
-                                AddInfoMessage("ACK updated");
+                                //AddInfoMessage("ACK updated, data processing successfully");
                                 AckNumberLocal = (uint)SeqNumberRemote;
+                                //is update of smth needed?
                             }
+
+                            AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize));
+
+                            /*
+                            //WAIT for DATA reply and ACK...
+                            //TODO TEST THIS PART
+                            SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);
+                            if (SeqNumberRemote == null)
+                            {
+                                AddInfoMessage("Answer for request not received...");
+                            }
+                            else
+                            {
+                                AddInfoMessage("TCP DATA received. Sending ACK...");
+
+                                //make new TCP ACK layer
+                                SeqNumberLocal = AckNumberRemote; //the server's sequence number remains
+                                AckNumberLocal = (uint)SeqNumberRemote; //TODO +size of data?
+                                TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(PortRemote, PortLocal, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
+                                tcpPayloadSize = (uint)SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                             
+                                SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.                                
+                            }
+                            */
 
                             //terminating
                             if (SecretMessage.Length == 0)
@@ -329,10 +352,7 @@ namespace SteganoNetLib
                                 }
                             }
 
-                            AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize));
-                            DelayInMs = delayHttp;
                             System.Threading.Thread.Sleep(DelayInMs);
-
                             tcpLayer = null;
                             httpLayer = null;
                             layers.Clear();
@@ -453,11 +473,11 @@ namespace SteganoNetLib
 
         private static bool MakeTcpHandshake(List<Layer> layers, TcpControlBits tcpOperation, bool separateSynOrFinAck, NetSenderClient ns)
         {
+            //tcpOperation is TcpControlBits.Synchronize or TcpControlBits.Fin => one method for terminating and enstablishing           
+            string whatIsHappening = (tcpOperation == TcpControlBits.Synchronize) ? "SYN" : "FIN"; //TODO a bit tricky
+
             ns.SendPacket(layers);
-
-            //tcpOperation is TcpControlBits.Synchronize or TcpControlBits.Fin => one method for terminating and enstablishing
-            string whatIsHappening = (tcpOperation == TcpControlBits.Synchronize) ? "SYN" : "FIN";
-
+            ns.AddInfoMessage("TCP " + whatIsHappening + " sent.");
             ns.AckNumberLocal = ns.SeqNumberLocal + 1; //expected value from oposite side
             ns.AckNumberRemote = ns.SeqNumberLocal + 1; //because we know it
 
@@ -492,7 +512,7 @@ namespace SteganoNetLib
             return true;
         }
 
-        public int SendPacket(List<Layer> layers) //send just from list of layers, building and forwarding the answer; returns value of that packet
+        public int SendPacket(List<Layer> layers, bool WaitForTcpAck = false) //send just from list of layers, building and forwarding the answer; returns value of that packet
         {
             if (layers == null) { return 0; } //extra protection
 
@@ -504,6 +524,7 @@ namespace SteganoNetLib
             try
             {
                 selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
+                int packetSize = 0;
                 using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
                 {
                     PacketBuilder builder = new PacketBuilder(layers);
@@ -511,12 +532,30 @@ namespace SteganoNetLib
                     communicator.SendPacket(packet);
                     try
                     {
-                        return packet.Ethernet.IpV4.Tcp.PayloadLength;
+                        packetSize = packet.Ethernet.IpV4.Tcp.PayloadLength;
                     }
                     catch
-                    {                        
+                    {
                         return 0; //packet is not TCP, we probably dont need to know the size
                     }
+
+                    //if needed then ACK data for TCP
+                    if (WaitForTcpAck) //NOTE: not used, not tested
+                    {
+                        uint? seqNumHere = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal);
+                        if (seqNumHere == null)
+                        {
+                            AddInfoMessage("TCP waiting for ACK failed. - no other action");
+                            //AckNumberRemote -= 1; //remove iteraction to resend                                                       
+                        }
+                        else
+                        {
+                            SeqNumberRemote = seqNumHere;
+                            AddInfoMessage("TCP waiting for ACK successfull");
+                        }
+                    }
+
+                    return packetSize;
                 }
             }
             catch
