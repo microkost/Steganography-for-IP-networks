@@ -59,6 +59,8 @@ namespace SteganoNetLib
                 { 301, "IP Type of service / DiffServ (agresive) - 8b" },
                 { 302, "IP Type of service / DiffServ - 2b" },
                 { 303, String.Format("IP Identification [delay {0} s] - 16b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000) }, //adding exact time value to the name
+                { 305, "IP flags (agresive) - 3b" }, //TODO
+                { 306, "IP flags - 1b" }, //TODO
                 //---
                 { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
                 { 333, "ICMP ping (Identifier) - 16b" },

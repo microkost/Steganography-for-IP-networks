@@ -21,6 +21,7 @@ namespace SteganoNetLib
         public List<int> StegoUsedMethodIds { get; set; } //list of IDs of steganographic techniques
         public string SecretMessage { get; set; } //encrypted message to transfer
         public Queue<string> Messages { get; set; } //status and debug info        
+        private bool Authenticated { get; set; }
 
 
         //timers public - saved to DelayInMs when used                
@@ -90,7 +91,8 @@ namespace SteganoNetLib
             this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpOfInterface);
             this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpOfRemoteHost);
 
-            //bussiness ctor            
+            //bussiness ctor           
+            Authenticated = false; 
             Messages = new Queue<string>();
             Timer = new Stopwatch();
             DelayInMs = delayGeneral;
@@ -111,7 +113,9 @@ namespace SteganoNetLib
                 return;
             }
 
-            SecretMessage = DataOperations.StringASCII2BinaryNumber(SecretMessage); //convert messsage to binary
+            string secretProtectedAscii = DataOperations.ErrorDetectionASCIIFromClean(SecretMessage); //add redundacy for transmission //https://en.wikipedia.org/wiki/Error_detection_and_correction
+            SecretMessage = DataOperations.StringASCII2BinaryNumber(secretProtectedAscii); //convert messsage to binary
+
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            
 
             //get list of domain names in advance if they are going to be used
@@ -127,6 +131,13 @@ namespace SteganoNetLib
             {
                 AddInfoMessage(String.Format("Sending prepared on {0} = {1}...", IpOfInterface, selectedDevice.Description));
                 AddInfoMessage(String.Format("Server settings: Local: {0}:{1}, Remote: {2}:{3}", IpOfInterface, PortLocal, IpOfRemoteHost, PortRemote));
+
+                if (!Authenticated)
+                {
+                    string chapsecret = NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString());
+                    Authenticated = true;
+                }
+
 
                 do
                 {

@@ -53,7 +53,7 @@ namespace SteganoNetLib
             foreach (string num in binNumToConvert)
             {
                 char c = ' ';
-                try 
+                try
                 {
                     c = (char)Convert.ToInt32(num, 2); //missing any input protection
                 }
@@ -64,7 +64,7 @@ namespace SteganoNetLib
                 }
 
                 if (c == '\0') //dont return end of char earlier!
-                    continue;                
+                    continue;
 
                 result += c;
             }
@@ -94,7 +94,7 @@ namespace SteganoNetLib
         public static int MessageASCIItoBitLenght(string messageEncrypted) //returns bit size of message or 0 when error
         {
             string binaryMesssage = StringASCII2BinaryNumber(messageEncrypted);
-            if(binaryMesssage == null) { return 0; };
+            if (binaryMesssage == null) { return 0; };
 
             return binaryMesssage.Count();
         }
@@ -118,6 +118,16 @@ namespace SteganoNetLib
         }
 
         //crc or another consistency check appended to string...
+        public static string ErrorDetectionASCII2Clean(string message) //used by server to check RECEIVED
+        {
+            return message;
+        }
+
+        public static string ErrorDetectionASCIIFromClean(string message) //used by client to put redundancy for SENDING
+        {
+            return message;
+        }
+
         //public static string CalculateCrc32() https://github.com/damieng/DamienGKit/blob/master/CSharp/DamienG.Library/Security/Cryptography/Crc32.cs
     }
 }

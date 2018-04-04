@@ -420,7 +420,7 @@ namespace SteganoNetLib
                     continue;
                 }
 
-                string message = DataOperations.BinaryNumber2stringASCII(word);
+                string message = DataOperations.BinaryNumber2stringASCII(word);                                
 
                 /*
                 //foreach message, foreach word
@@ -433,16 +433,20 @@ namespace SteganoNetLib
                 } 
                 */
 
-                sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
+                //TMP turned off
+                //sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
             }
-
 
             //if more than half of next message contains message 
             //parse by "\n\r"
             //cut of empty lines
             //join together longer and ASCII one
 
-            return sb.ToString();
+            string messageCleaned = sb.ToString().Trim(); //cleaning mess from message
+            string messageChecked = DataOperations.ErrorDetectionASCII2Clean(messageCleaned); //https://en.wikipedia.org/wiki/Error_detection_and_correction
+
+            return messageChecked;
+            //return sb.ToString();
         }
 
 
