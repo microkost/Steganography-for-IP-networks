@@ -13,7 +13,7 @@ namespace SteganoNetLib
         private const int bitsForChar = 8; //how long is char in bits //TODO PROP?
 
         //sender: convert ASCII to BINARY
-        //receiver: reasemble and convert to ASCII
+        //receiver: reasemble and convert BINARY to ASCII
 
         //sender: prepare string for sending (alignment x8) retrun list of <int>
         //receiver: un alingment => string to list of <int>
@@ -87,16 +87,34 @@ namespace SteganoNetLib
         public static bool IsASCII(this string value) //for testing ascii values
         {
             //source http://stackoverflow.com/questions/1522884/c-sharp-ensure-string-contains-only-ascii
-            // ASCII encoding replaces non-ascii with question marks, so we use UTF8 to see if multi-byte sequences are there
+            //ASCII encoding replaces non-ascii with question marks, so we use UTF8 to see if multi-byte sequences are there
             return Encoding.UTF8.GetByteCount(value) == value.Length;
         }
 
-        public static int MessageASCIItoBitLenght(string messageEncrypted) //returns bit size of message or 0 when error
+        public static int MessageASCIItoBitLenght(string message) //returns bit size of message or 0 when error
         {
-            string binaryMesssage = StringASCII2BinaryNumber(messageEncrypted);
+            string binaryMesssage = StringASCII2BinaryNumber(message);
             if (binaryMesssage == null) { return 0; };
 
             return binaryMesssage.Count();
+        }
+
+        public static string ErrorDetectionASCIIFromClean(string message) //used by client to put redundancy for SENDING
+        {
+            //crc or another consistency check appended to string...
+            //CalculateCrc32()
+            //CalculateHash()
+            //append checksum to the end of message (fixed lenght - padding / cutting)
+            return message;
+        }
+
+        public static string ErrorDetectionASCII2Clean(string message) //used by server to check RECEIVED
+        {
+            //crc or another consistency check removed from string...
+            //deapend checkshum positions
+            //calculate hash with the rest
+            //compare with received hash
+            return message;
         }
 
         public static string CalculateHash(string input)
@@ -117,17 +135,10 @@ namespace SteganoNetLib
             return sb.ToString();
         }
 
-        //crc or another consistency check appended to string...
-        public static string ErrorDetectionASCII2Clean(string message) //used by server to check RECEIVED
+        public static string CalculateCrc32(string input)
         {
-            return message;
+            //source https://github.com/damieng/DamienGKit/blob/master/CSharp/DamienG.Library/Security/Cryptography/Crc32.cs
+            throw new NotImplementedException();
         }
-
-        public static string ErrorDetectionASCIIFromClean(string message) //used by client to put redundancy for SENDING
-        {
-            return message;
-        }
-
-        //public static string CalculateCrc32() https://github.com/damieng/DamienGKit/blob/master/CSharp/DamienG.Library/Security/Cryptography/Crc32.cs
     }
 }

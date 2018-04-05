@@ -61,13 +61,17 @@ namespace SteganoNetLib
                 { 303, String.Format("IP Identification [delay {0} s] - 16b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000) }, //adding exact time value to the name
                 { 305, "IP flags (agresive) - 3b" }, //TODO
                 { 306, "IP flags - 1b" }, //TODO
+                    //IP options
+                    //IP fragment offset
                 //---
                 { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
-                { 333, "ICMP ping (Identifier) - 16b" },
-                { 335, "ICMP ping (Sequence number) - 16b" }, //is actually changing all the time               
+                { 333, "ICMP ping (Identifier) - 16b" }, //TODO should be set on start of transaction and not changed in the time
+                { 335, "ICMP ping (Sequence number) - 16b" }, //TODO is actually changing all the time, improve
                 //---
                 //{ 451, "TCP (standard) - 0b" }, //TODO
-                //{ 453, "TCP (ISN) - 32b" }, //TODO
+                    //{ 453, "TCP (ISN) - 32b" }, //TODO
+                    //455 TCP Urgent pointer
+                    //TCP Options - Timestamp                    
                 //---
                 { 701, String.Format("DNS request (standard over DNS) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
                 { 703, "DNS request (transaction id) - 16b" },
@@ -325,6 +329,14 @@ namespace SteganoNetLib
                             }
                             break;
                         }
+                    case 337:
+                        {
+                            //icmp.CodeValue = 1;
+                            //TESTING METHOD
+                            //should be nice to use optional data
+                            break;
+                            
+                        }
                 }
             }
 
@@ -390,6 +402,21 @@ namespace SteganoNetLib
                     case 451: //TCP (standard, for other layers) //SENDER
                         {
                             sc.AddInfoMessage("4TCP: method " + methodId);
+                            break;
+                        }
+                        //453
+                    case 455: //TCP Urgent pointer //SENDER
+                        {
+                            sc.AddInfoMessage("4TCP: method " + methodId);
+                            //TODO implement
+                            //tcp.ControlBits = tcp.TcpControlBits.Urgent;
+                            //TODO tcp.UrgentPointer = 16 bit 
+                            break;
+                        }
+                    case 457: //TCP
+                        {
+                            //display filter: tcp.options.time_stamp
+                            //http://ithitman.blogspot.fi/2013/02/tcp-timestamp-demystified.html
                             break;
                         }
                 }

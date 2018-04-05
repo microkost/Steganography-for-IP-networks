@@ -25,7 +25,7 @@ namespace SteganoNetLib
         public const int TcpTimeoutInMs = 20000; //gap between all packets in miliseconds
         public const int DnsTimeoutInMs = NetSenderClient.delayDns * 2; //how long to wait for official DNS answer
 
-        public static List<String> TCPphrases = new List<string> { "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }; //TCP legal
+        //public static List<String> TCPphrases = new List<string> { "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }; //TCP legal
         private static Random rand = new Random(); //TCP legal values                
 
         //---------L2------------------------------------------------------------------------------------------------------------
@@ -75,7 +75,8 @@ namespace SteganoNetLib
                         if (SendARP(StringIPToInt(GetDefaultGateway().ToString()), 0, macAddr, ref macAddrLen) != 0)
                         {
                             //if still not valid then return smth universal
-                            return NetDevice.GetRandomMacAddress(); //problem on 802.11 alias WiFi
+                            //return NetDevice.GetRandomMacAddress(); //problem on 802.11 alias WiFi
+                            throw new Exception(); //use backup solution
                         }
                     }
                     for (int i = 0; i < macAddrLen; i++)
@@ -287,8 +288,7 @@ namespace SteganoNetLib
 
         public static uint GetSynOrAckRandNumber() //for generating random SYN and ACK numbers
         {
-            //effectively random; it may be any value between 0 and 4,294,967,295, inclusive. 
-            //TODO remove...
+            //effectively random; it may be any value between 0 and 4,294,967,295 (?) inclusive. 
             uint generatedNum = (ushort)rand.Next(0, 65535);
             return generatedNum;
         }
@@ -458,7 +458,7 @@ namespace SteganoNetLib
             }
             else
             {
-                //we probably dont know resolve to everything what is comming...
+                //we probably dont know reply to everything what is comming...
                 //TODO found how to recognize "can't find X: Non-existent domain" and solve...
                 address = System.Net.IPAddress.Parse("208.67.222.222"); //openDNS IP
             }
@@ -498,7 +498,5 @@ namespace SteganoNetLib
             layers.Add(httpLayer);
             return layers;
         }
-
-
     }
 }
