@@ -73,11 +73,13 @@ namespace SteganoNetLib
                     //455 TCP Urgent pointer
                     //TCP Options - Timestamp                    
                 //---
-                { 701, String.Format("DNS request (standard over DNS) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
+                { 701, String.Format("DNS request (standard over UDP) [delay {0} s] - 0b", (double)NetSenderClient.delayDns/1000) },
                 { 703, "DNS request (transaction id) - 16b" },
+                    //707 DNS flags https://tools.ietf.org/html/rfc1035#section-4.1.1, standard 0x00000100
+                    //705 query contains answer, probably not valid...
                 //---
-                { 731, "HTTP GET (over TCP) - 16b" }, //TODO
-                { 733, "HTTP GET randomly - 16b" }, //TODO
+                { 731, "HTTP GET (over TCP) - 0b" }, //TODO
+                { 733, "HTTP GET facebook picture - 64b" }, //TODO
                 //HTTP Entity tag headers 
                         
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
@@ -335,7 +337,7 @@ namespace SteganoNetLib
                             //TESTING METHOD
                             //should be nice to use optional data
                             break;
-                            
+
                         }
                 }
             }
@@ -404,7 +406,7 @@ namespace SteganoNetLib
                             sc.AddInfoMessage("4TCP: method " + methodId);
                             break;
                         }
-                        //453
+                    //453
                     case 455: //TCP Urgent pointer //SENDER
                         {
                             sc.AddInfoMessage("4TCP: method " + methodId);
@@ -417,6 +419,9 @@ namespace SteganoNetLib
                         {
                             //display filter: tcp.options.time_stamp
                             //http://ithitman.blogspot.fi/2013/02/tcp-timestamp-demystified.html
+                            //https://github.com/PcapDotNet/Pcap.Net/blob/master/PcapDotNet/src/PcapDotNet.Packets/Transport/TcpOptionTimestamp.cs
+
+                            //tcp.TcpOptions = new TcpOptionTimestamp(555, 555);
                             break;
                         }
                 }
@@ -465,6 +470,14 @@ namespace SteganoNetLib
                             }
                             break;
                         }
+                    case 705:
+                        {
+                            DnsQueryResourceRecord dnsRequest = ((DnsQueryResourceRecord)dns.Queries.First());
+                            string stegoInFormOfIpAddress = "255.255.255.255";
+                            IpV4Address fakeIp = new IpV4Address(stegoInFormOfIpAddress);
+                            dns.Answers.Add(new DnsDataResourceRecord(dnsRequest.DomainName, dnsRequest.DnsType, DnsClass.Internet, dnsRequest.Ttl, new DnsResourceDataIpV4(fakeIp)));
+                            break;
+                        }
                 }
             }
             return new Tuple<DnsLayer, string>(dns, secret);
@@ -489,6 +502,12 @@ namespace SteganoNetLib
                             rs.AddInfoMessage("7DNS: method " + methodId);
                             string binvalue = Convert.ToString(dns.Id, 2);
                             BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            break;
+                        }
+                    case 705:
+                        {
+                            //throw NotImplementedException;
+                            //alisfliksajfkaf++;
                             break;
                         }
                 }
@@ -516,21 +535,37 @@ namespace SteganoNetLib
                 {
                     case 731: //HTTP clean //SENDER
                         {
-                            sc.AddInfoMessage("7HTTP: legacy method " + methodId + " (no data removed)");                            
+                            sc.AddInfoMessage("7HTTP: legacy method " + methodId + " (no data removed)");
                             break;
                         }
-                    case 733: //HTTP random, edit
-                        {                            
+                    case 733: //HTTP GET facebook picture //SENDER
+                        {
                             sc.AddInfoMessage("7HTTP: method " + methodId);
-                            const int usedbits = 200;                            
+                            const int usedbits = 200;
                             try
-                            {                                
+                            {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                
-                                secret = secret.Remove(0, usedbits);                                
+
+                                //request for FB image                                                                
+                                //https://scontent-arn2-1.xx.fbcdn.net/v/t1.0-9/28783581_2044295905785459_4786842833526980608_o.jpg?_nc_cat=0&oh=f393eabff543c0014fa7d549a606cd72&oe=5B3439EE
+                                //https://scontent-arn2-1.xx.fbcdn.net/v/t31.0-8/26756412_2019306211617762_7982736838983831551_o.jpg?_nc_cat=0&oh=1fe51c45d8053ae7b0f95570763e3cfd&oe=5B729DA3
+                                //https://www.facebook.com/<username>/photos/a.1693236240891429.1073741827.1693231710891882/2042454925969557/?type=3&theater
+
+                                //instagram                                
+                                //https://scontent-arn2-1.cdninstagram.com/vp/8c1b8efbaac6831e2a15d59e6a047276/5B6D8993/t51.2885-15/e35/29417270_195771601230887_3084806938333020160_n.jpg
+                                //https://scontent-arn2-1.cdninstagram.com/vp/d9d046183c558e2065c5c6b77ded7cd8/5B74D9C8/t51.2885-15/e35/29417740_596673960668154_5630438044696838144_n.jpg
+
+                                //twitter
+                                //https://pbs.twimg.com/media/DUj28AMXkAEy8q7.jpg:large
+                                //https://pbs.twimg.com/media/DZ-5xFDU0AAJRPu.jpg:large
+
+                                //pinterest
+
+
+                                secret = secret.Remove(0, usedbits);
                             }
                             catch
-                            {                                
+                            {
                                 if (secret.Length != 0)
                                 {
                                     //dns.Id = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding

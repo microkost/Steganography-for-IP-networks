@@ -69,7 +69,7 @@ namespace SteganoNet.UI.Console
             for (int i = 0; i < allmethods.Count; i++) //method printer
             {
                 var item = allmethods.ElementAt(i);
-                System.Console.WriteLine(String.Format("\t\t{0}.\t {1} (id: {2})", i + 1, item.Value, item.Key));
+                System.Console.WriteLine(String.Format("\t\t{0}.  {1} (id: {2})", i + 1, item.Value, item.Key));
             }
             System.Console.Write("\tEnter numbers of methods separated by comma (1,2): ");
             string selectionIndexes = System.Console.ReadLine();

@@ -322,7 +322,7 @@ namespace SteganoNetLib
 
                             AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize));
 
-                            /*
+                            
                             //WAIT for DATA reply and ACK...
                             //TODO TEST THIS PART
                             SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);
@@ -340,8 +340,7 @@ namespace SteganoNetLib
                                 TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(PortRemote, PortLocal, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                                 tcpPayloadSize = (uint)SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                             
                                 SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.                                
-                            }
-                            */
+                            }                            
 
                             //terminating
                             if (SecretMessage.Length == 0)
@@ -523,7 +522,7 @@ namespace SteganoNetLib
             return true;
         }
 
-        public int SendPacket(List<Layer> layers, bool WaitForTcpAck = false) //send just from list of layers, building and forwarding the answer; returns value of that packet
+        public int SendPacket(List<Layer> layers/*, bool WaitForTcpAck = false*/) //send just from list of layers, building and forwarding the answer; returns value of that packet
         {
             if (layers == null) { return 0; } //extra protection
 
@@ -550,6 +549,7 @@ namespace SteganoNetLib
                         return 0; //packet is not TCP, we probably dont need to know the size
                     }
 
+                    /*
                     //if needed then ACK data for TCP
                     if (WaitForTcpAck) //NOTE: not used, not tested
                     {
@@ -565,6 +565,7 @@ namespace SteganoNetLib
                             AddInfoMessage("TCP waiting for ACK successfull");
                         }
                     }
+                    */
 
                     return packetSize;
                 }
