@@ -115,6 +115,7 @@ namespace SteganoNetLib
 
             string secretProtectedAscii = DataOperations.ErrorDetectionASCIIFromClean(SecretMessage); //add redundacy for transmission //https://en.wikipedia.org/wiki/Error_detection_and_correction
             SecretMessage = DataOperations.StringASCII2BinaryNumber(secretProtectedAscii); //convert messsage to binary
+            AddInfoMessage("DEBUG: Message in binary is: " + SecretMessage);
 
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            
 
@@ -135,12 +136,14 @@ namespace SteganoNetLib
                 if (!Authenticated)
                 {
                     string chapsecret = NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString());
+                    //TODO
                     Authenticated = true;
                 }
 
-
                 do
                 {
+                    AddInfoMessage("-C-L-I-E-N-T--------------------------------");
+
                     //creating implicit layers
                     List<Layer> layers = new List<Layer>(); //list of used layers
                     layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2                    
@@ -156,7 +159,7 @@ namespace SteganoNetLib
                         if (Timer.ElapsedMilliseconds > IpIdentificationChangeSpeedInMs)
                         {
                             FirstRun = true;
-                            AddInfoMessage("\t>Timer reseted after: " + Timer.ElapsedMilliseconds);
+                            AddInfoMessage("IP identification timer reseted after: " + Timer.ElapsedMilliseconds/1000 + " sec.");
                             Timer.Restart();
                         }
                         if (FirstRun == false && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
@@ -248,9 +251,7 @@ namespace SteganoNetLib
                     List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
                     {
-                        //wireshark debug filter (ip.addr == 1.1.1.1 or ip.addr == 1.1.1.2) and (tcp or http)
-
-                        AddInfoMessage("-C-L-I-E-N-T--------------------------------");
+                        //wireshark debug filter (ip.addr == 1.1.1.1 or ip.addr == 1.1.1.2) and (tcp or http)                        
                         TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
 
                         if (!IsEnstablishedTCP) //make TCP session

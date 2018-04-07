@@ -114,6 +114,8 @@ namespace SteganoNetLib
             //deapend checkshum positions
             //calculate hash with the rest
             //compare with received hash
+
+            //return null when corrupted
             return message;
         }
 

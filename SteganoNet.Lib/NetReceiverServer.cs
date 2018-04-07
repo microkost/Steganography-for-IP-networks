@@ -155,7 +155,8 @@ namespace SteganoNetLib
             //make answer packet and send it if needed
             //when is terminated, run reasembling to message
 
-            AddInfoMessage("received IPv4: " + (packet.Timestamp.ToString("yyyy-MM-dd hh:mm:ss.fff") + " length:" + packet.Length));
+            AddInfoMessage("-S-E-R-V-E-R--------------------------------");
+            AddInfoMessage("received IPv4: " + (packet.Timestamp.ToString("hh:mm:ss.fff") + " length:" + packet.Length));
 
             //same lenght is usually same stego stream
             if (PacketSize != packet.Length) //temporary recognizing of different streams
@@ -178,7 +179,10 @@ namespace SteganoNetLib
                 tcp = (ip.Tcp.IsValid) ? ip.Tcp : null;
                 udp = (ip.Udp.IsValid) ? ip.Udp : null;
                 dns = (udp.Dns.IsValid) ? udp.Dns : null;
-                http = (tcp.Http.IsValid) ? tcp.Http : null;
+                if (tcp != null)
+                {
+                    http = (tcp.Http.IsValid) ? tcp.Http : null;
+                }
             }
             catch (Exception ex)
             {
@@ -251,12 +255,10 @@ namespace SteganoNetLib
             //HTTP methods
             List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
-            {                
+            {
                 //update local TCP values from arriving packet
                 SeqNumberRemote = tcp.SequenceNumber;
-                AckNumberRemote = tcp.AcknowledgmentNumber;
-
-                AddInfoMessage("-S-E-R-V-E-R--------------------------------");
+                AckNumberRemote = tcp.AcknowledgmentNumber;                
 
                 if (tcp.ControlBits == TcpControlBits.Synchronize || (tcp.ControlBits == TcpControlBits.Synchronize | tcp.ControlBits == TcpControlBits.Acknowledgment) || tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment))
                 {
@@ -295,7 +297,7 @@ namespace SteganoNetLib
                         //TODO FINISH and test
                         AddInfoMessage("Replying with TCP FIN/ACK...");
                         SeqNumberLocal = AckNumberRemote;
-                        AckNumberLocal = SeqNumberRemote + 1;                                                                                            
+                        AckNumberLocal = SeqNumberRemote + 1;
                         TcpLayer tcLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Fin | TcpControlBits.Acknowledgment);
                         SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcLayer));
 
@@ -317,13 +319,13 @@ namespace SteganoNetLib
 
                     if (tcp.Payload.Length == 0) //when is just ACK (after SYN/ACK)
                     {
-                        AddInfoMessage("Server: ACK received"); 
+                        AddInfoMessage("Server: ACK received");
                         return; //no reaction to that datagram
                     }
 
-                    if(tcp.ControlBits == (TcpControlBits.Push | TcpControlBits.Acknowledgment)) //ACK of received data
+                    if (tcp.ControlBits == (TcpControlBits.Push | TcpControlBits.Acknowledgment)) //ACK of received data
                     {
-                        AddInfoMessage("Server: PSH received, ACK outgoing...");                        
+                        AddInfoMessage("Server: PSH received, ACK outgoing...");
                         //This ACK packet is sent by the server solely to acknowledge the data sent by the client while upper layers process the HTTP request.
                         SeqNumberLocal = AckNumberRemote; //the server's sequence number remains                       
                         AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength); //acknowledgement number has increased by the length of the payload
@@ -340,7 +342,7 @@ namespace SteganoNetLib
                     messageCollector.Append(NetSteganography.GetContent7Http(http, StegoUsedMethodIds, this));
                     PortLocal = PortLocalHttp;
                     PortRemote = (PortRemote == 0) ? tcp.SourcePort : PortRemote; //if local port is not specified, save it from incoming
-                    SendReplyPacket(NetStandard.GetHttpPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, tcpLayer, http));                    
+                    SendReplyPacket(NetStandard.GetHttpPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, tcpLayer, http));
                 }
             }
 
@@ -407,41 +409,67 @@ namespace SteganoNetLib
             string[] streams = Regex.Split(sb.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
 
             sb.Clear(); //reused for output
+            StringBuilder sbBinary = new StringBuilder();
             foreach (string word in streams)
             {
                 if (word.Length < 8) //cut off mess (one char have 8 bits)
                 {
-                    AddInfoMessage("Info: empty word removed from received messages. ");
+
+                    Console.WriteLine("Info: empty word removed from received messages. ");
                     continue;
                 }
 
-                string message = DataOperations.BinaryNumber2stringASCII(word);                                
+                //all messages are part of one binary
+                sbBinary.Append(word);
 
-                /*
-                //foreach message, foreach word
-                //count non-ascii... ;
-                //if count of non-ascii > wordchar.Count then remove...
-                if(DataOperations.IsASCII(message))
-                {
-                    AddInfoMessage("Info: Non ascii message removed from server");
-                    continue;
-                } 
-                */
-
-                //TMP turned off
-                //sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
+                //each message is separate
+                string message = DataOperations.BinaryNumber2stringASCII(word); //dont trim!
+                sb.Append(message);
             }
 
+            /*
+            //foreach message, foreach word
+            //count non-ascii... ;
+            //if count of non-ascii > wordchar.Count then remove...
+            if(DataOperations.IsASCII(message))
+            {
+                AddInfoMessage("Info: Non ascii message removed from server");
+                continue;
+            } 
+            */
+            //TMP turned off
+            //sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
             //if more than half of next message contains message 
             //parse by "\n\r"
             //cut of empty lines
             //join together longer and ASCII one
 
-            string messageCleaned = sb.ToString().Trim(); //cleaning mess from message
-            string messageChecked = DataOperations.ErrorDetectionASCII2Clean(messageCleaned); //https://en.wikipedia.org/wiki/Error_detection_and_correction
+            Console.WriteLine("\n"); //just to make it visible in console
+            Console.WriteLine("DEBUG: Message in binary is: " + sbBinary.ToString());
 
-            return messageChecked;
-            //return sb.ToString();
+            string messageFromLongBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
+            //add consistency check
+            Console.WriteLine("Message from long binary: " + messageFromLongBinary);
+
+            string messageOriginal = sb.ToString();
+            string messageChecked = DataOperations.ErrorDetectionASCII2Clean(messageOriginal); //https://en.wikipedia.org/wiki/Error_detection_and_correction
+
+            if (messageChecked.Equals(messageFromLongBinary)) //test of methodology
+            {
+                Console.WriteLine("Info: Message after assembling fits!");
+            }
+
+
+            if (messageChecked == null)
+            {
+                Console.WriteLine("Warning! Following message could be corrupted.");
+                return messageOriginal;
+            }
+            else
+            {
+                //Console.WriteLine("Info: Following message passed consistency test.");
+                return messageChecked;
+            }
         }
 
 
@@ -460,7 +488,7 @@ namespace SteganoNetLib
             {
                 PacketBuilder builder = new PacketBuilder(layers);
                 Packet packet = builder.Build(DateTime.Now);
-                communicator.SendPacket(packet);                
+                communicator.SendPacket(packet);
                 AddInfoMessage("Reply datagram sent from server (" + layers.Last().ToString() + ").");
             }
             return;
