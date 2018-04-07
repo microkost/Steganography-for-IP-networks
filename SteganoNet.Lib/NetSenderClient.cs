@@ -306,27 +306,29 @@ namespace SteganoNetLib
                             uint tcpPayloadSize = (uint)SendPacket(layers); //sending packet now, not at the end of method due to waiting for ack...                             
                             SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.
 
-                            //WAIT for ACK of sended DATA
+                            
+                            //just WAIT for ACK of sended DATA
                             //Having received some bytes of data from the server, the client increases its acknowledgement number from 1 to 1449.
-                            SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal);
-                            if (SeqNumberRemote == null)
+                            //SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal);
+                            Packet receivedAckPack = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Acknowledgment);
+                            if (receivedAckPack == null /*SeqNumberRemote == null*/)
                             {
-                                AddInfoMessage("Problem with receiving...");
+                                AddInfoMessage("Problem with receiving TCP ACK...");
                             }
                             else
                             {
-                                //AddInfoMessage("ACK updated, data processing successfully");
-                                AckNumberLocal = (uint)SeqNumberRemote;
-                                //is update of smth needed?
-                            }
-
+                                //SeqNumberLocal = AckNumberRemote; //is update of smth needed?
+                                //AckNumberLocal = (uint)SeqNumberRemote;     
+                                SeqNumberLocal = receivedAckPack.Ethernet.IpV4.Tcp.AcknowledgmentNumber;
+                                AckNumberLocal = receivedAckPack.Ethernet.IpV4.Tcp.SequenceNumber;
+                            }                            
+                            
                             AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize));
 
                             
-                            //WAIT for DATA reply and ACK...
-                            //TODO TEST THIS PART
-                            SeqNumberRemote = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, AckNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);
-                            if (SeqNumberRemote == null)
+                            //WAIT for DATA reply and send ACK...
+                            Packet reply = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);                            
+                            if (reply == null)
                             {
                                 AddInfoMessage("Answer for request not received...");
                             }
@@ -334,13 +336,24 @@ namespace SteganoNetLib
                             {
                                 AddInfoMessage("TCP DATA received. Sending ACK...");
 
+                                SeqNumberRemote = reply.Ethernet.IpV4.Tcp.SequenceNumber;
+                                AckNumberRemote = reply.Ethernet.IpV4.Tcp.AcknowledgmentNumber;
+                                
+                                int payload = reply.Ethernet.IpV4.Tcp.PayloadLength;
+                                AddInfoMessage("Client received data of: " + payload);
+                                //should pickup HTTP layer here with response
+
+                                SeqNumberLocal = AckNumberRemote + tcpPayloadSize; //the server's sequence number remains
+                                SeqNumberLocal = (uint)(AckNumberRemote + payload); //the server's sequence number remains
+                                //AckNumberLocal = (uint)(SeqNumberRemote + payload);
+
                                 //make new TCP ACK layer
-                                SeqNumberLocal = AckNumberRemote; //the server's sequence number remains
-                                AckNumberLocal = (uint)SeqNumberRemote; //TODO +size of data?
+
+
                                 TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(PortRemote, PortLocal, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                                 tcpPayloadSize = (uint)SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                             
-                                SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.                                
-                            }                            
+                                //SeqNumberLocal += tcpPayloadSize; //The sequence number of the client has been increased because of the last packet it sent.                                
+                            }                               
 
                             //terminating
                             if (SecretMessage.Length == 0)
@@ -534,7 +547,6 @@ namespace SteganoNetLib
             try
             {
                 selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter
-                int packetSize = 0;
                 using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
                 {
                     PacketBuilder builder = new PacketBuilder(layers);
@@ -542,32 +554,12 @@ namespace SteganoNetLib
                     communicator.SendPacket(packet);
                     try
                     {
-                        packetSize = packet.Ethernet.IpV4.Tcp.PayloadLength;
+                        return packet.Ethernet.IpV4.Tcp.PayloadLength;
                     }
                     catch
                     {
                         return 0; //packet is not TCP, we probably dont need to know the size
-                    }
-
-                    /*
-                    //if needed then ACK data for TCP
-                    if (WaitForTcpAck) //NOTE: not used, not tested
-                    {
-                        uint? seqNumHere = NetStandard.WaitForTcpAck(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal);
-                        if (seqNumHere == null)
-                        {
-                            AddInfoMessage("TCP waiting for ACK failed. - no other action");
-                            //AckNumberRemote -= 1; //remove iteraction to resend                                                       
-                        }
-                        else
-                        {
-                            SeqNumberRemote = seqNumHere;
-                            AddInfoMessage("TCP waiting for ACK successfull");
-                        }
-                    }
-                    */
-
-                    return packetSize;
+                    }                    
                 }
             }
             catch

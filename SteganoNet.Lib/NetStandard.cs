@@ -307,8 +307,36 @@ namespace SteganoNetLib
                     if (communicator.ReceivePacket(out Packet packet) == PcapDotNet.Core.PacketCommunicatorReceiveResult.Ok && packet.Ethernet.IpV4.Tcp.ControlBits == waitForBit)
                     {
                         if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == ackNumberExpected) //debug point
-                        {
+                        {                            
                             return packet.Ethernet.IpV4.Tcp.SequenceNumber; //if ACK fits, return SEQ
+                        }
+                    }
+
+                    if (sw.ElapsedMilliseconds > TcpTimeoutInMs) //timeout break
+                    {
+                        sw.Stop();
+                        return null;
+                    }
+                }
+            }
+        }
+
+        public static Packet CatchTcpReply(IpV4Address SourceIpV4, IpV4Address DestinationIpV4, ushort _sourcePort, ushort _destinationPort, uint ackNumberExpected, TcpControlBits waitForBit) //parametres are switching inside method, not in call
+        {
+            PcapDotNet.Core.PacketDevice selectedDevice = NetDevice.GetSelectedDevice(SourceIpV4); //take the selected adapter
+            using (PcapDotNet.Core.PacketCommunicator communicator = selectedDevice.Open(65536, PcapDotNet.Core.PacketDeviceOpenAttributes.Promiscuous, 1000))
+            {
+                communicator.SetFilter("tcp and src " + DestinationIpV4 + " and dst " + SourceIpV4 + " and src port " + _destinationPort + " and dst port " + _sourcePort);
+                Stopwatch sw = new Stopwatch(); //for timeout
+                sw.Start();
+
+                while (true)
+                {
+                    if (communicator.ReceivePacket(out Packet packet) == PcapDotNet.Core.PacketCommunicatorReceiveResult.Ok && packet.Ethernet.IpV4.Tcp.ControlBits == waitForBit)
+                    {
+                        if (packet.Ethernet.IpV4.Tcp.AcknowledgmentNumber == ackNumberExpected) //debug point
+                        {
+                            return packet; //if ACK fits, return whole packet for parsing
                         }
                     }
 

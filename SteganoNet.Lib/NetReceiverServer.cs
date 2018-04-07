@@ -318,7 +318,6 @@ namespace SteganoNetLib
                     if (tcp.Payload.Length == 0) //when is just ACK (after SYN/ACK)
                     {
                         AddInfoMessage("Server: ACK received"); 
-                        //TODO some check if have right value...
                         return; //no reaction to that datagram
                     }
 
@@ -327,17 +326,22 @@ namespace SteganoNetLib
                         AddInfoMessage("Server: PSH received, ACK outgoing...");
                         //solve TCP for ACK of just data receiving
                         //This ACK packet is sent by the server solely to acknowledge the data sent by the client while upper layers process the HTTP request.
-                        SeqNumberLocal = AckNumberRemote; //the server's sequence number remains
+                        SeqNumberLocal = AckNumberRemote; //the server's sequence number remains                       
                         AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength); //acknowledgement number has increased by the length of the payload
                         TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                        SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayerReply)); //acking
+                        SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayerReply)); //acking                        
+                        //TROUBLES HERE                                                                                                                                                             
                         //return;
                     }
-                  
-                    //TODO troubles with lower layers payload steganography
+
+                    //is to fast!
+                    System.Threading.Thread.Sleep(NetSenderClient.delayHttp/2);
 
                     //solve TCP for DATA push (actual reply to http request)
                     //SeqNumberLocal and AckNumberLocal is still same, since none of its packets prior to this one have carried a payload                    
+                    //TODO server need to increase ACK of size of PAYLOAD which he received                    
+                    SeqNumberLocal = AckNumberRemote;
+                    AckNumberLocal = (uint)(SeqNumberRemote + tcp.PayloadLength);
                     TcpLayer tcpLayer = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, (TcpControlBits.Push | TcpControlBits.Acknowledgment));
 
                     //solve HTTP for reply
@@ -345,6 +349,7 @@ namespace SteganoNetLib
                     PortLocal = PortLocalHttp;
                     PortRemote = (PortRemote == 0) ? tcp.SourcePort : PortRemote; //if local port is not specified, save it from incoming
                     SendReplyPacket(NetStandard.GetHttpPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, tcpLayer, http));
+                    
                 }
             }
 
@@ -452,7 +457,7 @@ namespace SteganoNetLib
 
         public void SendReplyPacket(List<Layer> layers) //send answer just from list of layers, building and forwarning the answer
         {
-            if (layers == null) { return; } //extra protection
+            if (layers == null) { return; }
 
             if (layers.Count < 3) //TODO should use complex test of content as client method
             {
@@ -460,17 +465,13 @@ namespace SteganoNetLib
                 return;
             }
 
-            PacketBuilder builder = new PacketBuilder(layers);
-            Packet packet = builder.Build(DateTime.Now);
-
             selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
-                communicator.SendPacket(packet);
-
-                string nameOflayer = layers.Last().ToString();
-                //should somehow inform for which packet is replying... Parse layers and show non L2 nor L3
-                AddInfoMessage("Reply datagram sent from server (" + nameOflayer + ").");
+                PacketBuilder builder = new PacketBuilder(layers);
+                Packet packet = builder.Build(DateTime.Now);
+                communicator.SendPacket(packet);                
+                AddInfoMessage("Reply datagram sent from server (" + layers.Last().ToString() + ").");
             }
             return;
         }
