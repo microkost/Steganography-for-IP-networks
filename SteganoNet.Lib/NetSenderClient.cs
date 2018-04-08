@@ -140,9 +140,10 @@ namespace SteganoNetLib
                     Authenticated = true;
                 }
 
+                int messageCounter = 0;
                 do
                 {
-                    AddInfoMessage("-C-L-I-E-N-T--------------------------------");
+                    AddInfoMessage("-C-L-I-E-N-T--------------------------------" + (++messageCounter));
 
                     //creating implicit layers
                     List<Layer> layers = new List<Layer>(); //list of used layers
@@ -308,7 +309,7 @@ namespace SteganoNetLib
                             SeqNumberLocal += tcpPayloadSize; //the sequence number of the client has been increased because of the last packet it sent.
                             //AckNumberLocal is going to be increased later by the size of received data
 
-                            
+
                             //just WAIT for ACK of sended DATA                            
                             Packet receivedAckPack = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Acknowledgment);
                             if (receivedAckPack == null)
@@ -335,7 +336,7 @@ namespace SteganoNetLib
                                 AckNumberLocal = (uint)(reply.Ethernet.IpV4.Tcp.SequenceNumber + reply.Ethernet.IpV4.Tcp.PayloadLength); //increased by size of received data
                                 //make new TCP ACK layer for ACKing received data
                                 TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                                SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                             
+                                SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                                                             
                             }                               
 
                             //terminating
@@ -401,15 +402,16 @@ namespace SteganoNetLib
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
                     if (SecretMessage.Length == 0)
                     {
-                        AddInfoMessage(String.Format("All message departured, you can stop the process by pressing ESC")); //TODO it's confusing when is running from GUI
+                        AddInfoMessage(String.Format("All messages ({0}) departured, you can stop the process by pressing ESC", messageCounter)); //TODO it's confusing when is running from GUI
+                        
                         Terminate = true;
                     }
 
                     //build packet and send
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
-                    communicator.SendPacket(packet);
-                    System.Threading.Thread.Sleep(DelayInMs);
+                    communicator.SendPacket(packet);                    
+                    System.Threading.Thread.Sleep(DelayInMs);                    
                 }
                 while (!Terminate || SecretMessage.Length != 0);
             }

@@ -39,6 +39,8 @@ namespace SteganoNetLib
         private bool FirstRun { get; set; }
         private bool IsListenedSameInterface { get; set; } //if debug mode is running
 
+        private int messageCounter = 0; //jsut counting processed messages
+
         private uint AckNumberLocal { get; set; } //for TCP answers
         private uint AckNumberRemote { get; set; } //for TCP answers
         private uint SeqNumberLocal { get; set; } //for TCP answers
@@ -143,8 +145,7 @@ namespace SteganoNetLib
                 AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
                 return;
             }
-        }
-
+        }        
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
             //How it works:
@@ -155,7 +156,7 @@ namespace SteganoNetLib
             //make answer packet and send it if needed
             //when is terminated, run reasembling to message
 
-            AddInfoMessage("-S-E-R-V-E-R--------------------------------");
+            AddInfoMessage("-S-E-R-V-E-R--------------------------------" + (++messageCounter));
             AddInfoMessage("received IPv4: " + (packet.Timestamp.ToString("hh:mm:ss.fff") + " length:" + packet.Length));
 
             //same lenght is usually same stego stream
@@ -258,7 +259,7 @@ namespace SteganoNetLib
             {
                 //update local TCP values from arriving packet
                 SeqNumberRemote = tcp.SequenceNumber;
-                AckNumberRemote = tcp.AcknowledgmentNumber;                
+                AckNumberRemote = tcp.AcknowledgmentNumber;
 
                 if (tcp.ControlBits == TcpControlBits.Synchronize || (tcp.ControlBits == TcpControlBits.Synchronize | tcp.ControlBits == TcpControlBits.Acknowledgment) || tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment))
                 {
@@ -394,82 +395,90 @@ namespace SteganoNetLib
             return GetSecretMessage(this.StegoBinary);
         }
 
-        private string GetSecretMessage(List<StringBuilder> stegoBinary) //private internal method, source list of binary strings (lighter)
+        private string GetSecretMessage(List<StringBuilder> stegoBinary) //converts list of binaries to messages and make test
         {
             if (stegoBinary.Count == 0) //nothing to show
             {
-                return "error: no packets captured => no message contained";
+                return "Error! No packets captured => no message contained";
             }
 
-            //TODO if (stegoBinary.Count > XXX) //if message is too big
+            if (stegoBinary.Count > 65535) //if message is too big for some reason...
+            {
+                return "Error! Received too many messages for processing! ";
+            }
 
-            StringBuilder sb = new StringBuilder();
-            stegoBinary.ForEach(item => sb.Append(item)); //convert many binary substrings to one message
+            StringBuilder sbSingle = new StringBuilder();
+            stegoBinary.ForEach(item => sbSingle.Append(item)); //convert many binary substrings to one message
+            string[] streams = Regex.Split(sbSingle.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
 
-            string[] streams = Regex.Split(sb.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
-
-            sb.Clear(); //reused for output
+            sbSingle.Clear(); //reused for output
             StringBuilder sbBinary = new StringBuilder();
             foreach (string word in streams)
             {
                 if (word.Length < 8) //cut off mess (one char have 8 bits)
                 {
-
-                    Console.WriteLine("Info: empty word removed from received messages. ");
+                    //Console.WriteLine("Info: empty word removed from received messages. ");
                     continue;
                 }
 
-                //all messages are part of one binary
-                sbBinary.Append(word);
-
-                //each message is separate
-                string message = DataOperations.BinaryNumber2stringASCII(word); //dont trim!
-                sb.Append(message);
+                //two methods of proceesing...              
+                sbBinary.Append(word); //all messages are part of one binary                
+                sbSingle.Append(DataOperations.BinaryNumber2stringASCII(word)); //each message is separate
             }
 
-            /*
-            //foreach message, foreach word
-            //count non-ascii... ;
-            //if count of non-ascii > wordchar.Count then remove...
-            if(DataOperations.IsASCII(message))
-            {
-                AddInfoMessage("Info: Non ascii message removed from server");
-                continue;
-            } 
-            */
-            //TMP turned off
-            //sb.Append(message + "\n\r"); //line splitter //TODO: CRYPTOGRAPHY IS NOT HANDLING THIS WELL!
-            //if more than half of next message contains message 
-            //parse by "\n\r"
-            //cut of empty lines
-            //join together longer and ASCII one
+            Console.WriteLine("\n"); //just to make it visible in console           
+            string messageFromSingle = sbSingle.ToString();
+            string messageFromBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
 
-            Console.WriteLine("\n"); //just to make it visible in console
+            if (!messageFromSingle.Equals(messageFromBinary)) //test of methodology
+            {
+                Console.WriteLine("Warning: Message and check messages are not same after assembling!");
+            }
+
+            Console.WriteLine("DEBUG: Message from long binary: " + messageFromBinary);
             Console.WriteLine("DEBUG: Message in binary is: " + sbBinary.ToString());
 
-            string messageFromLongBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
-            //add consistency check
-            Console.WriteLine("Message from long binary: " + messageFromLongBinary);
+            //consistency check https://en.wikipedia.org/wiki/Error_detection_and_correction
+            string messageSingleChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromSingle);
+            string messageBinaryChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromBinary);
 
-            string messageOriginal = sb.ToString();
-            string messageChecked = DataOperations.ErrorDetectionASCII2Clean(messageOriginal); //https://en.wikipedia.org/wiki/Error_detection_and_correction
-
-            if (messageChecked.Equals(messageFromLongBinary)) //test of methodology
+            //decisions which one is correct to return
+            if (messageBinaryChecked == null && messageSingleChecked != null) //one is not null
             {
-                Console.WriteLine("Info: Message after assembling fits!");
+                return messageSingleChecked;
             }
 
+            if (messageBinaryChecked != null && messageSingleChecked == null) //one is not null
+            {
+                return messageBinaryChecked;
+            }
 
-            if (messageChecked == null)
+            if (messageBinaryChecked == null && messageSingleChecked == null) //both of them are null
             {
-                Console.WriteLine("Warning! Following message could be corrupted.");
-                return messageOriginal;
+                return ("Warning! Following messages are probably corrupted." + messageFromSingle + "\n\r" + messageFromBinary);
             }
-            else
+
+            if (messageBinaryChecked != null && messageSingleChecked != null) //none of them are null
             {
-                //Console.WriteLine("Info: Following message passed consistency test.");
-                return messageChecked;
+                if (messageSingleChecked.Equals(messageBinaryChecked)) //when they are same
+                {
+                    return messageBinaryChecked; //it does not matter                    
+                }
+                else
+                {
+                    Console.WriteLine("Warning: Message and check messages are not same after assembling!");
+                    if (messageBinaryChecked.Length > messageFromSingle.Length) //return longer one
+                    {
+                        return messageBinaryChecked;
+                    }
+                    else
+                    {
+                        return messageFromSingle;
+                    }
+                }
             }
+
+            return ("Warning! Following messages are probably corrupted:" + messageFromSingle + "\n\r" + messageFromBinary);            
         }
 
 
