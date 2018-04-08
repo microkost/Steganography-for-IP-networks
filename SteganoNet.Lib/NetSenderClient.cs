@@ -92,7 +92,7 @@ namespace SteganoNetLib
             this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpOfRemoteHost);
 
             //bussiness ctor           
-            Authenticated = false; 
+            Authenticated = false;
             Messages = new Queue<string>();
             Timer = new Stopwatch();
             DelayInMs = delayGeneral;
@@ -115,7 +115,17 @@ namespace SteganoNetLib
 
             string secretProtectedAscii = DataOperations.ErrorDetectionASCIIFromClean(SecretMessage); //add redundacy for transmission
             SecretMessage = DataOperations.StringASCII2BinaryNumber(secretProtectedAscii); //convert messsage to binary
-            AddInfoMessage("DEBUG: Message in binary is: " + SecretMessage);
+
+            try //saving binary from sender to file, DEBUG purpose only
+            {
+                string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + "client-secret-" + DateTime.Now.ToLongTimeString() + ".txt";
+                System.IO.File.AppendAllText(FilePath, SecretMessage.ToString());
+            }
+            catch
+            {
+                //AddInfoMessage("Debug saving to file failed.");
+                AddInfoMessage("DEBUG: Secret message in binary is: " + SecretMessage.ToString());
+            }
 
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            
 
@@ -160,7 +170,7 @@ namespace SteganoNetLib
                         if (Timer.ElapsedMilliseconds > IpIdentificationChangeSpeedInMs)
                         {
                             FirstRun = true;
-                            AddInfoMessage("IP identification timer reseted after: " + Timer.ElapsedMilliseconds/1000 + " sec.");
+                            AddInfoMessage("IP identification timer reseted after: " + Timer.ElapsedMilliseconds / 1000 + " sec.");
                             Timer.Restart();
                         }
                         if (FirstRun == false && StegoUsedMethodIds.Contains(NetSteganography.IpIdentificationMethod))
@@ -317,27 +327,27 @@ namespace SteganoNetLib
                                 AddInfoMessage("Problem with receiving TCP ACK...");
                             }
                             else
-                            {                                
+                            {
                                 AckNumberLocal = receivedAckPack.Ethernet.IpV4.Tcp.SequenceNumber + (uint)receivedAckPack.Ethernet.IpV4.Tcp.PayloadLength; //update value by size of received data
-                            }                            
-                            
+                            }
+
                             AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize)); //acknowledged data
 
-                            
+
                             //WAIT for DATA reply and send ACK...
-                            Packet reply = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);                            
+                            Packet reply = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);
                             if (reply == null)
                             {
                                 AddInfoMessage("Answer for request not received...");
                             }
                             else
                             {
-                                AddInfoMessage("TCP DATA received. Sending ACK...");                                
+                                AddInfoMessage("TCP DATA received. Sending ACK...");
                                 AckNumberLocal = (uint)(reply.Ethernet.IpV4.Tcp.SequenceNumber + reply.Ethernet.IpV4.Tcp.PayloadLength); //increased by size of received data
                                 //make new TCP ACK layer for ACKing received data
                                 TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                                 SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                                                             
-                            }                               
+                            }
 
                             //terminating
                             if (SecretMessage.Length == 0)
@@ -403,15 +413,15 @@ namespace SteganoNetLib
                     if (SecretMessage.Length == 0)
                     {
                         AddInfoMessage(String.Format("All messages ({0}) departured, you can stop the process by pressing ESC", messageCounter)); //TODO it's confusing when is running from GUI
-                        
+
                         Terminate = true;
                     }
 
                     //build packet and send
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
-                    communicator.SendPacket(packet);                    
-                    System.Threading.Thread.Sleep(DelayInMs);                    
+                    communicator.SendPacket(packet);
+                    System.Threading.Thread.Sleep(DelayInMs);
                 }
                 while (!Terminate || SecretMessage.Length != 0);
             }
@@ -497,7 +507,7 @@ namespace SteganoNetLib
                 return false;
             }
             else
-            {                 
+            {
                 ns.SeqNumberRemote = replyPacket.Ethernet.IpV4.Tcp.SequenceNumber;
                 ns.AddInfoMessage("TCP " + whatIsHappening + " ACK received.");
             }
@@ -544,7 +554,7 @@ namespace SteganoNetLib
                     catch
                     {
                         return 0; //packet is not TCP, we probably dont need to know the size
-                    }                    
+                    }
                 }
             }
             catch

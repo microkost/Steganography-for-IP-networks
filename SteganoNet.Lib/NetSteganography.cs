@@ -131,7 +131,6 @@ namespace SteganoNetLib
                             try
                             {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                //sc.AddInfoMessage("S> " + methodId + " : " + partOfSecret);
                                 ip.TypeOfService = Convert.ToByte(partOfSecret, 2); //using 8 bits                                
                                 secret = secret.Remove(0, usedbits);
                             }
@@ -139,8 +138,7 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
-                                    //sc.AddInfoMessage("S> " + methodId + " : " + secret + " alias " + secret.PadLeft(usedbits, '0'));
+                                    ip.TypeOfService = Convert.ToByte(secret, 2); //using rest + padding removed .PadLeft(usedbits, '0')
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more                               
@@ -154,7 +152,6 @@ namespace SteganoNetLib
                             try
                             {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                //sc.AddInfoMessage(">> " + methodId + " : " + partOfSecret);
                                 ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
                                 secret = secret.Remove(0, usedbits);
                             }
@@ -162,8 +159,7 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    ip.TypeOfService = Convert.ToByte(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
-                                    //sc.AddInfoMessage(">> " + methodId + " : " + secret + " alias " + secret.PadLeft(usedbits, '0'));
+                                    ip.TypeOfService = Convert.ToByte(secret, 2); //using rest + padding removed .PadLeft(usedbits, '0')
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
@@ -190,7 +186,8 @@ namespace SteganoNetLib
                                 {
                                     if (secret.Length != 0)
                                     {
-                                        ip.Identification = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                        //ip.Identification = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                        ip.Identification = Convert.ToUInt16(secret, 2); //using rest + padding
                                         secret = secret.Remove(0, secret.Length);
                                     }
                                     return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
@@ -298,7 +295,8 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    icmp.Identifier = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    //icmp.Identifier = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    icmp.Identifier = Convert.ToUInt16(secret, 2); //using rest + padding
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
@@ -324,7 +322,7 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    icmp.SequenceNumber = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    icmp.SequenceNumber = Convert.ToUInt16(secret, 2); //using rest + padding .PadLeft(usedbits, '0')
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
@@ -463,7 +461,7 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    dns.Id = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
+                                    dns.Id = Convert.ToUInt16(secret, 2); //using rest + padding .PadLeft(usedbits, '0')
                                     secret = secret.Remove(0, secret.Length);
                                 }
                                 return new Tuple<DnsLayer, string>(dns, secret); //nothing more          

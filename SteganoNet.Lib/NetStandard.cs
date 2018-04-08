@@ -404,11 +404,11 @@ namespace SteganoNetLib
                     sw.Start();
                     IpV4Address iptranslated = new IpV4Address();
 
-                    bool waitForDns = true; ;
+                    bool waitForDns = true;
                     while (waitForDns)
                     {
                         iptranslated = GetDnsIpFromHostnameReal(query.DomainName.ToString());
-                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs) //timeout break
+                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs/2) //timeout break
                         {
                             sw.Stop();
                             waitForDns = false;

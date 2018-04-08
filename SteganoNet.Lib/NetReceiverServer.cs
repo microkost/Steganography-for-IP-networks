@@ -145,7 +145,7 @@ namespace SteganoNetLib
                 AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
                 return;
             }
-        }        
+        }
         private void ProcessIncomingV4Packet(Packet packet) //keep it light!
         {
             //How it works:
@@ -427,8 +427,9 @@ namespace SteganoNetLib
                 sbSingle.Append(DataOperations.BinaryNumber2stringASCII(word)); //each message is separate
             }
 
+            Console.WriteLine("\n"); //just to make it visible in console           
             //check of bit align
-            if(sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
+            if (sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
             {
                 int howManyBitsCutted = 0;
                 do
@@ -437,21 +438,28 @@ namespace SteganoNetLib
                     howManyBitsCutted++;
                 }
                 while (sbBinary.Length % DataOperations.bitsForChar == 0);
-                Console.WriteLine("Warning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + "bits to align.");
+                Console.WriteLine("\tWarning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + " bits to align.");
             }
 
-            Console.WriteLine("\n"); //just to make it visible in console           
             string messageFromSingle = sbSingle.ToString();
             string messageFromBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
 
             if (!messageFromSingle.Equals(messageFromBinary)) //test of methodology
             {
-                Console.WriteLine("Warning: Message and check messages are not same after assembling!");
+                //Console.WriteLine("\tWarning: Two different processing of same message are having different results."); //useless information for user
             }
 
             //consistency check https://en.wikipedia.org/wiki/Error_detection_and_correction
             string messageSingleChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromSingle);
             string messageBinaryChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromBinary);
+
+            try //DEBUG printing to file
+            {
+                string report = String.Format("Single \r\n{0}\r\nBinary \r\n{1}\r\nSingleChecked \r\n{2}\r\nBinaryChecked \r\n{3}\r\n", sbSingle.ToString(), sbBinary.ToString(), (messageSingleChecked ?? "").ToString(), (messageBinaryChecked ?? "").ToString());
+                string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + "server-secret-" + DateTime.Now.ToLongTimeString() + ".txt";
+                System.IO.File.AppendAllText(FilePath, report);
+            }
+            catch { } //no report
 
             //decisions which one is correct to return
             if (messageBinaryChecked == null && messageSingleChecked != null) //one is not null
@@ -466,8 +474,8 @@ namespace SteganoNetLib
 
             if (messageBinaryChecked == null && messageSingleChecked == null) //both of them are null
             {
-                return ("Warning! Following messages are probably corrupted.\n\r" + 
-                    messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" + 
+                return ("Warning! Following messages are probably corrupted.\n\r" +
+                    messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
                     messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
             }
 
@@ -479,7 +487,7 @@ namespace SteganoNetLib
                 }
                 else
                 {
-                    Console.WriteLine("Warning: Message and check messages are not same after assembling!");
+                    Console.WriteLine("\tWarning: Message and check messages are not same after assembling!");
                     if (messageBinaryChecked.Length > messageFromSingle.Length) //return longer one
                     {
                         return messageBinaryChecked;
