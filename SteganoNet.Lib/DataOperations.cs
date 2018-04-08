@@ -10,18 +10,17 @@ namespace SteganoNetLib
 {
     public static class DataOperations
     {
-        private const int bitsForChar = 8; //how long is char in bits //TODO PROP?
+        public const int bitsForChar = 8; //how long is char in bits //TODO PROP?
+        private const int hashBitMultiplier = 2; //how long is hash (bitsForChar * this)
 
         //sender: convert ASCII to BINARY
-        //receiver: reasemble and convert BINARY to ASCII
-
-        //sender: prepare string for sending (alignment x8) retrun list of <int>
-        //receiver: un alingment => string to list of <int>
-
+        //sender: prepare string for sending (alignment x8) return list of <int>
         //sender: spliting key string, how to recognize gaps? probably not needed, bitsForChar is delimiter
-        //receiver: delimiter determining => bitsForChar as settings
-
         //sender: validation and hashing
+
+        //receiver: reasemble and convert BINARY to ASCII
+        //receiver: un alingment => string to list of <int>
+        //receiver: delimiter determining => bitsForChar as settings
         //receiver: hashing and validate
 
         public static string StringASCII2BinaryNumber(string input) //convert string to binary number
@@ -101,22 +100,75 @@ namespace SteganoNetLib
 
         public static string ErrorDetectionASCIIFromClean(string message) //used by client to put redundancy for SENDING
         {
-            //crc or another consistency check appended to string...
-            //CalculateCrc32()
+            //consistency check appended to string before converstion to binary https://en.wikipedia.org/wiki/Error_detection_and_correction
+
             //CalculateHash()
-            //append checksum to the end of message (fixed lenght - padding / cutting)
-            return message;
+            string hashForMessage = CalculateHash(message);
+            string hashSub = "";
+            try
+            {
+                hashSub = hashForMessage.Substring(0, hashBitMultiplier * bitsForChar);
+            }
+            catch
+            {
+                //if message is short and hash is not enought long
+                hashSub = hashForMessage.PadLeft(hashBitMultiplier * bitsForChar, '0');
+            }
+
+            return message + hashSub;
+
+            //CalculateCrc32()
+            //TODO method and selector
         }
 
-        public static string ErrorDetectionASCII2Clean(string message) //used by server to check RECEIVED
+        public static string ErrorDetectionASCII2Clean(string messageWithRedundancy) //used by server to check RECEIVED
         {
-            //crc or another consistency check removed from string...
-            //deapend checkshum positions
-            //calculate hash with the rest
-            //compare with received hash
+            //consistency check removed from received message, returns consistent message 
 
-            //return null when corrupted
-            return message;
+            try //CalculateHash variant
+            {
+                //cut off hash and pure message
+                string hashReceived = messageWithRedundancy.Substring(messageWithRedundancy.Length - (hashBitMultiplier * bitsForChar));
+                string message = ErrorDetectionCutHashOut(messageWithRedundancy);
+                string hashForMessage = CalculateHash(message);
+                string hashSub = "";
+                try
+                {
+                    hashSub = hashForMessage.Substring(0, hashBitMultiplier * bitsForChar); //cut calculated hash
+                }
+                catch
+                {
+                    //if message is short and hash is not enought long
+                    hashSub = hashForMessage.PadLeft(hashBitMultiplier * bitsForChar, '0');
+                }
+
+                if (hashReceived.Equals(hashSub))
+                {
+                    return message;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch
+            {
+                return null; //when corrupted
+            }
+        }
+
+        public static string ErrorDetectionCutHashOut(string messageWithRedundancy)
+        {
+            //cuts off hash, used for user outputs
+            try
+            {
+                return messageWithRedundancy.Substring(0, messageWithRedundancy.Length - (hashBitMultiplier * bitsForChar));
+            }
+            catch //in case of failure
+            {
+                return messageWithRedundancy;
+            }
+
         }
 
         public static string CalculateHash(string input)

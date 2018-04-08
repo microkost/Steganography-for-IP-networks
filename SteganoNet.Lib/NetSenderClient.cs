@@ -113,7 +113,7 @@ namespace SteganoNetLib
                 return;
             }
 
-            string secretProtectedAscii = DataOperations.ErrorDetectionASCIIFromClean(SecretMessage); //add redundacy for transmission //https://en.wikipedia.org/wiki/Error_detection_and_correction
+            string secretProtectedAscii = DataOperations.ErrorDetectionASCIIFromClean(SecretMessage); //add redundacy for transmission
             SecretMessage = DataOperations.StringASCII2BinaryNumber(secretProtectedAscii); //convert messsage to binary
             AddInfoMessage("DEBUG: Message in binary is: " + SecretMessage);
 

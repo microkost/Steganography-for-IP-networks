@@ -126,7 +126,7 @@ namespace SteganoNetLib
                             {
                                 if (packet.IsValid && packet.IpV4 != null) //only IPv4
                                 {
-                                    if (FirstRun) //used for separation of streams based on packet size (needs to be done better)
+                                    if (FirstRun) //used for separation of streams based on packet size (should be done better)
                                     {
                                         PacketSize = packet.Length;
                                         FirstRun = false;
@@ -213,6 +213,7 @@ namespace SteganoNetLib
             {
                 messageCollector.Append(NetSteganography.GetContent3Network(ip, StegoUsedMethodIds, this)); //TODO send ipSelectionIds only, not all
                 //SendReplyPacket(null) => pure IP is not responding 
+                //TODO do not support replying modified values on IP layer (send back same DiffServ in 301/302 methods
             }
 
 
@@ -426,6 +427,19 @@ namespace SteganoNetLib
                 sbSingle.Append(DataOperations.BinaryNumber2stringASCII(word)); //each message is separate
             }
 
+            //check of bit align
+            if(sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
+            {
+                int howManyBitsCutted = 0;
+                do
+                {
+                    sbBinary.Length = sbBinary.Length - 1;
+                    howManyBitsCutted++;
+                }
+                while (sbBinary.Length % DataOperations.bitsForChar == 0);
+                Console.WriteLine("Warning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + "bits to align.");
+            }
+
             Console.WriteLine("\n"); //just to make it visible in console           
             string messageFromSingle = sbSingle.ToString();
             string messageFromBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
@@ -434,9 +448,6 @@ namespace SteganoNetLib
             {
                 Console.WriteLine("Warning: Message and check messages are not same after assembling!");
             }
-
-            Console.WriteLine("DEBUG: Message from long binary: " + messageFromBinary);
-            Console.WriteLine("DEBUG: Message in binary is: " + sbBinary.ToString());
 
             //consistency check https://en.wikipedia.org/wiki/Error_detection_and_correction
             string messageSingleChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromSingle);
@@ -455,7 +466,9 @@ namespace SteganoNetLib
 
             if (messageBinaryChecked == null && messageSingleChecked == null) //both of them are null
             {
-                return ("Warning! Following messages are probably corrupted." + messageFromSingle + "\n\r" + messageFromBinary);
+                return ("Warning! Following messages are probably corrupted.\n\r" + 
+                    messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" + 
+                    messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
             }
 
             if (messageBinaryChecked != null && messageSingleChecked != null) //none of them are null
@@ -478,7 +491,9 @@ namespace SteganoNetLib
                 }
             }
 
-            return ("Warning! Following messages are probably corrupted:" + messageFromSingle + "\n\r" + messageFromBinary);            
+            return ("Warning! Following messages are corrupted.\n\r" +
+                    messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
+                    messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
         }
 
 

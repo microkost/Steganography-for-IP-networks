@@ -1,4 +1,4 @@
-# IP network steganography framework
+# TCP/IP network steganography framework
 
 [![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/microkost/Steganography-for-IP-networks)
 
@@ -8,15 +8,25 @@ information to simulate steganography attack.
 
 
 ## Table of Contents
+- [Methods](#Methods)
 - [Install](#install)
 - [How to run](#How-to-run)
     - [Console parameters](#Command-line-parameters)
 - [Usage](#usage)
-- [Methods](#Methods)
 	- [Technical description](https://github.com/microkost/Steganography-for-IP-networks/blob/master/MethodDescription.txt)
 - [Limitations](#Limitations)
 - [Developer](#Developer)
 - [Disclaimer and License](#Disclaimer)
+
+
+## Methods
+* IP steganography (v4)
+* ICMP steganography
+* TCP steganography
+* DNS steganography
+* HTTP steganography
+
+Detailed information about used fields at headers and techniques in [technical description](https://github.com/microkost/Steganography-for-IP-networks/blob/master/MethodDescription.txt)
 
 
 ## Install
@@ -59,21 +69,12 @@ MsBuild.exe SteganographyFramework.sln /t:Build /m
 * -message: "secret message"
 
 
-## Methods
-* IP steganography (v4)
-* ICMP steganography
-* DNS steganography
-
-Detailed information about used fields at headers and techniques in [technical description](https://github.com/microkost/Steganography-for-IP-networks/blob/master/MethodDescription.txt)
-
-
 ## Limitations
 * IPv4 only
 * Use in LAN or have reachable IP address to let it work properly (NAT principe)
-* you need to **know which** steganography methods **are not conflicting** (you can't use px. ICMP and DNS at the same datagram)
+* you need to **know which** steganography methods **are not conflicting** (you can't use ICMP and DNS simultaneously)
 * project is x86 platform
-* not running on Virtual Machine, needs physical PC for unknown reason (VmWare troubles, Azure/Hyper-V troubles, VirtualBox OK)
-* running on WiFi is sensitive for correct MAC address reading, Ethernet is without troubles
+* makes troubles on Virtual Machine - libraries missing (VmWare troubles, Azure/Hyper-V troubles, VirtualBox OK)
 
 
 ## Developer
