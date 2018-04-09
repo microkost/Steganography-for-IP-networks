@@ -16,22 +16,19 @@ namespace SteganoNetLib
         public const int IpRangeStart = 300;
         public const int IpRangeEnd = 329;
         public const int IpIdentificationMethod = 303;
-
         public const int IcmpRangeStart = 330;
         public const int IcmpRangeEnd = 359;
         public const int IcmpGenericPing = 331;
-
         public const int NetworkRangeStart = IpRangeStart; //used in test
         public const int NetworkRangeEnd = 399; //used in test
-        //udp
         public const int TcpRangeStart = 450;
         public const int TcpRangeEnd = 499;
-
         public const int DnsRangeStart = 700;
         public const int DnsRangeEnd = 729;
-
         public const int HttpRangeStart = 730;
         public const int HttpRangeEnd = 759;
+
+        //TODO missing const values for usedBit size. Need to be checked manually if value fits in writing and readning method.
 
         private static Random rand = new Random();
         private static ushort SequenceNumber = (ushort)DateTime.Now.Ticks; //for legacy usage        
@@ -49,7 +46,7 @@ namespace SteganoNetLib
              * 7xx > session, presentation and application layer
              * 8xx > other methods like time channel
              * 
-             * dash '-' is splitter for parsing capacity size of method! Always at the end with size and unit ' - 100b' for 100 bits in method
+             * dash '-' is splitter for parsing capacity size of method! always at the end with size and unit ' - 100b' for 100 bits in method
              * inform user about settings in [] brackets like exact delay if possible (constants)
              */
 
@@ -59,10 +56,7 @@ namespace SteganoNetLib
                 { 301, "IP Type of service / DiffServ (agresive) - 8b" },
                 { 302, "IP Type of service / DiffServ - 2b" },
                 { 303, String.Format("IP Identification [delay {0} s] - 16b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000) }, //adding exact time value to the name
-                { 305, "IP flags (agresive) - 3b" }, //TODO
-                { 306, "IP flags - 1b" }, //TODO
-                    //IP options
-                    //IP fragment offset
+                { 305, "IP flag (MF + offset (when applicable)) - 13b" },
                 //---
                 { 331, String.Format("ICMP ping (standard) [delay {0} s] - 0b", (double)NetSenderClient.delayIcmp/1000) },
                 { 333, "ICMP ping (Identifier) - 16b" }, //TODO should be set on start of transaction and not changed in the time
@@ -124,22 +118,24 @@ namespace SteganoNetLib
             {
                 switch (methodId)
                 {
-                    case 301: //IP (Type of service / DiffServ) //SENDER
+                    case 301: //IP (Type of service / DiffServ) agresive //SENDER
                         {
                             sc.AddInfoMessage("3IP: method " + methodId);
                             const int usedbits = 8;
                             try
                             {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2); //using 8 bits                                
+                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
                                 secret = secret.Remove(0, usedbits);
                             }
                             catch
                             {
                                 if (secret.Length != 0)
                                 {
+                                    string transfer = (secret[0] == '0') ? "0" : secret;
                                     ip.TypeOfService = Convert.ToByte(secret, 2); //using rest + padding removed .PadLeft(usedbits, '0')
                                     secret = secret.Remove(0, secret.Length);
+
                                 }
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more                               
                             }
@@ -168,7 +164,6 @@ namespace SteganoNetLib
                         }
                     case 303: //IP (Identification) //SENDER
                         {
-                            //sc.AddInfoMessage("3IP: method " + methodId);                            
                             const int usedbits = 16;
                             if (firstAndResetRun == true)
                             {
@@ -176,9 +171,7 @@ namespace SteganoNetLib
                                 try
                                 {
                                     string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                    //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
-                                    //Fragmentation = IpV4Fragmentation.None, //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
-                                    //TODO ADD FLAGS
+                                    //set * Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0) //TODO ADD FLAGS
                                     ip.Identification = Convert.ToUInt16(partOfSecret, 2);
                                     secret = secret.Remove(0, usedbits);
                                 }
@@ -186,8 +179,7 @@ namespace SteganoNetLib
                                 {
                                     if (secret.Length != 0)
                                     {
-                                        //ip.Identification = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
-                                        ip.Identification = Convert.ToUInt16(secret, 2); //using rest + padding
+                                        ip.Identification = Convert.ToUInt16(secret, 2); //using rest + padding removed .PadLeft(usedbits, '0')
                                         secret = secret.Remove(0, secret.Length);
                                     }
                                     return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
@@ -195,13 +187,44 @@ namespace SteganoNetLib
                             }
                             break;
                         }
-                    case 305: //IP Flags...
+                    case 305: //IP flag (MF + offset) //SENDER
                         {
-                            sc.AddInfoMessage("3IP: method " + methodId);
-                            /* In IPv4, fragments are indicated using four fields of the basic header: 
-                             * Fragment Offset, a "Don't Fragment" (DF) flag, and a "More Fragments"(MF) flag
-                             * Fragmentation = IpV4Fragmentation.None, //new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, 0),
-                             */
+                            const int usedbits = 13; //offset can be from 0 to 8191
+                            try
+                            {
+                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
+                                ushort offset = Convert.ToUInt16(partOfSecret, 2);
+                                if (offset % 8 == 0 && offset != 0)
+                                {
+                                    sc.AddInfoMessage("3IP: method " + methodId); //mentioning when is actually used                                    
+                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.MoreFragments, offset); //also IpV4FragmentationOptions.DoNotFragment
+                                    secret = secret.Remove(0, usedbits);
+                                }
+                                else
+                                {
+                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0); //end of fragmentation
+                                }
+                            }
+                            catch
+                            {
+                                if (secret.Length != 0)
+                                {
+                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0); //TODO could be deadlocked when no other method used
+                                    ushort offset = Convert.ToUInt16(secret, 2);
+                                    if (offset % 8 == 0 && offset != 0)
+                                    {
+                                        sc.AddInfoMessage("3IP: method " + methodId); //mentioning when is actually used
+                                        ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.DoNotFragment, offset); //rewrite previous
+                                        secret = secret.Remove(0, secret.Length);
+                                        return new Tuple<IpV4Layer, string>(ip, secret); //nothing more to send 
+                                    }
+                                }
+                                else
+                                {
+                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0);
+                                    return new Tuple<IpV4Layer, string>(ip, secret); //nothing more to send
+                                }
+                            }
                             break;
                         }
                 }
@@ -218,15 +241,14 @@ namespace SteganoNetLib
             {
                 switch (methodId)
                 {
-                    case 301: //IP (Type of service / DiffServ agresive) RECEIVER
+                    case 301: //IP (Type of service / DiffServ agresive) //RECEIVER
                         {
                             rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                             string binvalue = Convert.ToString(ip.TypeOfService, 2); //use whole field
-                            string binvaluePadded = binvalue.PadLeft(8, '0');
-                            BlocksOfSecret.Add(binvaluePadded); //when zeros was cutted
+                            BlocksOfSecret.Add(binvalue.PadLeft(8, '0')); //when zeros was cutted
                             break;
                         }
-                    case 302: //IP (Type of service / DiffServ) RECEIVER
+                    case 302: //IP (Type of service / DiffServ) //RECEIVER
                         {
                             rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                             string fullfield = Convert.ToString(ip.TypeOfService, 2).PadLeft(8, '0');
@@ -234,7 +256,7 @@ namespace SteganoNetLib
                             BlocksOfSecret.Add(binvalue);
                             break;
                         }
-                    case 303: //IP (Identification) RECEIVER
+                    case 303: //IP (Identification) //RECEIVER
                         {
                             rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
 
@@ -243,6 +265,15 @@ namespace SteganoNetLib
                             {
                                 Identification = binvalue;
                                 BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted    
+                            }
+                            break;
+                        }
+                    case 305: //IP flag (MF + offset) //RECEIVER
+                        {
+                            if (ip.Fragmentation.Options == IpV4FragmentationOptions.MoreFragments)
+                            {
+                                rs.AddInfoMessage("3IP: method " + methodId);
+                                BlocksOfSecret.Add(Convert.ToString(ip.Fragmentation.Offset, 2).PadLeft(13, '0'));
                             }
                             break;
                         }
