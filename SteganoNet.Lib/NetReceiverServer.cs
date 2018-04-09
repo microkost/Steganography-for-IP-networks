@@ -89,8 +89,8 @@ namespace SteganoNetLib
                 string filter = "";
                 if (IsListenedSameInterface)
                 {
-                    //AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface
-                    filter = String.Format("tcp port {0} or icmp or udp port {1} and not src port {2}", PortLocal, PortLocalDns, PortLocalDns);
+                    AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                                        
+                    filter = String.Format("(tcp port {0}) or (icmp[icmptype] != icmp-echoreply) or (udp port {1} and not src port {2})", PortLocal, PortLocalDns, PortLocalDns);
                 }
                 else
                 {
@@ -103,10 +103,11 @@ namespace SteganoNetLib
                     //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
                     communicator.SetFilter(filter); // Compile and set the filter
                 }
-                catch
+                catch(Exception e)
                 {
+
                     //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
-                    AddInfoMessage("Traffic filter was not applied, because it have wrong format.");
+                    AddInfoMessage("Traffic filter was not applied, because it have wrong format." + e.Message);
                 }
 
                 do // Retrieve the packets

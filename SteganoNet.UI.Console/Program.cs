@@ -383,8 +383,8 @@ namespace SteganoNet.UI.Console
             }
 
             //making executable command (WIN+R) and copy-paste
-            System.Console.Write(String.Format("\nRun same scenario again with command: \n{0} ", System.AppDomain.CurrentDomain.BaseDirectory /*Assembly.GetExecutingAssembly().CodeBase/*, Path.GetFileName(Assembly.GetExecutingAssembly().CodeBase)*/));
-            System.Console.WriteLine(String.Format("-role {0} -ip {1} -port {2} -ipremote {3} -portremote {4} -methods {5} -runsame {6} -message \"{7}\"", role, ipSource, portSource, ipRemote, portRemote, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n", "sample"));
+            System.Console.Write(String.Format("\nRun same scenario again with command: \n{0} ", System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName));
+            System.Console.WriteLine(String.Format("-ip {0} -port {1} -ipremote {2} -portremote {3} -runsame {4} -message \"{5}\" -role {6} -methods {7}", ipSource, portSource, ipRemote, portRemote, "n", "sample text", role, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray())));
 
             if (isHumanDriving) //dont ask when script
             {
