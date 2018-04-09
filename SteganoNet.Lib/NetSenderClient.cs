@@ -124,7 +124,7 @@ namespace SteganoNetLib
             catch
             {
                 //AddInfoMessage("Debug saving to file failed.");
-                AddInfoMessage("DEBUG: Secret message in binary is: " + SecretMessage.ToString());
+                //AddInfoMessage("DEBUG: Secret message in binary is: " + SecretMessage.ToString());
             }
 
             selectedDevice = NetDevice.GetSelectedDevice(IpOfInterface); //take the selected adapter            

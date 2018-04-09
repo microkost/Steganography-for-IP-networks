@@ -103,7 +103,7 @@ namespace SteganoNet.UI.Console
 
             //how much space is in stegoMethods
             int spaceInOneMethod = 3; //estimation TODO exactly!
-            NetSteganography.GetMethodsCapacity(); //TODO not done...
+            NetSteganography.GetMethodCapacity(0); //TODO not done...
 
             int channelSize = stegoMethods.Count * spaceInOneMethod;
             int transportsNeeded = bitsInMessage / channelSize;

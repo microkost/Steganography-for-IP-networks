@@ -33,6 +33,8 @@ https://tools.ietf.org/html/rfc791#page-11
 		Sources emitting non-atomic datagrams MUST NOT repeat IPv4 ID values within one MDL for a given source address/destination address/protocol tuple.
 		does not repeat within the maximum datagram lifetime (MDL) [RFC791] [RFC1122] which is typically interpreted as two minutes
 --------------------------------------------------------------------------------
+305: to do!
+--------------------------------------------------------------------------------
 331 alias constant IcmpGenericPing: no steganography, implemented according to RFC
 --------------------------------------------------------------------------------
 333: using ICMP Identifier 16bit field in EchoRequest (ping) datagram. 

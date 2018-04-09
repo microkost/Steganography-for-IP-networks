@@ -90,12 +90,13 @@ namespace SteganoNetLib
                 if (IsListenedSameInterface)
                 {
                     AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                                        
-                    filter = String.Format("(tcp port {0}) or (icmp[icmptype] != icmp-echoreply) or (udp port {1} and not src port {2})", PortLocal, PortLocalDns, PortLocalDns);
+                    filter = String.Format("(tcp port {0}) or (icmp[icmptype] != icmp-echoreply) or (udp port {1} and not src port {2}) or (ip[6] = 32)", PortLocal, PortLocalDns, PortLocalDns);
+                    //condition ip.flags.mf==1 is (ip[6] = 32) from https://github.com/SergK/cheatsheat-tcpdump/blob/master/tcpdump_advanced_filters.txt
                 }
                 else
                 {
                     //cut off replies from same interface
-                    filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port {2} and not src port {3})", IpLocalListening, PortLocal, PortLocalDns, PortLocalDns);
+                    filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port {2} and not src port {3}) or (ip[6] = 32)", IpLocalListening, PortLocal, PortLocalDns, PortLocalDns);
                 }
 
                 try
