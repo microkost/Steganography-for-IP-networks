@@ -119,7 +119,7 @@ namespace SteganoNetLib
             try //saving binary from sender to file, DEBUG purpose only
             {
                 string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-client-secret.txt";
-                System.IO.File.AppendAllText(FilePath, "Client binary \r\n"+SecretMessage.ToString());
+                System.IO.File.AppendAllText(FilePath, "Client binary \r\n" + SecretMessage.ToString());
             }
             catch
             {
@@ -134,8 +134,8 @@ namespace SteganoNetLib
             {
                 DomainsToAsk = NetDevice.GetDomainsForDnsRequest(false); //if something with dns or http is used then prepare list of distinct domain names, running once
                 AddInfoMessage("DNS or HTTP is going to be used. Prepared " + DomainsToAsk.Count + " to request");
-                AddInfoMessage("DNS will ask port " + PortRemoteDns + ", otherwise is remote port " + PortRemote);
-                AddInfoMessage("HTTP will ask port " + PortRemoteHttp + ", otherwise is remote port " + PortRemote);
+                //AddInfoMessage("DNS will ask port " + PortRemoteDns + ", otherwise is remote port " + PortRemote);
+                //AddInfoMessage("HTTP will ask port " + PortRemoteHttp + ", otherwise is remote port " + PortRemote);
             }
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
@@ -147,6 +147,7 @@ namespace SteganoNetLib
                 {
                     string chapsecret = NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString());
                     //TODO
+                    //first convert message to bits, then do chap, since you can transfer final size of message, which can dramatically help with reasembling
                     Authenticated = true;
                 }
 
@@ -159,10 +160,9 @@ namespace SteganoNetLib
                     List<Layer> layers = new List<Layer>(); //list of used layers
                     layers.Add(NetStandard.GetEthernetLayer(MacAddressLocal, MacAddressRemote)); //L2                    
 
-
                     //IP methods
                     List<int> ipSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IpRangeStart, NetSteganography.IpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey()); //selected all existing int ids in range of IP codes
-                    if (StegoUsedMethodIds.Any(ipSelectionIds.Contains))
+                    if (StegoUsedMethodIds.Any(ipSelectionIds.Contains) && SecretMessage.Length != 0)
                     {
                         IpV4Layer ipV4Layer = NetStandard.GetIpV4Layer(IpOfInterface, IpOfRemoteHost); //L3                         
 
@@ -179,6 +179,10 @@ namespace SteganoNetLib
                         }
 
                         //generic for all methods (name "first" run is confusing, used when new IP identification field is inserted)
+                        if (ipV4Layer == null || SecretMessage.Equals(""))
+                        {
+                            continue;
+                        }
                         Tuple<IpV4Layer, string> ipStego = NetSteganography.SetContent3Network(ipV4Layer, StegoUsedMethodIds, SecretMessage, this, FirstRun);
                         ipV4Layer = ipStego.Item1; //save layer containing steganography
                         SecretMessage = ipStego.Item2; //save rest of unsended bites
@@ -212,9 +216,13 @@ namespace SteganoNetLib
 
                     //ICMP methods
                     List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
-                    if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
+                    if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains) && SecretMessage.Length != 0)
                     {
                         IcmpEchoLayer icmpLayer = new IcmpEchoLayer(); //here is problem in creating correct layer because ICMP doesnt have instanstable generic one
+                        if (icmpLayer == null || SecretMessage.Equals(""))
+                        {
+                            continue;
+                        }
                         Tuple<IcmpEchoLayer, string> icmpStego = NetSteganography.SetContent3Icmp(icmpLayer, StegoUsedMethodIds, SecretMessage, this);
                         icmpLayer = icmpStego.Item1; //save layer containing steganography
                         SecretMessage = icmpStego.Item2; //save rest of unsended bites
@@ -228,7 +236,7 @@ namespace SteganoNetLib
 
                     //TCP methods
                     List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
-                    if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains))
+                    if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains) && SecretMessage.Length != 0)
                     {
                         //part of HTTP methods
                     }
@@ -236,7 +244,7 @@ namespace SteganoNetLib
 
                     //DNS methods
                     List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
-                    if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains))
+                    if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains) && SecretMessage.Length != 0)
                     {
                         UdpLayer udpLayer = NetStandard.GetUdpLayer(PortLocal, PortRemoteDns); //using 53 hardcoded!
                         layers.Add(udpLayer); //udp is carrying layer
@@ -249,6 +257,10 @@ namespace SteganoNetLib
                         dnsLayer.Queries = new List<DnsQueryResourceRecord>() { NetStandard.GetDnsQuery(oneDomain) }; //TODO randomly change DnsType
 
                         //insert steganography changing pre-build layer
+                        if (dnsLayer == null || SecretMessage.Equals(""))
+                        {
+                            continue;
+                        }
                         Tuple<DnsLayer, string> dnsStego = NetSteganography.SetContent7Dns(dnsLayer, StegoUsedMethodIds, SecretMessage, this);
                         dnsLayer = dnsStego.Item1; //save layer containing steganography
                         SecretMessage = dnsStego.Item2; //save rest of unsended bites
@@ -260,11 +272,8 @@ namespace SteganoNetLib
 
                     //HTTP methods
                     List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
-                    if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
+                    if (StegoUsedMethodIds.Any(httpSelectionIds.Contains) && SecretMessage.Length != 0)
                     {
-                        //wireshark debug filter (ip.addr == 1.1.1.1 or ip.addr == 1.1.1.2) and (tcp or http)                        
-                        TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
-
                         if (!IsEnstablishedTCP) //make TCP session
                         {
                             SeqNumberLocal = NetStandard.GetSynOrAckRandNumber();
@@ -272,8 +281,14 @@ namespace SteganoNetLib
                             SeqNumberRemote = 0; //we dont know
                             AckNumberRemote = SeqNumberLocal + 1; //we dont know + 1
 
-                            tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
-                            //TODO STEGO IN steganography
+                            TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Synchronize);
+                            if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains)) //steganography for enstablishing only
+                            {
+                                //Tuple<TcpLayer, string> tcpStego = NetSteganography.SetContent4Tcp(tcpLayer, StegoUsedMethodIds, SecretMessage, this, !IsEnstablishedTCP); //false when it can be included => negation warning
+                                //tcpLayer = tcpStego.Item1; //save layer containing steganography
+                                //SecretMessage = tcpStego.Item2; //save rest of unsended bites   
+                                //TODO SAVE SeqNumberLocal, AckNumberLocal, AckNumberRemote TO LOCAL VARIABLES WHEN updated
+                            }
 
                             layers.Add(tcpLayer);
                             IsEnstablishedTCP = MakeTcpHandshake(layers, TcpControlBits.Synchronize, true, this); //is updating global properties Seq/AckNumber
@@ -281,6 +296,7 @@ namespace SteganoNetLib
                         }
                         else //TCP enstablished
                         {
+                            TcpLayer tcpLayer = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.None); //default for rewrite
                             tcpLayer.ControlBits = (TcpControlBits.Push | TcpControlBits.Acknowledgment);
                             //TODO idea: should sent standard DNS request when DNS not in methods and its not, because you cant combine DNS and HTTP to one datagram
 
@@ -309,6 +325,10 @@ namespace SteganoNetLib
                                 */
                             };
 
+                            if (httpLayer == null || SecretMessage.Equals(""))
+                            {
+                                continue;
+                            }
                             Tuple<HttpLayer, string> httpStego = NetSteganography.SetContent7Http(httpLayer, StegoUsedMethodIds, SecretMessage, this);
                             httpLayer = httpStego.Item1; //save layer containing steganography
                             SecretMessage = httpStego.Item2; //save rest of unsended bites
@@ -402,7 +422,15 @@ namespace SteganoNetLib
                         {
                             AddInfoMessage("Added L3 ICMP in last step");
                             Tuple<IcmpEchoLayer, string> icmpStegoTMP = NetSteganography.SetContent3Icmp(new IcmpEchoLayer(), new List<int> { NetSteganography.IcmpGenericPing }, SecretMessage, this);
-                            layers.Add(icmpStegoTMP.Item1);
+                            try
+                            {
+                                layers.Add(icmpStegoTMP.Item1);
+                            }
+                            catch
+                            {
+                                AddInfoMessage("ICMP: backup option in backup layer creation used");
+                                layers.Add(new IcmpEchoLayer());
+                            }                                                           
                             DelayInMs = delayIcmp;
                         }
 

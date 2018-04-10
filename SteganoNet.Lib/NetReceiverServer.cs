@@ -249,10 +249,12 @@ namespace SteganoNetLib
             List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains))
             {
+                AddInfoMessage("7DNS: Be patient with terminating (when manually), wait for reply."); //TODO remove?
                 messageCollector.Append(NetSteganography.GetContent7Dns(dns, StegoUsedMethodIds, this));
                 PortLocal = PortLocalDns; //TODO should test if port "53" is listening + receiving                
                 PortRemote = (PortRemote == 0) ? udp.SourcePort : PortRemote; //if local port is not specified, save it from incoming                               
                 SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, dns));
+                
             }
 
 
@@ -271,8 +273,8 @@ namespace SteganoNetLib
                     //SYN
                     if (tcp.ControlBits == TcpControlBits.Synchronize && tcp.ControlBits != (TcpControlBits.Synchronize | TcpControlBits.Acknowledgment))
                     {
-                        //TODO messageCollector.Append TCP stego
-                        //TODO pickup stego from that TCP packet!!!
+                        //TODO pickup stego from that TCP packet!!! here and everywhere else
+                        //messageCollector.Append(NetSteganography.GetContent4Network(tcp, StegoUsedMethodIds, this));
 
                         AddInfoMessage("Replying with TCP SYN/ACK...");
                         SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //replace to static number for debug, could be also steganographic
