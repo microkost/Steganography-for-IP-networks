@@ -408,7 +408,7 @@ namespace SteganoNetLib
                     while (waitForDns)
                     {
                         iptranslated = GetDnsIpFromHostnameReal(query.DomainName.ToString());
-                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs/2) //timeout break
+                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs/2) //timeout break //SLOW
                         {
                             sw.Stop();
                             waitForDns = false;

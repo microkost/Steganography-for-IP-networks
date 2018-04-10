@@ -56,19 +56,19 @@ namespace SteganoNetLib
                 { 302, "IP Type of service / DiffServ - " + GetMethodCapacity(302) + "b" },
                 { 303, String.Format("IP Identification [delay {0}s] - {1}b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000, GetMethodCapacity(303) )}, //adding exact time value to the name
                 { 305, "IP flag (MF + offset (when applicable)) - " + GetMethodCapacity(305) + "b" },
+                //TODO icmp methods are waiting for refactoring...
                 { 331, String.Format("ICMP ping (standard) [delay {0}s] - {1}b", (double)NetSenderClient.delayIcmp/1000, GetMethodCapacity(331) )},
-                { 333, "ICMP ping (Identifier) - " + GetMethodCapacity(333) + "b" },    //TODO should be set on start of transaction and not changed in the time
-                { 335, "ICMP ping (Sequence number) - " + GetMethodCapacity(335) + "b" },   //TODO is actually changing all the time, improve by just incrementing
+                { 333, "ICMP ping (identifier) - " + GetMethodCapacity(333) + "b" },    //TODO should be set on start of transaction and not changed in the time
+                { 335, "ICMP ping (sequence number) - " + GetMethodCapacity(335) + "b" },   //TODO is actually changing all the time, improve by just incrementing
                 //{ 451, "TCP (standard)- " + GetMethodCapacity(451) + "b" },
                 //{ 453, "TCP ISN (once) - " + GetMethodCapacity(453) + "b" }, //use idea from 303
                 //{ 455, "TCP Urgent pointer - " + GetMethodCapacity(455) + "b" }, //use idea from 305
                 //{ 457, "TCP Options (timestamp) - " + GetMethodCapacity(457) + "b" },
                 { 701, String.Format("DNS request (standard over UDP) [delay {0}s] - {1}b", (double)NetSenderClient.delayDns/1000, GetMethodCapacity(331)) },
-                { 703, "DNS request (transaction id) - " + GetMethodCapacity(703) + "b" }, 
-                //705 query contains answer, probably not valid...
+                { 703, "DNS request (transaction id) - " + GetMethodCapacity(703) + "b" },
+                { 705, "DNS request (response) - " + GetMethodCapacity(705) + "b" },                 
                 //707 DNS flags https://tools.ietf.org/html/rfc1035#section-4.1.1, standard 0x00000100 //TODO update value Capacity
-                    
-                //---
+
                 { 731, "HTTP GET (over TCP) - 0b" }, //TODO
                 //{ 733, "HTTP GET facebook picture - 64b" }, //TODO
                 //HTTP Entity tag headers 
@@ -138,13 +138,13 @@ namespace SteganoNetLib
         private static string GetBinaryContentToSend(string secret, int usedbits) //returns value to steganogram for all methods
         {
             if (secret.Equals(""))
-            {                
+            {
                 //exception handling                
                 System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace(); // Get call stack                                
                 throw new Exception("Internal error! Canot be sent empty message. Error caused by: " + stackTrace.GetFrame(1).GetMethod().Name);
             }
 
-            string partOfSecret = "";           
+            string partOfSecret = "";
             try
             {
                 partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
@@ -170,7 +170,7 @@ namespace SteganoNetLib
                 throw new Exception("Value " + partOfSecret + " caused an exception when converting to decimal number");
             }
 
-            
+
         }
 
         //service method for all
@@ -208,28 +208,6 @@ namespace SteganoNetLib
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
                             }
                             break;
-
-                            /*
-                            int usedbits = GetMethodCapacity(methodId);
-                            try
-                            {
-                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                //add check for 0
-                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
-                                secret = secret.Remove(0, usedbits);
-                            }
-                            catch
-                            {
-                                if (secret.Length != 0)
-                                {
-                                    string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero
-                                    ip.TypeOfService = Convert.ToByte(transfer, 2);
-                                    secret = secret.Remove(0, transfer.Length);
-                                }
-                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more                               
-                            }
-                            break;
-                            */
                         }
                     case 302: //IP (Type of service / DiffServ) //SENDER
                         {
@@ -242,39 +220,6 @@ namespace SteganoNetLib
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
                             }
                             break;
-
-                            /*
-                            int usedbits = GetMethodCapacity(methodId);
-                            try
-                            {
-                                Tuple<string, int> content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
-
-                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                if (Double.Parse(partOfSecret) == 0) //check for 0
-                                {
-                                    ip.TypeOfService = Convert.ToByte("0", 2); //send just zero
-                                    secret = secret.Remove(0, 1); //cut one bit from whole
-                                    sc.AddInfoMessage("3IP: method " + methodId + " was zero, sended just 0");
-                                }
-                                else
-                                {
-                                    ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
-                                    secret = secret.Remove(0, usedbits);
-                                }
-                            }
-                            catch
-                            {
-                                if (secret.Length != 0)
-                                {
-                                    //TODO is not correct, whole number is not zero not start with 0
-                                    string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero
-                                    ip.TypeOfService = Convert.ToByte(transfer, 2); //using rest + padding removed .PadLeft(usedbits, '0')
-                                    secret = secret.Remove(0, transfer.Length);
-                                }
-                                return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
-                            }
-                            break;
-                            */
                         }
                     case 303: //IP (Identification) //SENDER
                         {
@@ -291,32 +236,6 @@ namespace SteganoNetLib
                                 }
                             }
                             break;
-
-                            /*
-                            if (firstAndResetRun == true)
-                            {
-                                int usedbits = GetMethodCapacity(methodId);
-                                sc.AddInfoMessage("3IP: method " + methodId + " it's first or reseted run");
-                                try
-                                {
-                                    string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                    //add check for 0
-                                    ip.Identification = Convert.ToUInt16(partOfSecret, 2);
-                                    secret = secret.Remove(0, usedbits);
-                                }
-                                catch
-                                {
-                                    if (secret.Length != 0)
-                                    {
-                                        string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero
-                                        ip.Identification = Convert.ToUInt16(transfer, 2); //using rest + padding removed .PadLeft(usedbits, '0')
-                                        secret = secret.Remove(0, transfer.Length);
-                                    }
-                                    return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
-                                }
-                            }
-                            break;
-                            */
                         }
                     case 305: //IP flag (MF + offset) //SENDER
                         {
@@ -339,48 +258,6 @@ namespace SteganoNetLib
                                 return new Tuple<IpV4Layer, string>(ip, secret); //nothing more          
                             }
                             break;
-
-                            /*
-                            int usedbits = GetMethodCapacity(305); //offset can be from 0 to 8191
-                            try
-                            {
-                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                ushort offset = Convert.ToUInt16(partOfSecret, 2);
-                                if (offset % 8 == 0 && offset != 0)
-                                {
-                                    //add check for 0                                    
-                                    sc.AddInfoMessage("3IP: method " + methodId); //mentioning when is actually used                                    
-                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.MoreFragments, offset); //also IpV4FragmentationOptions.DoNotFragment
-                                    secret = secret.Remove(0, usedbits);
-                                }
-                                else
-                                {
-                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0); //end of fragmentation                                     
-                                }
-                            }
-                            catch
-                            {
-                                if (secret.Length != 0)
-                                {
-                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0); //could be deadlocked when no other method used
-                                    string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero                                    
-                                    ushort offset = Convert.ToUInt16(transfer, 2);
-                                    if (offset % 8 == 0 && offset != 0)
-                                    {
-                                        sc.AddInfoMessage("3IP: method " + methodId); //mentioning when is actually used
-                                        ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.MoreFragments, offset); //rewrite previous
-                                        secret = secret.Remove(0, transfer.Length);
-                                        return new Tuple<IpV4Layer, string>(ip, secret); //nothing more to send 
-                                    }
-                                }
-                                else
-                                {
-                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0);
-                                    return new Tuple<IpV4Layer, string>(ip, secret); //nothing more to send
-                                }
-                            }
-                            break;
-                            */
                         }
                 }
             }
@@ -427,7 +304,7 @@ namespace SteganoNetLib
                             {
                                 rs.AddInfoMessage("3IP: method " + methodId);
                                 string binvalue = Convert.ToString(ip.Fragmentation.Offset, 2).PadLeft(GetMethodCapacity(methodId), '0');
-                                BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));                                
+                                BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                             }
                             break;
                         }
@@ -669,7 +546,7 @@ namespace SteganoNetLib
             {
                 switch (methodId)
                 {
-                    case 701: //DNS clean //SENDER
+                    case 701: //DNS regular //SENDER
                         {
                             sc.AddInfoMessage("7DNS: legacy method " + methodId + " (no data removed)");
                             dns.Id = (ushort)rand.Next(0, 65535);
@@ -680,48 +557,65 @@ namespace SteganoNetLib
                             sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId));
                             string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
 
-                            try
-                            {
-                                dns.Id = Convert.ToUInt16(content, 2); //place content string
-                            }
-                            catch
-                            {
-                                dns.Id = Convert.ToUInt16("0", 2); //place content string
-                            }
+                            dns.Id = Convert.ToUInt16(content, 2); //place content string 
+                            //DEBUG: dns was in try-catch setting content = 0 when error, probably old debug...
                             secret = secret.Remove(0, content.Length); //cut x bits from whole
                             if (content.Length == 0 || secret.Length == 0)
                             {
                                 return new Tuple<DnsLayer, string>(dns, secret); //nothing more               
                             }
                             break;
-
-                            /*
-                            sc.AddInfoMessage("7DNS: method " + methodId + );
-                            const int usedbits = 16;
-                            try
-                            {
-                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                dns.Id = Convert.ToUInt16(partOfSecret, 2);
-                                secret = secret.Remove(0, usedbits);
-                            }
-                            catch
-                            {
-                                if (secret.Length != 0)
-                                {
-                                    dns.Id = Convert.ToUInt16(secret, 2); //using rest + padding .PadLeft(usedbits, '0')
-                                    secret = secret.Remove(0, secret.Length);
-                                }
-                                return new Tuple<DnsLayer, string>(dns, secret); //nothing more          
-                            }
-                            break;
-                            */
                         }
-                    case 705:
+                    case 705: //DNS request containing anwer with stego //SENDER
                         {
-                            DnsQueryResourceRecord dnsRequest = ((DnsQueryResourceRecord)dns.Queries.First());
+                            sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+
+                            //make from content IP address form
                             string stegoInFormOfIpAddress = "255.255.255.255";
+                            if (content.Equals("0"))
+                            {
+                                stegoInFormOfIpAddress = "0.0.0.0"; //TODO less suspicious
+                            }
+                            else //parse content to IP
+                            {
+                                try
+                                {
+                                    if (content.Length % 4 != 0)
+                                    {
+                                        content = content.PadLeft(32, '0');
+                                    }
+
+                                    List<string> octets = new List<string>();
+                                    for (int i = 0; i < content.Length; i = i + 8)
+                                    {
+                                        if (content.Length - i >= 8)
+                                            octets.Add(content.Substring(i, 8));
+                                        else
+                                            octets.Add(content.Substring(i, ((content.Length - i))));
+                                    }
+
+                                    stegoInFormOfIpAddress = Convert.ToUInt16(octets[0], 2) + "." + Convert.ToUInt16(octets[1], 2) + "." + Convert.ToUInt16(octets[2], 2) + "." + Convert.ToUInt16(octets[3], 2);
+                                    sc.AddInfoMessage("7DNS: IP is + " + stegoInFormOfIpAddress + " made from: " + content);
+                                }
+                                catch
+                                {
+                                    sc.AddInfoMessage("7DNS: carrying info in fake IP failed for this datagram.");
+                                }
+                            }
                             IpV4Address fakeIp = new IpV4Address(stegoInFormOfIpAddress);
-                            dns.Answers.Add(new DnsDataResourceRecord(dnsRequest.DomainName, dnsRequest.DnsType, DnsClass.Internet, dnsRequest.Ttl, new DnsResourceDataIpV4(fakeIp)));
+
+                            //System.OverflowException: 
+                            List<DnsQueryResourceRecord> dnsRequest = new List<DnsQueryResourceRecord>() { ((DnsQueryResourceRecord)dns.Queries.First()) };
+                            DnsQueryResourceRecord dnsRequestOrig = dnsRequest.First();
+                            DnsDataResourceRecord dnsAnswerFake = new DnsDataResourceRecord(dnsRequestOrig.DomainName, dnsRequestOrig.DnsType, DnsClass.Internet, 128, new DnsResourceDataIpV4(fakeIp));
+
+                            //new DNS layer                            
+                            dns.IsQuery = true;
+                            dns.Queries = new List<DnsQueryResourceRecord>() { dnsRequestOrig }; //keep request
+                            dns.IsResponse = true;
+                            dns.Answers = new List<DnsDataResourceRecord>() { dnsAnswerFake };
+
                             break;
                         }
                 }
