@@ -139,7 +139,6 @@ namespace SteganoNetLib
         public static Tuple<IpV4Layer, string> SetContent3Network(IpV4Layer ip, List<int> stegoUsedMethodIds, string secret, NetSenderClient sc = null, bool firstAndResetRun = false) //SENDER
         {
             if (ip == null) { return null; } //extra protection
-            List<string> BlocksOfSecretSent = new List<string>(); //SHOULD BE REMOVED
 
             foreach (int methodId in stegoUsedMethodIds) //process every method separately on this packet
             {
@@ -151,8 +150,8 @@ namespace SteganoNetLib
                             int usedbits = GetMethodCapacity(methodId);
                             try
                             {
+                                //problem when just zeros carried, you never know how many of them survive transfer
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                BlocksOfSecretSent.Add(partOfSecret);
                                 //add check for 0
                                 ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
                                 secret = secret.Remove(0, usedbits);
@@ -162,7 +161,6 @@ namespace SteganoNetLib
                                 if (secret.Length != 0)
                                 {
                                     string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero
-                                    BlocksOfSecretSent.Add(transfer);
                                     ip.TypeOfService = Convert.ToByte(transfer, 2);
                                     secret = secret.Remove(0, transfer.Length);
 
@@ -178,17 +176,24 @@ namespace SteganoNetLib
                             try
                             {
                                 string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                BlocksOfSecretSent.Add(partOfSecret);
-                                //add check for 0
-                                ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
-                                secret = secret.Remove(0, usedbits);
+                                if (Double.Parse(partOfSecret) == 0) //check for 0
+                                {
+                                    ip.TypeOfService = Convert.ToByte("0", 2); //send just zero
+                                    secret = secret.Remove(0, 1); //cut one bit from whole
+                                    sc.AddInfoMessage("3IP: method " + methodId + " was zero, sended just 0");
+                                }
+                                else
+                                {
+                                    ip.TypeOfService = Convert.ToByte(partOfSecret, 2);
+                                    secret = secret.Remove(0, usedbits);
+                                }                                                                       
                             }
                             catch
                             {
                                 if (secret.Length != 0)
                                 {
+                                    //TODO is not correct, whole number is not zero not start with 0
                                     string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero
-                                    BlocksOfSecretSent.Add(transfer);
                                     ip.TypeOfService = Convert.ToByte(transfer, 2); //using rest + padding removed .PadLeft(usedbits, '0')
                                     secret = secret.Remove(0, transfer.Length);
                                 }
@@ -205,7 +210,6 @@ namespace SteganoNetLib
                                 try
                                 {
                                     string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                    BlocksOfSecretSent.Add(partOfSecret);
                                     //add check for 0
                                     ip.Identification = Convert.ToUInt16(partOfSecret, 2);
                                     secret = secret.Remove(0, usedbits);
@@ -215,7 +219,6 @@ namespace SteganoNetLib
                                     if (secret.Length != 0)
                                     {
                                         string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero
-                                        BlocksOfSecretSent.Add(transfer);
                                         ip.Identification = Convert.ToUInt16(transfer, 2); //using rest + padding removed .PadLeft(usedbits, '0')
                                         secret = secret.Remove(0, transfer.Length);
                                     }
@@ -235,7 +238,6 @@ namespace SteganoNetLib
                                 {
                                     //add check for 0                                    
                                     sc.AddInfoMessage("3IP: method " + methodId); //mentioning when is actually used                                    
-                                    BlocksOfSecretSent.Add(partOfSecret);
                                     ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.MoreFragments, offset); //also IpV4FragmentationOptions.DoNotFragment
                                     secret = secret.Remove(0, usedbits);
                                 }
@@ -248,13 +250,12 @@ namespace SteganoNetLib
                             {
                                 if (secret.Length != 0)
                                 {
-                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0); //TODO could be deadlocked when no other method used
+                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0); //could be deadlocked when no other method used
                                     string transfer = (secret[0].Equals("0")) ? "0" : secret; //using rest, but it cant start with zero                                    
                                     ushort offset = Convert.ToUInt16(transfer, 2);
                                     if (offset % 8 == 0 && offset != 0)
                                     {
                                         sc.AddInfoMessage("3IP: method " + methodId); //mentioning when is actually used
-                                        BlocksOfSecretSent.Add(transfer);
                                         ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.MoreFragments, offset); //rewrite previous
                                         secret = secret.Remove(0, transfer.Length);
                                         return new Tuple<IpV4Layer, string>(ip, secret); //nothing more to send 
@@ -270,12 +271,6 @@ namespace SteganoNetLib
                         }
                 }
             }
-
-            //temp output to file
-            //string separated = string.Join("-\n", BlocksOfSecretSent.ToArray());
-            //string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + "blocks-server.txt";
-            //System.IO.File.AppendAllText(FilePath, separated.ToString());
-
             return new Tuple<IpV4Layer, string>(ip, secret);
         }
         public static string GetContent3Network(IpV4Datagram ip, List<int> stegoUsedMethodIds, NetReceiverServer rs = null) //RECEIVER
@@ -291,9 +286,9 @@ namespace SteganoNetLib
                         {
                             rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                             string binvalue = Convert.ToString(ip.TypeOfService, 2); //use whole field
-                            if (Int32.Parse(binvalue) == 0)
+                            if (Double.Parse(binvalue) == 0)
                             {
-                                BlocksOfSecret.Add("0"); //when received zero's do not pad
+                                BlocksOfSecret.Add("0"); //when received zero, do not pad
                             }
                             else
                             {
@@ -307,14 +302,13 @@ namespace SteganoNetLib
                             string fullfield = Convert.ToString(ip.TypeOfService, 2).PadLeft(8, '0');
                             string binvalue = fullfield.Substring(fullfield.Length - 2); //use only last two bits
 
-                            if (Int32.Parse(binvalue) == 0)
+                            if (Double.Parse(binvalue) == 0)
                             {
-                                BlocksOfSecret.Add("0"); //when received zero's do not pad
+                                BlocksOfSecret.Add("0"); //when received zero do not pad
                             }
                             else
                             {
                                 BlocksOfSecret.Add(binvalue.PadLeft(GetMethodCapacity(methodId), '0')); //when zeros was cutted
-                                //BlocksOfSecret.Add(binvalue);
                             }
 
                             break;
@@ -324,7 +318,7 @@ namespace SteganoNetLib
                             rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
 
                             string binvalue = Convert.ToString(ip.Identification, 2);
-                            if (Int32.Parse(binvalue) == 0)
+                            if (Double.Parse(binvalue) == 0)
                             {
                                 if (Identification != binvalue) //do not add value when it didnt change
                                 {
@@ -350,11 +344,11 @@ namespace SteganoNetLib
                                 string binvalue = Convert.ToString(ip.Fragmentation.Offset, 2);
                                 if (Double.Parse(binvalue) == 0)
                                 {
-                                    BlocksOfSecret.Add("0");
+                                    BlocksOfSecret.Add("0"); //when received zero do not pad
                                 }
                                 else
                                 {
-                                    BlocksOfSecret.Add(binvalue.PadLeft(GetMethodCapacity(methodId), '0'));
+                                    BlocksOfSecret.Add(binvalue.PadLeft(GetMethodCapacity(methodId), '0')); //when zeros was cutted
                                 }
                             }                                
                             break;
@@ -364,11 +358,6 @@ namespace SteganoNetLib
 
             if (BlocksOfSecret.Count != 0) //providing value output
             {
-                //temp output to file
-                //string separated = string.Join("_", BlocksOfSecret.ToArray());
-                //string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + "blocks-client.txt";
-                //System.IO.File.AppendAllText(FilePath, separated.ToString());
-
                 return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
             }
             else
