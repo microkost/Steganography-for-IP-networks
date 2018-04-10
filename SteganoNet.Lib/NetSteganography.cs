@@ -262,7 +262,7 @@ namespace SteganoNetLib
                                 }
                                 else
                                 {
-                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0);
+                                    ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.None, 0);                                    
                                     return new Tuple<IpV4Layer, string>(ip, secret); //nothing more to send
                                 }
                             }
@@ -344,11 +344,6 @@ namespace SteganoNetLib
                         }
                     case 305: //IP flag (MF + offset) //RECEIVER
                         {
-                            if(ip.Fragmentation.Offset != 0) //DEBUG
-                            {
-                                rs.AddInfoMessage("3IP: method " + methodId + "offset now");
-                            }
-
                             if (ip.Fragmentation.Options == IpV4FragmentationOptions.MoreFragments) 
                             {
                                 rs.AddInfoMessage("3IP: method " + methodId);
@@ -361,8 +356,7 @@ namespace SteganoNetLib
                                 {
                                     BlocksOfSecret.Add(binvalue.PadLeft(GetMethodCapacity(methodId), '0'));
                                 }
-                            }
-                                
+                            }                                
                             break;
                         }
                 }
