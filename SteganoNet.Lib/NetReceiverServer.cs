@@ -273,12 +273,12 @@ namespace SteganoNetLib
                     //SYN
                     if (tcp.ControlBits == TcpControlBits.Synchronize && tcp.ControlBits != (TcpControlBits.Synchronize | TcpControlBits.Acknowledgment))
                     {
-                        //TODO pickup stego from that TCP packet!!! here and everywhere else
+                        //TODO pickup stego from that TCP packet!!! here AND everywhere else
                         //messageCollector.Append(NetSteganography.GetContent4Network(tcp, StegoUsedMethodIds, this));
 
                         AddInfoMessage("Replying with TCP SYN/ACK...");
-                        SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //replace to static number for debug, could be also steganographic
-                        SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //TODO STEGO
+                        SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //TODO STEGO in
+                        SeqNumberLocal = NetStandard.GetSynOrAckRandNumber(); //TODO STEGO in
                         AckNumberLocal = SeqNumberRemote + 1;
 
                         AddInfoMessage(String.Format("SERVER: SYN seq: {0}, ack: {1}, seqr {2}, ackr {3}", SeqNumberLocal, AckNumberLocal, SeqNumberRemote, AckNumberRemote));
@@ -504,8 +504,8 @@ namespace SteganoNetLib
             }
 
             return ("Warning! Following messages are corrupted.\n\r" +
-                    messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
-                    messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
+                    "\t" + messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
+                    "\t" + messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
         }
 
 

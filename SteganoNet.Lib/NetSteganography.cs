@@ -570,19 +570,22 @@ namespace SteganoNetLib
                         {
                             sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId));
                             string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            int sizeToCut = content.Length;
 
                             //make from content IP address form
                             string stegoInFormOfIpAddress = "255.255.255.255";
-                            if (content.Equals("0"))
+                            if (content.Equals("0")) //its already checked and converted into "0"
                             {
                                 stegoInFormOfIpAddress = "0.0.0.0"; //TODO less suspicious
+                                sizeToCut = 1;
                             }
                             else //parse content to IP
                             {
                                 try
                                 {
-                                    if (content.Length % 4 != 0)
+                                    if (content.Length % 8 != 0 || content.Length < 32)
                                     {
+                                        sc.AddInfoMessage("7DNS: Content was padded! Originally: " + content.Length); //debug only
                                         content = content.PadLeft(32, '0');
                                     }
 
@@ -601,23 +604,30 @@ namespace SteganoNetLib
                                 catch
                                 {
                                     sc.AddInfoMessage("7DNS: carrying info in fake IP failed for this datagram.");
+                                    sizeToCut = 0;
                                 }
                             }
                             IpV4Address fakeIp = new IpV4Address(stegoInFormOfIpAddress);
-
-                            //System.OverflowException: 
+                            
                             List<DnsQueryResourceRecord> dnsRequest = new List<DnsQueryResourceRecord>() { ((DnsQueryResourceRecord)dns.Queries.First()) };
                             DnsQueryResourceRecord dnsRequestOrig = dnsRequest.First();
-                            DnsDataResourceRecord dnsAnswerFake = new DnsDataResourceRecord(dnsRequestOrig.DomainName, dnsRequestOrig.DnsType, DnsClass.Internet, 128, new DnsResourceDataIpV4(fakeIp));
 
                             //new DNS layer                            
+                            DnsDataResourceRecord dnsAnswerFake = new DnsDataResourceRecord(dnsRequestOrig.DomainName, dnsRequestOrig.DnsType, DnsClass.Internet, 128, new DnsResourceDataIpV4(fakeIp));
                             dns.IsQuery = true;
                             dns.Queries = new List<DnsQueryResourceRecord>() { dnsRequestOrig }; //keep request
-                            dns.IsResponse = true;
+                            //dns.IsResponse = true; //its mutual exclusive, one or the other
                             dns.Answers = new List<DnsDataResourceRecord>() { dnsAnswerFake };
 
+                            secret = secret.Remove(0, sizeToCut); //cut x bits from whole
+                            if (content.Length == 0 || secret.Length == 0)
+                            {
+                                return new Tuple<DnsLayer, string>(dns, secret); //nothing more               
+                            }                            
                             break;
                         }
+
+                        //more
                 }
             }
             return new Tuple<DnsLayer, string>(dns, secret);
@@ -646,6 +656,40 @@ namespace SteganoNetLib
                         }
                     case 705:
                         {
+                            rs.AddInfoMessage("7DNS: method " + methodId);
+                            if (dns.Answers.Count == 1 && dns.Queries.Count == 1) //if it is in DNS request...
+                            {
+                                DnsResourceData ddip = dns.Answers[0].DnsType.A.(DnsResourceDataIpV4);
+                                //DnsResourceDataIpV4 ddip = dns.Answers[0];
+                                IpV4Address valueIp = ddip.Data;
+
+
+
+                                DnsDataResourceRecord request = dns.Answers.First(); //ignore the rest
+                                //IpV4Address valueIp = request.Data.ToString();
+                                //DnsResourceDataIpV4 value = request.Data; //GetDnsResourceDataType
+                                //IpV4Address valueIp = (IpV4Address)request.Data;
+                                //string data = value.ToString();
+                                //var data = request.Data;//{}
+                                string fakeIpV4 = "1";// data.ToString();
+                                try
+                                {
+                                    IpV4Address fakeIp = new IpV4Address(fakeIpV4);
+                                    rs.AddInfoMessage("7DNS: method " + methodId + "IP: " + fakeIpV4);
+                                }    
+                                catch
+                                {
+                                    rs.AddInfoMessage("7DNS: method " + methodId + " received IP was corrupted");
+                                    break;
+                                }
+
+                                //start to parse
+                                
+
+                                //List<DnsDataResourceRecord> answers = new List<DnsDataResourceRecord>(); //used for collecting answers if they came in list
+                                //answers = dns.Answers;
+                                //string binvalue =
+                            }
                             //throw NotImplementedException;
                             //alisfliksajfkaf++;
                             break;
