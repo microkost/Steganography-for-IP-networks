@@ -608,7 +608,7 @@ namespace SteganoNetLib
                                 }
                             }
                             IpV4Address fakeIp = new IpV4Address(stegoInFormOfIpAddress);
-                            
+
                             List<DnsQueryResourceRecord> dnsRequest = new List<DnsQueryResourceRecord>() { ((DnsQueryResourceRecord)dns.Queries.First()) };
                             DnsQueryResourceRecord dnsRequestOrig = dnsRequest.First();
 
@@ -623,7 +623,7 @@ namespace SteganoNetLib
                             if (content.Length == 0 || secret.Length == 0)
                             {
                                 return new Tuple<DnsLayer, string>(dns, secret); //nothing more               
-                            }                            
+                            }
                             break;
                         }
 
@@ -656,42 +656,28 @@ namespace SteganoNetLib
                         }
                     case 705:
                         {
-                            rs.AddInfoMessage("7DNS: method " + methodId);
-                            if (dns.Answers.Count == 1 && dns.Queries.Count == 1) //if it is in DNS request...
+                            //rs.AddInfoMessage("7DNS: method " + methodId);
+                            if (dns.Answers.Count > 0 && dns.Queries.Count > 0) //if it is in DNS request...
                             {
-                                DnsResourceData ddip = dns.Answers[0].DnsType.A.(DnsResourceDataIpV4);
-                                //DnsResourceDataIpV4 ddip = dns.Answers[0];
-                                IpV4Address valueIp = ddip.Data;
+                                DnsDataResourceRecord request = dns.Answers.First(); //take just one request from collection                               
+                                IpV4Address fakeIpV4 = ((DnsResourceDataIpV4)request.Data).Data; //wtf parsing
 
-
-
-                                DnsDataResourceRecord request = dns.Answers.First(); //ignore the rest
-                                //IpV4Address valueIp = request.Data.ToString();
-                                //DnsResourceDataIpV4 value = request.Data; //GetDnsResourceDataType
-                                //IpV4Address valueIp = (IpV4Address)request.Data;
-                                //string data = value.ToString();
-                                //var data = request.Data;//{}
-                                string fakeIpV4 = "1";// data.ToString();
-                                try
+                                string binvalue = "";
+                                if (fakeIpV4.Equals(new IpV4Address("0.0.0.0"))) //could also come 255.255.255.255?
                                 {
-                                    IpV4Address fakeIp = new IpV4Address(fakeIpV4);
-                                    rs.AddInfoMessage("7DNS: method " + methodId + "IP: " + fakeIpV4);
-                                }    
-                                catch
-                                {
-                                    rs.AddInfoMessage("7DNS: method " + methodId + " received IP was corrupted");
-                                    break;
+                                    binvalue += "0";
                                 }
-
-                                //start to parse
-                                
-
-                                //List<DnsDataResourceRecord> answers = new List<DnsDataResourceRecord>(); //used for collecting answers if they came in list
-                                //answers = dns.Answers;
-                                //string binvalue =
+                                else
+                                {
+                                    string[] parts = (fakeIpV4.ToString()).Split('.'); //start to parse
+                                    foreach (string octet in parts)
+                                    {                                        
+                                        binvalue += (Convert.ToString(Int32.Parse(octet), 2).PadLeft(8, '0'));
+                                    }
+                                }
+                                rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);
+                                BlocksOfSecret.Add(binvalue);                                
                             }
-                            //throw NotImplementedException;
-                            //alisfliksajfkaf++;
                             break;
                         }
                 }
