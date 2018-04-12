@@ -344,21 +344,20 @@ namespace SteganoNetLib
                             Packet receivedAckPack = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Acknowledgment);
                             if (receivedAckPack == null)
                             {
-                                AddInfoMessage("Problem with receiving TCP ACK...");
+                                AddInfoMessage("Problem with receiving TCP ACK...");                                
                             }
                             else
-                            {                                
-                                AckNumberLocal = receivedAckPack.Ethernet.IpV4.Tcp.SequenceNumber + (uint)receivedAckPack.Ethernet.IpV4.Tcp.PayloadLength; //update value by size of received data
+                            {
+                                AckNumberLocal = receivedAckPack.Ethernet.IpV4.Tcp.SequenceNumber + (uint)receivedAckPack.Ethernet.IpV4.Tcp.PayloadLength; //update value by size of received data                                
                             }
 
-                            AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize)); //acknowledged data
-
+                            AddInfoMessage(String.Format("{0} bits of TCP + HTTP left to send - data size: {1}", SecretMessage.Length, tcpPayloadSize)); //acknowledged data                            
 
                             //WAIT for DATA reply and send ACK...
                             Packet reply = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);
                             if (reply == null)
                             {
-                                AddInfoMessage("Answer for request not received...");
+                                AddInfoMessage("Answer for request not received...");                                
                             }
                             else
                             {
@@ -366,7 +365,7 @@ namespace SteganoNetLib
                                 AckNumberLocal = (uint)(reply.Ethernet.IpV4.Tcp.SequenceNumber + reply.Ethernet.IpV4.Tcp.PayloadLength); //increased by size of received data
                                 //make new TCP ACK layer for ACKing received data
                                 TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(PortLocal, PortRemote, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
-                                SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                                                             
+                                SendPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpOfInterface, IpOfRemoteHost, tcpLayerReply)); //sending packet now, not at the end of method due to waiting for ack...                                
                             }
 
                             //terminating

@@ -257,6 +257,7 @@ namespace SteganoNetLib
 
 
             //HTTP methods
+            //HTTP methods
             List<int> httpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.HttpRangeStart, NetSteganography.HttpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
             {
@@ -336,6 +337,9 @@ namespace SteganoNetLib
                         TcpLayer tcpLayerReply = NetStandard.GetTcpLayer(tcp.DestinationPort, tcp.SourcePort, SeqNumberLocal, AckNumberLocal, TcpControlBits.Acknowledgment);
                         SendReplyPacket(NetStandard.GetTcpReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, tcpLayerReply)); //acking                        
                     }
+
+                    //is to fast! Especially when running locally...
+                    System.Threading.Thread.Sleep(NetSenderClient.delayHttp / 6);
 
                     //solve TCP for DATA push (actual reply to http request)
                     SeqNumberLocal = AckNumberRemote;
