@@ -49,8 +49,8 @@ namespace SteganoNetLib
             Dictionary<int, string> listOfStegoMethods = new Dictionary<int, string>
             {
                 //if you update listOfStegoMethods, update also GetMethodCapacity()
-                //for details read file MethodDescription.txt, keep it updated if changing following list!             
-                //inform user about settings in [] brackets like exact delay if possible (constants)
+                //for details of methods read file MethodDescription.txt, keep it updated if changing smth here...
+                //inform user about invisible settings in [] brackets like exact delay (if possible (constants))
 
                 { 301, "IP Type of service / DiffServ (agresive) - " + GetMethodCapacity(301) + "b" },
                 { 302, "IP Type of service / DiffServ - " + GetMethodCapacity(302) + "b" },
@@ -68,9 +68,8 @@ namespace SteganoNetLib
                 { 703, "DNS request (transaction id) - " + GetMethodCapacity(703) + "b" },
                 { 705, "DNS request (response) - " + GetMethodCapacity(705) + "b" },                 
                 //707 DNS flags https://tools.ietf.org/html/rfc1035#section-4.1.1, standard 0x00000100 //TODO update value Capacity
-
-                { 731, "HTTP GET (over TCP) - 0b" }, //TODO
-                //{ 733, "HTTP GET facebook picture - 64b" }, //TODO
+                { 731, "HTTP GET (over TCP) - " + GetMethodCapacity(731) + "b" },
+                { 733, "HTTP GET (social media) - " + GetMethodCapacity(733) + "b" },  
                 //HTTP Entity tag headers 
                         
                 //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
@@ -96,17 +95,13 @@ namespace SteganoNetLib
                 { 451, 0},
                 { 453, 32 },
                 { 455, 16 },
-                { 457, 0 }, //TODO update when implemented               
+                { 457, 0 }, //TODO update when implemented
                 { 701, 0 },
                 { 703, 16 },
                 { 705, 32 },
                 { 707, 0 },
-                //{ ,},
-                //{ ,},
-                //{ ,},
-                //{ ,},
-                //{ ,},
-                //{ ,},
+                { 731, 0 },
+                { 733, 64 },
                 //{ ,},
             };
 
@@ -169,8 +164,6 @@ namespace SteganoNetLib
             {
                 throw new Exception("Value " + partOfSecret + " caused an exception when converting to decimal number");
             }
-
-
         }
 
         //service method for all
@@ -243,7 +236,7 @@ namespace SteganoNetLib
                             ushort offset = Convert.ToUInt16(content, 2);
                             if (offset % 8 == 0 && offset != 0) //offset rule
                             {
-                                sc.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId)); //offset can be from 0 to 8191
+                                sc.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId)); //offset can be from 0 to 8191 based on standard
                                 ip.Fragmentation = new IpV4Fragmentation(IpV4FragmentationOptions.MoreFragments, offset); //also IpV4FragmentationOptions.DoNotFragment posssible
                                 secret = secret.Remove(0, content.Length); //remove only when is used...
                             }
@@ -289,10 +282,10 @@ namespace SteganoNetLib
                         }
                     case 303: //IP (Identification) //RECEIVER
                         {
-                            rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                             string binvalue = Convert.ToString(ip.Identification, 2).PadLeft(GetMethodCapacity(methodId), '0');
                             if (IdentificationIP != binvalue) //do not add value when it didnt change
                             {
+                                rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
                                 IdentificationIP = binvalue; //remember for next time
                                 BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                             }
@@ -548,17 +541,15 @@ namespace SteganoNetLib
                 {
                     case 701: //DNS regular //SENDER
                         {
-                            sc.AddInfoMessage("7DNS: legacy method " + methodId + " (no data removed)");
-                            dns.Id = (ushort)rand.Next(0, 65535);
+                            sc.AddInfoMessage("7DNS: legacy method " + methodId + " (no data)");
+                            //dns.Id = (ushort)rand.Next(0, 65535);
                             break;
                         }
                     case 703: //DNS (transaction id) //SENDER
                         {
                             sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId));
                             string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
-
                             dns.Id = Convert.ToUInt16(content, 2); //place content string 
-                            //DEBUG: dns was in try-catch setting content = 0 when error, probably old debug...
                             secret = secret.Remove(0, content.Length); //cut x bits from whole
                             if (content.Length == 0 || secret.Length == 0)
                             {
@@ -574,18 +565,18 @@ namespace SteganoNetLib
 
                             //make from content IP address form
                             string stegoInFormOfIpAddress = "255.255.255.255";
-                            if (content.Equals("0")) //its already checked and converted into "0"
+                            if (content.Equals("0")) //its already checked and converted into "0" by GetBinaryContentToSend()
                             {
                                 stegoInFormOfIpAddress = "0.0.0.0"; //TODO less suspicious
                                 sizeToCut = 1;
                             }
-                            else //parse content to IP
+                            else //parse content to IP address
                             {
                                 try
                                 {
                                     if (content.Length % 8 != 0 || content.Length < 32)
                                     {
-                                        sc.AddInfoMessage("7DNS: Content was padded! Originally: " + content.Length); //debug only
+                                        //sc.AddInfoMessage("7DNS: " + methodId + ", content was padded, originally: " + content.Length);
                                         content = content.PadLeft(32, '0');
                                     }
 
@@ -599,12 +590,13 @@ namespace SteganoNetLib
                                     }
 
                                     stegoInFormOfIpAddress = Convert.ToUInt16(octets[0], 2) + "." + Convert.ToUInt16(octets[1], 2) + "." + Convert.ToUInt16(octets[2], 2) + "." + Convert.ToUInt16(octets[3], 2);
-                                    sc.AddInfoMessage("7DNS: IP is + " + stegoInFormOfIpAddress + " made from: " + content);
+                                    sc.AddInfoMessage("7DNS: IP is + " + stegoInFormOfIpAddress);
                                 }
                                 catch
                                 {
-                                    sc.AddInfoMessage("7DNS: carrying info in fake IP failed for this datagram.");
-                                    sizeToCut = 0;
+                                    sc.AddInfoMessage("7DNS: carrying info in fake IP FAILED for this datagram.");
+                                    sizeToCut = 0; //do not cut
+                                    //TODO what is  in IP then?
                                 }
                             }
                             IpV4Address fakeIp = new IpV4Address(stegoInFormOfIpAddress);
@@ -615,8 +607,8 @@ namespace SteganoNetLib
                             //new DNS layer                            
                             DnsDataResourceRecord dnsAnswerFake = new DnsDataResourceRecord(dnsRequestOrig.DomainName, dnsRequestOrig.DnsType, DnsClass.Internet, 128, new DnsResourceDataIpV4(fakeIp));
                             dns.IsQuery = true;
-                            dns.Queries = new List<DnsQueryResourceRecord>() { dnsRequestOrig }; //keep request
                             //dns.IsResponse = true; //its mutual exclusive, one or the other
+                            dns.Queries = new List<DnsQueryResourceRecord>() { dnsRequestOrig }; //keep request                            
                             dns.Answers = new List<DnsDataResourceRecord>() { dnsAnswerFake };
 
                             secret = secret.Remove(0, sizeToCut); //cut x bits from whole
@@ -626,8 +618,6 @@ namespace SteganoNetLib
                             }
                             break;
                         }
-
-                        //more
                 }
             }
             return new Tuple<DnsLayer, string>(dns, secret);
@@ -656,14 +646,13 @@ namespace SteganoNetLib
                         }
                     case 705:
                         {
-                            //rs.AddInfoMessage("7DNS: method " + methodId);
                             if (dns.Answers.Count > 0 && dns.Queries.Count > 0) //if it is in DNS request...
                             {
                                 DnsDataResourceRecord request = dns.Answers.First(); //take just one request from collection                               
                                 IpV4Address fakeIpV4 = ((DnsResourceDataIpV4)request.Data).Data; //wtf parsing
 
                                 string binvalue = "";
-                                if (fakeIpV4.Equals(new IpV4Address("0.0.0.0"))) //could also come 255.255.255.255?
+                                if (fakeIpV4.Equals(new IpV4Address("0.0.0.0"))) //could also come 255.255.255.255, what if it is data?
                                 {
                                     binvalue += "0";
                                 }
@@ -671,12 +660,12 @@ namespace SteganoNetLib
                                 {
                                     string[] parts = (fakeIpV4.ToString()).Split('.'); //start to parse
                                     foreach (string octet in parts)
-                                    {                                        
+                                    {
                                         binvalue += (Convert.ToString(Int32.Parse(octet), 2).PadLeft(8, '0'));
                                     }
                                 }
                                 rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);
-                                BlocksOfSecret.Add(binvalue);                                
+                                BlocksOfSecret.Add(binvalue);
                             }
                             break;
                         }
@@ -708,40 +697,69 @@ namespace SteganoNetLib
                             sc.AddInfoMessage("7HTTP: legacy method " + methodId + " (no data removed)");
                             break;
                         }
-                    case 733: //HTTP GET facebook picture //SENDER
+                    case 733: //HTTP GET social network picture //SENDER
                         {
-                            sc.AddInfoMessage("7HTTP: method " + methodId);
-                            const int usedbits = 200;
-                            try
+                            sc.AddInfoMessage("7HTTP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+
+                            List<string> services = NetDevice.GetSocialMediaDomains();
+                            List<string> appendix = NetDevice.GetSocialMediaSuffix();
+                            string oneService = services[rand.Next(services.Count)];
+                            string oneApendix = appendix[rand.Next(appendix.Count)];
+
+                            //cut content to some smaller parts and convert them to hex
+
+                            string urlpart = "";
+                            int sizeToCut = content.Length;
+                            int bitsPerPart = 16;  //bitsPerPart is just decided number
+                            if (content.Equals("0")) //its already checked and converted into "0" by GetBinaryContentToSend()
                             {
-                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-
-                                //request for FB image                                                                
-                                //https://scontent-arn2-1.xx.fbcdn.net/v/t1.0-9/28783581_2044295905785459_4786842833526980608_o.jpg?_nc_cat=0&oh=f393eabff543c0014fa7d549a606cd72&oe=5B3439EE
-                                //https://scontent-arn2-1.xx.fbcdn.net/v/t31.0-8/26756412_2019306211617762_7982736838983831551_o.jpg?_nc_cat=0&oh=1fe51c45d8053ae7b0f95570763e3cfd&oe=5B729DA3
-                                //https://www.facebook.com/<username>/photos/a.1693236240891429.1073741827.1693231710891882/2042454925969557/?type=3&theater
-
-                                //instagram                                
-                                //https://scontent-arn2-1.cdninstagram.com/vp/8c1b8efbaac6831e2a15d59e6a047276/5B6D8993/t51.2885-15/e35/29417270_195771601230887_3084806938333020160_n.jpg
-                                //https://scontent-arn2-1.cdninstagram.com/vp/d9d046183c558e2065c5c6b77ded7cd8/5B74D9C8/t51.2885-15/e35/29417740_596673960668154_5630438044696838144_n.jpg
-
-                                //twitter
-                                //https://pbs.twimg.com/media/DUj28AMXkAEy8q7.jpg:large
-                                //https://pbs.twimg.com/media/DZ-5xFDU0AAJRPu.jpg:large
-
-                                //pinterest
-
-
-                                secret = secret.Remove(0, usedbits);
+                                urlpart = "0";
+                                sizeToCut = 1;
                             }
-                            catch
+                            else //parse content
                             {
-                                if (secret.Length != 0)
+                                try
                                 {
-                                    //dns.Id = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
-                                    secret = secret.Remove(0, secret.Length);
+                                    if (content.Length % bitsPerPart != 0 || content.Length < bitsPerPart)
+                                    {
+                                        //sc.AddInfoMessage("7DNS: " + methodId + ", content was padded, originally: " + content.Length);
+                                        content = content.PadLeft(GetMethodCapacity(methodId), '0');
+                                    }
+
+                                    List<string> parts = new List<string>();
+                                    for (int i = 0; i < content.Length; i = i + bitsPerPart)
+                                    {
+                                        if (content.Length - i >= bitsPerPart)
+                                            parts.Add(content.Substring(i, bitsPerPart));
+                                        else
+                                            parts.Add(content.Substring(i, ((content.Length - i))));
+                                    }
+
+                                    foreach (string part in parts)
+                                    {
+                                        urlpart += Convert.ToInt32(part, 2).ToString("X").ToLower();
+                                    }
                                 }
-                                return new Tuple<HttpLayer, string>(http, secret); //nothing more                                         
+                                catch
+                                {
+                                    sc.AddInfoMessage("7HTTP: smth failed");
+                                    sizeToCut = 0; //do not cut                                    
+                                }
+                            }
+
+                            string url = oneService + urlpart + oneApendix; //place content string in HEX
+                            secret = secret.Remove(0, sizeToCut); //cut x bits from whole
+                            sc.AddInfoMessage("7HTTP: Asking: " + url);
+
+                            //make request
+                            HttpRequestLayer httpFakeRequest = (HttpRequestLayer)http;
+                            httpFakeRequest.Uri = url;
+                            http = (HttpLayer)httpFakeRequest;
+
+                            if (content.Length == 0 || secret.Length == 0)
+                            {
+                                return new Tuple<HttpLayer, string>(httpFakeRequest, secret); //nothing more               
                             }
                             break;
                         }
@@ -762,6 +780,65 @@ namespace SteganoNetLib
                     case 731: //HTTP (pure) RECEIVER
                         {
                             rs.AddInfoMessage("7HTTP: method " + methodId);
+
+                            break;
+                        }
+                    case 733: //HTTP GET social network picture //RECEIVER
+                        {
+                            if (http.IsRequest)
+                            {
+                                HttpRequestDatagram httpReq = (HttpRequestDatagram)http;
+                                string url = httpReq.Uri;
+                                rs.AddInfoMessage("7HTTP: method " + methodId + " received: "+ url);
+
+                                //work for regex to cut the message from url, now fast workaround
+                                List<string> services = NetDevice.GetSocialMediaDomains();
+                                List<string> appendix = NetDevice.GetSocialMediaSuffix();
+                                foreach(string prependix in services)
+                                {
+                                    if(url.Contains(prependix))
+                                    {
+                                        url = url.Replace(prependix, "");                                        
+                                    }
+                                }
+                                foreach(string append in appendix)
+                                {
+                                    if (url.Contains(append))
+                                    {
+                                        url = url.Replace(append, "");
+                                    }
+                                }
+                                rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
+
+                                //binvalue
+
+                                //BlocksOfSecret.Add(binvalue);                                
+                            }
+
+                            /*
+                             * f (dns.Answers.Count > 0 && dns.Queries.Count > 0) //if it is in DNS request...
+                            {
+                                DnsDataResourceRecord request = dns.Answers.First(); //take just one request from collection                               
+                                IpV4Address fakeIpV4 = ((DnsResourceDataIpV4)request.Data).Data; //wtf parsing
+
+                                string binvalue = "";
+                                if (fakeIpV4.Equals(new IpV4Address("0.0.0.0"))) //could also come 255.255.255.255, what if it is data?
+                                {
+                                    binvalue += "0";
+                                }
+                                else
+                                {
+                                    string[] parts = (fakeIpV4.ToString()).Split('.'); //start to parse
+                                    foreach (string octet in parts)
+                                    {                                        
+                                        binvalue += (Convert.ToString(Int32.Parse(octet), 2).PadLeft(8, '0'));
+                                    }
+                                }
+                                rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);
+                                BlocksOfSecret.Add(binvalue);                                
+                            }
+                            break;
+                             */
 
                             break;
                         }

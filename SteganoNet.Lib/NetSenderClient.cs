@@ -238,7 +238,7 @@ namespace SteganoNetLib
                     List<int> tcpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.TcpRangeStart, NetSteganography.TcpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(tcpSelectionIds.Contains) && SecretMessage.Length != 0)
                     {
-                        //part of HTTP methods
+                        //part of HTTP methods or should be improved later
                     }
 
 

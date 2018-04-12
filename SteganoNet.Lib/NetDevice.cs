@@ -65,13 +65,13 @@ namespace SteganoNetLib
 
                 string output = p.StandardOutput.ReadToEnd();
                 p.WaitForExit();
-                
+
                 string[] stringSeparators = new string[] { "\r\n" };
                 string[] parsedDirty = output.Split(stringSeparators, StringSplitOptions.None);
 
                 List<MacAddress> macList = new List<MacAddress>();
                 foreach (string s in parsedDirty) //checking and cleaning of strings
-                {                    
+                {
                     string mac = s.Trim();
                     Regex regex = new Regex("^(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}|(?:[0-9a-fA-F]{2}-){5}[0-9a-fA-F]{2}|(?:[0-9a-fA-F]{2}){5}[0-9a-fA-F]{2}$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
                     MatchCollection mc = regex.Matches(mac); //saving only those which are looking like mac...
@@ -79,8 +79,8 @@ namespace SteganoNetLib
                     {
                         macList.Add(new MacAddress(mac));
                     }
-                }                
-                return macList.First();                
+                }
+                return macList.First();
             }
             catch
             {
@@ -236,5 +236,66 @@ namespace SteganoNetLib
             return Uri.TryCreate(source, UriKind.Absolute, out Uri uriResult) && uriResult.Scheme == Uri.UriSchemeHttp;
         }
 
+        public static List<string> GetSocialMediaDomains(bool fromStatic = true) //getting social media hostnames to 
+        {
+            //if (fromStatic) //hardcoded solution (random things could generate)
+            List<string> services = new List<string>()
+            {
+                //always ends with "/"
+                //parsing starting after second "/", keep two slashes in url after domain
+                "https://scontent-arn2-1.xx.fbcdn.net/v/t1.0-9/",
+                "https://scontent-arn2-1.xx.fbcdn.net/v/t31.0-8/",
+                "https://www.facebook.com/groups/photos/", //groups should be username
+                "https://scontent-arn2-1.cdninstagram.com/vp/t51.2885-15/",
+                "https://scontent-arn2-1.cdninstagram.com/vp/5B74D9C8/",
+                "https://pbs.twimg.com/media/DUj28A/",
+                "https://pbs.twimg.com/media/DZ-5xFDU0/",
+                "https://lh3.googleusercontent.com/UJbNrdoCmeA/Ws7miuqLMuI/",
+                "https://lh3.googleusercontent.com/proxy/DFRhoqce1yHrzurt/",
+                "https://lh3.googleusercontent.com/EEkBjHI/X0EEkBjH/",
+                "https://img.washingtonpost.com/rf/image_1484w/"
+            };
+
+            //facebook
+            //https://scontent-arn2-1.xx.fbcdn.net/v/t1.0-9/28783581_20442955785459_4786842833526980608_o.jpg?_nc_cat=0&oh=f393eabff543c001a7d549a606cd72&oe=5B3439EE
+            //https://scontent-arn2-1.xx.fbcdn.net/v/t31.0-8/26756412_20106211617762_79826838983831551_o.jpg?_nc_cat=0&oh=1fe51c45d8053ae7b0f570763e3cfd&oe=5B729DA3
+            //https://www.facebook.com/<username>/photos/a.16932240891429.1073741827.1693231710891882/20424925969557/?type=3&theater
+            //instagram                                
+            //https://scontent-arn2-1.cdninstagram.com/vp/8c1b8efbaac6831e25d59e6a047276/5B6D8993/t51.2885-15/e35/29417270_195771601230887_30806938333020160_n.jpg
+            //https://scontent-arn2-1.cdninstagram.com/vp/d9d046183c558e2065c6b77ded7cd8/5B74D9C8/t51.2885-15/e35/29417740_596673960668154_56338044696838144_n.jpg
+            //twitter
+            //https://pbs.twimg.com/media/DUj28AkAEy8q7.jpg:large
+            //https://pbs.twimg.com/media/DZ-5xF0AAJRPu.jpg:large
+            //google plus / picasa
+            //https://lh3.googleusercontent.com/-UJbNrdoCmeA/Ws7miuqLMuI/AAAAAAAALLg/8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC/w530-h663-n-rw/The%2BInner%2BCircle.jpg            
+            //https://lh3.googleusercontent.com/proxy/-DFRhoqce1yHrzurtSyOjUEV23ty9q4aur7qJFRH54IvUpavBjFMSNqM8eEiNRQPq1C58EkvJpaXcbTHPjTT8YrQcYQYfTSe-zzcq9KL_ics9BUXXZUzu2Oq=w265-h177-p-rw
+            //https://lh3.googleusercontent.com/proxy/88h-zgjP7hnhVBA9onuox1RbsMAVWTOI7keYBRpQ2OVo6QVB1lEy4rHgmJVI3339JmEoPu9Wza21YpHucAIdS9uiz78M_hbXl9jJK1Ws6FqKkGQqSkLCEb2ymiaGSyvvWwOovw_0L7_sxhjjGto=w265-h177-p-rw
+            //https://lh3.googleusercontent.com/proxy/X0EEkBjHI6sLAR2oQsJYKU4nL4ReNTEI8W1zCQ7J4ZnlhB8v8yyC7CWCa6-e9Qzn0K45pzFAAN0Iz8F99Hi3pyWFb-CaXT8PmX7lrIrbDCQpmH-x=w265-h171-p-rw
+            //pinterest
+            //random
+            //https://img.washingtonpost.com/rf/image_1484w/2010-2019/WashingtonPost/2018/04/11/National-Politics/Images/Trump_09941.jpg-2d74f-4204.jpg?uuid=Bq6TcD3jEeiNU-ug7SNxzA
+
+
+            return services;
+        }
+
+        public static List<string> GetSocialMediaSuffix(bool fromStatic = true) //getting social media append
+        {
+            //random things could generate
+
+            //if (fromStatic) //hardcoded solution
+            List<string> services = new List<string>()
+            {
+                "_o.jpg?_nc_cat=0&oh=f39",
+                "_?type=3&theater",
+                "_n.jpg?_nc_cat=1&oh=b0f95763e3cfd&oe=5B729DA3",
+                "_n.jpg:large",
+                ".jpg:large",
+                ".png?GSyvvWwOovw_0L7_sxhjjGto=w265-h177-p-rw",
+                ".jpg:small?",
+                ".jpg?uuid=Bq6TcD3jEeiNU-ug7SNxzA"
+            };
+            return services;
+        }
     }
 }

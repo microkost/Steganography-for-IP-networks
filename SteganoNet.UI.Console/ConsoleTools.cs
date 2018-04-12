@@ -71,7 +71,7 @@ namespace SteganoNet.UI.Console
                 var item = allmethods.ElementAt(i);
                 System.Console.WriteLine(String.Format("\t\t{0}.  {1} (id: {2})", i + 1, item.Value, item.Key));
             }
-            System.Console.Write("\tEnter numbers of methods separated by comma (1,2): ");
+            System.Console.Write("\tEnter numbers of methods separated by comma (1,3): ");
             string selectionIndexes = System.Console.ReadLine();
 
             try
@@ -86,13 +86,14 @@ namespace SteganoNet.UI.Console
             catch
             {
                 //just in case of inserted non-sence
-                System.Console.WriteLine("\t Invalid input! Using IDs 301, 302");
-                return new List<int>() { 301, 302 };
+                System.Console.WriteLine("\t Invalid input! Using IDs 301, 303");
+                return new List<int>() { 301, 303 };
             }
 
             //TODO: Add mixed order
 
-            System.Console.WriteLine(String.Format("\r\tSelected: {0}", string.Join(",", selectedMethodsID)));
+            selectedMethodsID.Sort(); //sort them just for sure
+            System.Console.WriteLine(String.Format("\r\tSelected: {0}", string.Join(",", selectedMethodsID)));            
             return selectedMethodsID;
         }
 

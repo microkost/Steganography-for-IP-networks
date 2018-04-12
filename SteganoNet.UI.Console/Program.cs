@@ -237,6 +237,7 @@ namespace SteganoNet.UI.Console
                                 }
 
                                 stegoMethods = nums.ToList();
+                                stegoMethods.Sort(); //just for sure to sort them
                                 break;
                             }
                         case "-runsame":
