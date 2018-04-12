@@ -34,7 +34,6 @@ namespace SteganoNetLib
         private IpV4Address IpLocalListening { get; set; }
         private IpV4Address IpRemoteSpeaker { get; set; }
         private List<StringBuilder> StegoBinary { get; set; } //contains steganography strings in binary
-        private List<Tuple<Packet, List<int>>> StegoPackets { get; set; } //contains steganography packets (maybe outdated)    
         private int PacketSize { get; set; } //recognize change in stream
         private bool FirstRun { get; set; }
         private bool IsListenedSameInterface { get; set; } //if debug mode is running
@@ -63,7 +62,6 @@ namespace SteganoNetLib
             IsListenedSameInterface = remoteIsSameAsLocal || remoteIsZero;
 
             //bussiness ctor
-            StegoPackets = new List<Tuple<Packet, List<int>>>(); //maybe outdated
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
             Messages.Enqueue("Server created...");
@@ -144,7 +142,7 @@ namespace SteganoNetLib
                     }
                 } while (!Terminate);
 
-                AddInfoMessage(String.Format("Message is assembling from {0} packets", StegoPackets.Count));
+                AddInfoMessage(String.Format("Message is assembling from {0} sub messages", StegoBinary.Count));
                 return;
             }
         }

@@ -789,19 +789,19 @@ namespace SteganoNetLib
                             {
                                 HttpRequestDatagram httpReq = (HttpRequestDatagram)http;
                                 string url = httpReq.Uri;
-                                rs.AddInfoMessage("7HTTP: method " + methodId + " received: "+ url);
+                                rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
 
                                 //work for regex to cut the message from url, now fast workaround
                                 List<string> services = NetDevice.GetSocialMediaDomains();
                                 List<string> appendix = NetDevice.GetSocialMediaSuffix();
-                                foreach(string prependix in services)
+                                foreach (string prependix in services)
                                 {
-                                    if(url.Contains(prependix))
+                                    if (url.Contains(prependix)) //remove everything before actuall message
                                     {
-                                        url = url.Replace(prependix, "");                                        
+                                        url = url.Replace(prependix, "");
                                     }
                                 }
-                                foreach(string append in appendix)
+                                foreach (string append in appendix) //remove everything after actuall message
                                 {
                                     if (url.Contains(append))
                                     {
@@ -810,37 +810,54 @@ namespace SteganoNetLib
                                 }
                                 rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
 
-                                //binvalue
-
-                                //BlocksOfSecret.Add(binvalue);                                
-                            }
-
-                            /*
-                             * f (dns.Answers.Count > 0 && dns.Queries.Count > 0) //if it is in DNS request...
-                            {
-                                DnsDataResourceRecord request = dns.Answers.First(); //take just one request from collection                               
-                                IpV4Address fakeIpV4 = ((DnsResourceDataIpV4)request.Data).Data; //wtf parsing
-
+                                //convert message from URL to binary
+                                int bitsPerPart = 16; //TODO calculate from GetMethodCapacity(methodId)
+                                int hexaCharsForBinaryPart = bitsPerPart / 4; //TODO tricky as hell!
                                 string binvalue = "";
-                                if (fakeIpV4.Equals(new IpV4Address("0.0.0.0"))) //could also come 255.255.255.255, what if it is data?
-                                {
-                                    binvalue += "0";
-                                }
-                                else
-                                {
-                                    string[] parts = (fakeIpV4.ToString()).Split('.'); //start to parse
-                                    foreach (string octet in parts)
-                                    {                                        
-                                        binvalue += (Convert.ToString(Int32.Parse(octet), 2).PadLeft(8, '0'));
-                                    }
-                                }
-                                rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);
-                                BlocksOfSecret.Add(binvalue);                                
-                            }
-                            break;
-                             */
 
-                            break;
+                                try
+                                {
+                                    List<string> parts = new List<string>();
+                                    for (int i = 0; i < url.Length; i = i + hexaCharsForBinaryPart)
+                                    {
+                                        if (url.Length - i >= hexaCharsForBinaryPart)
+                                            parts.Add(url.Substring(i, hexaCharsForBinaryPart));
+                                        else
+                                            parts.Add(url.Substring(i, ((url.Length - i))));
+                                    }
+
+                                    foreach (string part in parts)
+                                    {
+                                        long decimalValue = Convert.ToInt64(part, 16);
+                                        binvalue += Convert.ToString(decimalValue, 2).PadLeft(bitsPerPart, '0');
+                                    }
+
+                                    foreach (char c in binvalue)
+                                    {
+                                        //TODO check that all of the char are not zeros! Since then is whole message 0
+                                    }
+
+                                    //TODO FIX message zeros on both sides
+                                    //TODO fix TCP ACK numbers...
+                                    //TODO more...
+                                }
+                                catch
+                                {
+                                    //TODO?
+                                }
+
+                                
+                                try
+                                {
+                                    BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue)); //TODO warning, this should be tricky as hell
+                                }
+                                catch
+                                {
+                                    BlocksOfSecret.Add(binvalue); //TODO warning!
+                                    rs.AddInfoMessage("checking of parsing crashed!"); 
+                                }
+                            }
+                            break;                            
                         }
                 }
             }
