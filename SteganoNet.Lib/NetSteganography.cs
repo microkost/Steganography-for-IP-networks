@@ -151,7 +151,8 @@ namespace SteganoNetLib
 
             try
             {
-                if (Double.Parse(partOfSecret) == 0 || partOfSecret[0].Equals("0")) //check if whole sequence is zero or it starts with zero
+                System.Text.RegularExpressions.Regex r = new System.Text.RegularExpressions.Regex("^[0\\s]*$"); //checking even very long string for only zeros
+                if (r.IsMatch(partOfSecret) || partOfSecret[0].Equals("0")) //check if whole sequence is zero or it starts with zero
                 {
                     return "0"; //send just zero and cut one bit from whole
                 }
@@ -832,14 +833,16 @@ namespace SteganoNetLib
                                         binvalue += Convert.ToString(decimalValue, 2).PadLeft(bitsPerPart, '0');
                                     }
 
-                                    foreach (char c in binvalue)
+                                    System.Text.RegularExpressions.Regex r = new System.Text.RegularExpressions.Regex("^[0\\s]*$");
+                                    if(r.IsMatch(binvalue)) //checking if binvalue is only 0, should be changed
                                     {
-                                        //TODO check that all of the char are not zeros! Since then is whole message 0
+                                        binvalue = "0";
                                     }
+                                    
 
-                                    //TODO FIX message zeros on both sides
+                                    //TODO unpadding!
                                     //TODO fix TCP ACK numbers...
-                                    //TODO more...
+                                    
                                 }
                                 catch
                                 {

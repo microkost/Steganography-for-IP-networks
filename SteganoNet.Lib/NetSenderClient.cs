@@ -347,7 +347,7 @@ namespace SteganoNetLib
                                 AddInfoMessage("Problem with receiving TCP ACK...");
                             }
                             else
-                            {
+                            {                                
                                 AckNumberLocal = receivedAckPack.Ethernet.IpV4.Tcp.SequenceNumber + (uint)receivedAckPack.Ethernet.IpV4.Tcp.PayloadLength; //update value by size of received data
                             }
 
