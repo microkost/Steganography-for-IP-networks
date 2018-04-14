@@ -339,7 +339,7 @@ namespace SteganoNetLib
                     }
 
                     //is to fast! Especially when running locally...
-                    System.Threading.Thread.Sleep(NetSenderClient.delayHttp / 6);
+                    System.Threading.Thread.Sleep(NetSenderClient.delayHttp / 4);
 
                     //solve TCP for DATA push (actual reply to http request)
                     SeqNumberLocal = AckNumberRemote;

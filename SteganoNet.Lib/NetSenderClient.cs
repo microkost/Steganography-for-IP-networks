@@ -29,7 +29,7 @@ namespace SteganoNetLib
         public const int delayIcmp = 1000; //gap for ICMP requests (default 1000)
         public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
         public const int delayDns = 3000;
-        public const int delayHttp = 4000;
+        public const int delayHttp = 2000; //4000;e
 
 
         //network public parametres

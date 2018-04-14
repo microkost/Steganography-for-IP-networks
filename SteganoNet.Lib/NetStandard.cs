@@ -312,7 +312,7 @@ namespace SteganoNetLib
                         }
                     }
 
-                    if (sw.ElapsedMilliseconds > TcpTimeoutInMs) //timeout break
+                    if (sw.ElapsedMilliseconds > TcpTimeoutInMs/2) //timeout break //divide by two is DEBUG faster...
                     {
                         sw.Stop();
                         return null;

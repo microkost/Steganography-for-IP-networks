@@ -101,7 +101,7 @@ namespace SteganoNetLib
                 { 705, 32 },
                 { 707, 0 },
                 { 731, 0 },
-                { 733, 64 },
+                { 733, 64 }, //could be any lenght, but needs to be %4 == 0 and %8 == 0
                 //{ ,},
             };
 
@@ -170,7 +170,9 @@ namespace SteganoNetLib
         //service method for all
         private static string GetBinaryStringFromReceived(string binvalue)
         {
-            if (Double.Parse(binvalue) == 0)
+            //if (Double.Parse(binvalue) == 0)
+            System.Text.RegularExpressions.Regex r = new System.Text.RegularExpressions.Regex("^[0\\s]*$"); //checking even very long string for only zeros
+            if (r.IsMatch(binvalue) || binvalue[0].Equals("0")) //check if whole sequence is zero or it starts with zero
             {
                 return "0";
             }
@@ -701,7 +703,6 @@ namespace SteganoNetLib
                     case 733: //HTTP GET social network picture //SENDER
                         {
                             sc.AddInfoMessage("7HTTP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
 
                             List<string> services = NetDevice.GetSocialMediaDomains();
                             List<string> appendix = NetDevice.GetSocialMediaSuffix();
@@ -709,10 +710,13 @@ namespace SteganoNetLib
                             string oneApendix = appendix[rand.Next(appendix.Count)];
 
                             //cut content to some smaller parts and convert them to hex
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            int sizeToCut = content.Length;
 
                             string urlpart = "";
-                            int sizeToCut = content.Length;
-                            int bitsPerPart = 16;  //bitsPerPart is just decided number
+                            int bitsPerPart = GetMethodCapacity(methodId) / 1; //4;  //bitsPerPart is just decided number
+                            //TADY
+
                             if (content.Equals("0")) //its already checked and converted into "0" by GetBinaryContentToSend()
                             {
                                 urlpart = "0";
@@ -724,7 +728,7 @@ namespace SteganoNetLib
                                 {
                                     if (content.Length % bitsPerPart != 0 || content.Length < bitsPerPart)
                                     {
-                                        //sc.AddInfoMessage("7DNS: " + methodId + ", content was padded, originally: " + content.Length);
+                                        sc.AddInfoMessage("7DNS: " + methodId + ", content was padded, originally: " + content.Length);
                                         content = content.PadLeft(GetMethodCapacity(methodId), '0');
                                     }
 
@@ -739,7 +743,7 @@ namespace SteganoNetLib
 
                                     foreach (string part in parts)
                                     {
-                                        urlpart += Convert.ToInt32(part, 2).ToString("X").ToLower();
+                                        urlpart += Convert.ToInt32(part, 2).ToString("X").ToLower(); //to HEXA
                                     }
                                 }
                                 catch
@@ -748,6 +752,8 @@ namespace SteganoNetLib
                                     sizeToCut = 0; //do not cut                                    
                                 }
                             }
+
+
 
                             string url = oneService + urlpart + oneApendix; //place content string in HEX
                             secret = secret.Remove(0, sizeToCut); //cut x bits from whole
@@ -809,11 +815,12 @@ namespace SteganoNetLib
                                         url = url.Replace(append, "");
                                     }
                                 }
-                                rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
+                                //rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
 
                                 //convert message from URL to binary
-                                int bitsPerPart = 16; //TODO calculate from GetMethodCapacity(methodId)
-                                int hexaCharsForBinaryPart = bitsPerPart / 4; //TODO tricky as hell!
+                                int bitsPerPart = GetMethodCapacity(methodId) / 4;
+                                //int bitsPerPart = GetMethodCapacity(methodId) / 1; //TADY
+                                int hexaCharsForBinaryPart = bitsPerPart / 4; //TODO tricky as hell, found another method
                                 string binvalue = "";
 
                                 try
@@ -830,37 +837,93 @@ namespace SteganoNetLib
                                     foreach (string part in parts)
                                     {
                                         long decimalValue = Convert.ToInt64(part, 16);
-                                        binvalue += Convert.ToString(decimalValue, 2).PadLeft(bitsPerPart, '0');
+                                        if (decimalValue != 0)
+                                        {
+                                            string converted = Convert.ToString(decimalValue, 2); //just this
+
+                                            //string padded = converted.PadLeft(bitsPerPart, '0');
+                                            
+                                            string tmp = converted.PadLeft(bitsPerPart, '0');
+                                            int howMuchToPad = tmp.Length - converted.Length; //8
+
+                                            while (howMuchToPad > bitsPerPart)
+                                            {
+                                                //5-1-7
+                                                rs.AddInfoMessage("Bit lowered from " + howMuchToPad + " to " + (howMuchToPad - bitsPerPart));
+                                                howMuchToPad = howMuchToPad - bitsPerPart;
+                                            }
+
+                                            if (howMuchToPad > bitsPerPart/2)
+                                            {
+                                                howMuchToPad = bitsPerPart / 2;
+                                            }
+                                            else
+                                            {
+                                                howMuchToPad = bitsPerPart;
+                                            }
+
+                                            
+                                            string padded = converted.PadLeft(howMuchToPad, '0');
+                                            rs.AddInfoMessage("Padded: " + howMuchToPad);
+
+                                            //string summed = GetBinaryStringFromReceived(converted);
+
+                                            /*
+                                            string final = "";
+                                            if (summed[0] != 0)
+                                            {
+                                                //if padding is higher than 3 do not pad or pad to less
+                                                if(converted.Length)
+                                                final = converted.PadLeft(bitsPerPart, '0'); ;
+                                            }
+                                            */
+
+                                            rs.AddInfoMessage("DBG: dec " + decimalValue);
+                                            rs.AddInfoMessage("DBG: con " + converted);
+                                            rs.AddInfoMessage("DBG: pad " + padded);
+                                            //rs.AddInfoMessage("DBG: con-method-pad " + GetBinaryStringFromReceived(converted));
+
+                                            //rs.AddInfoMessage("DBG: fin " + final);
+                                            rs.AddInfoMessage("DBG: ------");
+                                            
+
+                                            binvalue += padded;
+
+                                            //TODO problem here
+                                            //problem is padding by parts! Pad whole not just part...
+                                        }
+                                        else
+                                        {
+                                            rs.AddInfoMessage("DBG: ZERO " + 0);
+                                            binvalue += "0";
+                                        }
                                     }
 
                                     System.Text.RegularExpressions.Regex r = new System.Text.RegularExpressions.Regex("^[0\\s]*$");
-                                    if(r.IsMatch(binvalue)) //checking if binvalue is only 0, should be changed
+                                    if (r.IsMatch(binvalue)) //checking if binvalue is only 0, should be changed
                                     {
                                         binvalue = "0";
+                                        rs.AddInfoMessage("Binary value replaced by 1 zero");
                                     }
-                                    
+
 
                                     //TODO unpadding!
                                     //TODO fix TCP ACK numbers...
-                                    
+
                                 }
                                 catch
                                 {
                                     //TODO?
+                                    rs.AddInfoMessage("EPIC troubles");
                                 }
 
-                                
-                                try
-                                {
-                                    BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue)); //TODO warning, this should be tricky as hell
-                                }
-                                catch
-                                {
-                                    BlocksOfSecret.Add(binvalue); //TODO warning!
-                                    rs.AddInfoMessage("checking of parsing crashed!"); 
-                                }
+                                rs.AddInfoMessage("Added " + binvalue);
+                                string addedReal = (GetBinaryStringFromReceived(binvalue));
+                                rs.AddInfoMessage("Added " + addedReal);
+                                BlocksOfSecret.Add(addedReal);
+
                             }
-                            break;                            
+                            break;
                         }
                 }
             }
