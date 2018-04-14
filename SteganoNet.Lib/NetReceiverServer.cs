@@ -102,7 +102,7 @@ namespace SteganoNetLib
                     //syntax of filter https://www.winpcap.org/docs/docs_40_2/html/group__language.html
                     communicator.SetFilter(filter); // Compile and set the filter
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
 
                     //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
@@ -252,7 +252,7 @@ namespace SteganoNetLib
                 PortLocal = PortLocalDns; //TODO should test if port "53" is listening + receiving                
                 PortRemote = (PortRemote == 0) ? udp.SourcePort : PortRemote; //if local port is not specified, save it from incoming                               
                 SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, dns));
-                
+
             }
 
 
@@ -422,11 +422,14 @@ namespace SteganoNetLib
             StringBuilder sbBinary = new StringBuilder();
             foreach (string word in streams)
             {
-                if (word.Length < 8) //cut off mess (one char have 8 bits)
+
+                if (word.Length < 8 && !word.Equals("0")) //cut off mess (one char have 8 bits)
                 {
+                    //making mess when 0 messages
                     //Console.WriteLine("Info: empty word removed from received messages. ");
                     continue;
                 }
+
 
                 //two methods of proceesing...              
                 sbBinary.Append(word); //all messages are part of one binary                
@@ -437,6 +440,11 @@ namespace SteganoNetLib
             //check of bit align
             if (sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
             {
+                //if (StegoUsedMethodIds.Contains(NetSteganography.HttpDataInUrl))
+
+                //skipping aling since it makes troubles for this method
+                //TODO BETTER, only workaround
+
                 int howManyBitsCutted = 0;
                 do
                 {
@@ -445,6 +453,7 @@ namespace SteganoNetLib
                 }
                 while (sbBinary.Length % DataOperations.bitsForChar == 0);
                 Console.WriteLine("\tWarning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + " bits to align.");
+
             }
 
             string messageFromSingle = sbSingle.ToString();
