@@ -44,7 +44,8 @@ namespace SteganoNet.UI.Console
 
             //config global (pre-initialization)
             string role = "s"; //server or client
-            string messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering."; //only for user layer! Never pass to client...
+            string messageReadable = "VSB - Technical University of Ostrava has long tradition in high quality engineering."; //only for user layer! Never pass readable to client...
+            //string messageReadable = "VSB - Technical University of Ostrava";
             string messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable); //send this
             List<int> stegoMethods = new List<int>();
             System.Diagnostics.Process secondWindow = null; //testing solution on same computer

@@ -414,6 +414,134 @@ namespace SteganoNetLib
                 return "Error! Received too many messages for processing! ";
             }
 
+            for(int i = StegoBinary.Count()-1; i >= 0; i--)
+            { 
+                if(stegoBinary[i].Length > 1 && !stegoBinary[i].ToString().Equals("spacebetweenstreams"))
+                {
+                    string wordToCut = stegoBinary[i].ToString();
+                    while (wordToCut[0].Equals('0')) //cut intro zeros from string - padding effect, no zeros at the start
+                    {
+                        wordToCut = wordToCut.Remove(0, 1); //cut first zero
+                    }
+                    stegoBinary[i] = new StringBuilder(wordToCut);
+
+                    break;
+                }
+            }
+
+            StringBuilder sbSingle = new StringBuilder();
+            stegoBinary.ForEach(item => sbSingle.Append(item)); //convert many binary substrings to one message
+            string[] streams = Regex.Split(sbSingle.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
+
+            sbSingle.Clear(); //reused for output
+            StringBuilder sbBinary = new StringBuilder();
+            foreach (string word in streams)
+            {
+                if (word.Length < 8 && !word.Equals("0")) //cut off mess (one char have 8 bits)
+                {
+                    //making mess when 0 messages
+                    //Console.WriteLine("Info: empty word removed from received messages. ");
+                    continue;
+                }
+
+                //two methods of proceesing...              
+                sbBinary.Append(word); //all messages are part of one binary                
+                sbSingle.Append(DataOperations.BinaryNumber2stringASCII(word)); //each message is separate
+            }
+            Console.WriteLine("\n"); //just to make it visible in console           
+
+            /*
+            //check of bit align
+            if (sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
+            {
+                //if (StegoUsedMethodIds.Contains(NetSteganography.HttpDataInUrl))
+
+                //skipping aling since it makes troubles for this method
+                //TODO BETTER, only workaround
+
+                int howManyBitsCutted = 0;
+                do
+                {
+                    sbBinary.Length = sbBinary.Length - 1;
+                    howManyBitsCutted++;
+                }
+                while (sbBinary.Length % DataOperations.bitsForChar == 0);
+                Console.WriteLine("\tWarning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + " bits to align.");
+            }
+            */
+
+            string messageFromSingle = sbSingle.ToString();
+            string messageFromBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
+
+
+            //consistency check https://en.wikipedia.org/wiki/Error_detection_and_correction
+            string messageSingleChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromSingle);
+            string messageBinaryChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromBinary);
+
+            try //DEBUG printing to file
+            {
+                string report = String.Format("Server binary \r\n{0}\r\nSingle \r\n{1}\r\nSingleChecked \r\n{2}\r\nBinaryChecked \r\n{3}\r\n", sbBinary.ToString(), sbSingle.ToString(), (messageSingleChecked ?? "NULL").ToString(), (messageBinaryChecked ?? "NULL").ToString());
+                string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-server-secret.txt";
+                System.IO.File.AppendAllText(FilePath, report);
+            }
+            catch { } //no report
+
+            //decisions which one is correct to return
+            if (messageBinaryChecked == null && messageSingleChecked != null) //one is not null
+            {
+                return messageSingleChecked;
+            }
+
+            if (messageBinaryChecked != null && messageSingleChecked == null) //one is not null
+            {
+                return messageBinaryChecked;
+            }
+
+            if (messageBinaryChecked == null && messageSingleChecked == null) //both of them are null
+            {
+                return ("Warning! Following messages are probably corrupted.\n\r" +
+                    messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
+                    messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
+            }
+
+            if (messageBinaryChecked != null && messageSingleChecked != null) //none of them are null
+            {
+                if (messageSingleChecked.Equals(messageBinaryChecked)) //when they are same
+                {
+                    return messageBinaryChecked; //it does not matter                    
+                }
+                else
+                {
+                    Console.WriteLine("\tWarning: Message and check messages are not same after assembling!");
+                    if (messageBinaryChecked.Length > messageFromSingle.Length) //return longer one
+                    {
+                        return messageBinaryChecked;
+                    }
+                    else
+                    {
+                        return messageFromSingle;
+                    }
+                }
+            }
+
+            return ("Warning! Following messages are corrupted.\n\r" +
+                    "\t" + messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
+                    "\t" + messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
+        }
+
+        /*
+        private string GetSecretMessage(List<StringBuilder> stegoBinary) //converts list of binaries to messages and make test
+        {
+            if (stegoBinary.Count == 0) //nothing to show
+            {
+                return "Error! No packets captured => no message contained";
+            }
+
+            if (stegoBinary.Count > 65535) //if message is too big for some reason...
+            {
+                return "Error! Received too many messages for processing! ";
+            }
+
             //process
             
 
@@ -477,9 +605,9 @@ namespace SteganoNetLib
                 }
                 
             }
-            */
+            
 
-            Console.WriteLine("\n"); //just to make it visible in console           
+        Console.WriteLine("\n"); //just to make it visible in console           
             string messageFromSingle = sbSingle.ToString();
             string messageFromBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
 
@@ -537,7 +665,7 @@ namespace SteganoNetLib
                     "\t" + messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
                     "\t" + messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
         }
-
+        */
 
         public void SendReplyPacket(List<Layer> layers) //send answer just from list of layers, building and forwarning the answer
         {
