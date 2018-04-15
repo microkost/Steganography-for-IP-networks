@@ -719,17 +719,7 @@ namespace SteganoNetLib
                             //cut content to some smaller parts and convert them to hex
                             string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
                             int sizeToCut = content.Length;
-                            string urlpart = "";
-
-                            /*
-                            long v = 0;
-                            for (int i = content.Length - 1; i >= 0; i--)
-                            {
-                                v = (v << 1) + (content[i] - '0');
-                            }
-                            ulong valueInDec = BitConverter.ToUInt64(BitConverter.GetBytes(v), 0);
-                            string hexValue = valueInDec.ToString("X");                           
-                            */
+                            string urlpart = "";                    
 
                             string hexValue = String.Format("{0:X4}", Convert.ToUInt64(content, 2));
                             if (hexValue == "0000")
@@ -737,6 +727,11 @@ namespace SteganoNetLib
                                 hexValue = "0"; //should be smth else
                             }
                             urlpart = hexValue.ToString().ToLower();
+
+                            if (urlpart.Equals("0"))
+                            {
+                                urlpart = "8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC";
+                            }
 
                             string url = oneService + urlpart + oneApendix; //place content string in HEX
                             secret = secret.Remove(0, sizeToCut); //cut x bits from whole
@@ -797,6 +792,10 @@ namespace SteganoNetLib
                                     {
                                         url = url.Replace(append, "");
                                     }
+                                }
+                                if(url.Equals("8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC"))
+                                {
+                                    url = "0";
                                 }
                                 //rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
 
