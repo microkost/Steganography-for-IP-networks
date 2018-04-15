@@ -41,6 +41,15 @@ namespace SteganoNetLib
                 binValue = binValue.PadLeft(bitsForChar, '0'); //padding binary 
                 binaryNumInString += binValue;
             }
+
+            /*
+            //string should not start with zero, intro zeros in bin string are useless
+            while (binaryNumInString[0].Equals('0') && binaryNumInString.Length > 1)
+            {
+                binaryNumInString = binaryNumInString.Remove(0, 1); //cut first zero
+            }
+            */
+
             return binaryNumInString;
         }
 

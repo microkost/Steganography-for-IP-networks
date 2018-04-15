@@ -414,55 +414,74 @@ namespace SteganoNetLib
                 return "Error! Received too many messages for processing! ";
             }
 
-            StringBuilder sbSingle = new StringBuilder();
-            stegoBinary.ForEach(item => sbSingle.Append(item)); //convert many binary substrings to one message
-            string[] streams = Regex.Split(sbSingle.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
+            //process
+            
 
-            sbSingle.Clear(); //reused for output
-            StringBuilder sbBinary = new StringBuilder();
-            foreach (string word in streams)
+            List<StringBuilder> cleanStreams = new List<StringBuilder>();
+            foreach (StringBuilder word in stegoBinary)
             {
-
-                if (word.Length < 8 && !word.Equals("0")) //cut off mess (one char have 8 bits)
+                if(word.ToString().Equals(""))
                 {
-                    //making mess when 0 messages
-                    //Console.WriteLine("Info: empty word removed from received messages. ");
                     continue;
                 }
 
+                if (!StegoUsedMethodIds.Contains(NetSteganography.HttpDataInUrl)) //skipping aling since it makes troubles for this method
+                {
+                    if (word.Length < 8 && !word.Equals("0")) //cut off mess (one char have 8 bits) //do not apply to 733 method and => not work
+                    {
+                        continue;
+                    }
+                }
 
+                cleanStreams.Add(word); //if clean add
+            }
+            stegoBinary = cleanStreams;
+            string stegoLast = cleanStreams.Last().ToString(); //could be also zero or just 0
+            while (stegoLast[0].Equals('0') && stegoLast.Length > 2) //cut intro zeros from string - padding effect, no zeros at the start
+            {
+                //last string could not start with zero, is wrongly padded
+                stegoLast = stegoLast.Remove(0, 1); //cut first zero
+            }
+            cleanStreams[cleanStreams.Count - 1] = new StringBuilder(stegoLast);
+            stegoBinary = cleanStreams;
+
+
+            StringBuilder sbSingle = new StringBuilder();
+            stegoBinary.ForEach(item => sbSingle.Append(item)); //convert many binary substrings to one message            
+            string[] stream = Regex.Split(sbSingle.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams           
+            sbSingle.Clear(); //reused for output            
+        
+            StringBuilder sbBinary = new StringBuilder();
+            foreach (string word in stream)
+            {
                 //two methods of proceesing...              
                 sbBinary.Append(word); //all messages are part of one binary                
                 sbSingle.Append(DataOperations.BinaryNumber2stringASCII(word)); //each message is separate
             }
 
-            Console.WriteLine("\n"); //just to make it visible in console           
-            //check of bit align
+            /*
+            //check of bit align, its not working...
             if (sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
-            {
-                //if (StegoUsedMethodIds.Contains(NetSteganography.HttpDataInUrl))
-
-                //skipping aling since it makes troubles for this method
-                //TODO BETTER, only workaround
-
-                int howManyBitsCutted = 0;
-                do
+            {                
+                if (!StegoUsedMethodIds.Contains(NetSteganography.HttpDataInUrl)) //skipping aling since it makes troubles for this method
                 {
-                    sbBinary.Length = sbBinary.Length - 1;
-                    howManyBitsCutted++;
+                    //some methods are not bit aligned...
+                    int howManyBitsCutted = 0;
+                    do
+                    {
+                        sbBinary.Length = sbBinary.Length - 1;
+                        howManyBitsCutted++;
+                    }
+                    while (sbBinary.Length % DataOperations.bitsForChar == 0);
+                    Console.WriteLine("\tWarning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + " bits to align.");
                 }
-                while (sbBinary.Length % DataOperations.bitsForChar == 0);
-                Console.WriteLine("\tWarning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + " bits to align.");
-
+                
             }
+            */
 
+            Console.WriteLine("\n"); //just to make it visible in console           
             string messageFromSingle = sbSingle.ToString();
             string messageFromBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
-
-            if (!messageFromSingle.Equals(messageFromBinary)) //test of methodology
-            {
-                //Console.WriteLine("\tWarning: Two different processing of same message are having different results."); //useless information for user
-            }
 
             //consistency check https://en.wikipedia.org/wiki/Error_detection_and_correction
             string messageSingleChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromSingle);
@@ -474,7 +493,7 @@ namespace SteganoNetLib
                 string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-server-secret.txt";
                 System.IO.File.AppendAllText(FilePath, report);
             }
-            catch { } //no report
+            catch { } //no report if fails
 
             //decisions which one is correct to return
             if (messageBinaryChecked == null && messageSingleChecked != null) //one is not null
@@ -489,7 +508,7 @@ namespace SteganoNetLib
 
             if (messageBinaryChecked == null && messageSingleChecked == null) //both of them are null
             {
-                return ("Warning! Following messages are probably corrupted.\n\r" +
+                return ("Warning! Following messages are probably corrupted. Can you choose?\n\r" +
                     messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +
                     messageFromBinary + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromBinary));
             }

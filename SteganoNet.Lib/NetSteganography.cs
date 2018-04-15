@@ -180,7 +180,7 @@ namespace SteganoNetLib
             //if (Double.Parse(binvalue) == 0)
             System.Text.RegularExpressions.Regex r = new System.Text.RegularExpressions.Regex("^[0\\s]*$"); //checking even very long string for only zeros
             if (r.IsMatch(binvalue) || binvalue[0].Equals("0")) //check if whole sequence is zero or it starts with zero
-            {
+            {               
                 return "0";
             }
             else
@@ -738,34 +738,6 @@ namespace SteganoNetLib
                             }
                             urlpart = hexValue.ToString().ToLower();
 
-                            /*
-                            //TODO should be removed, done in GetBinaryContentToSend
-                            if (GetBinaryContentToSend(content, GetMethodCapacity(methodId)).Equals("0")) //its already checked and converted into "0" by GetBinaryContentToSend()
-                            {
-                                content = "0";
-                                sizeToCut = 1;
-                                sc.AddInfoMessage("Should not be visible");
-                            }
-                            else //parse content
-                            {
-                                
-
-                                try
-                                {                                                                    
-                                    
-
-                                    sizeToCut = content.Length;
-                                    //urlpart = Convert.ToInt32(content, 2).ToString("X").ToLower(); //to HEXA                                    
-                                }
-                                catch
-                                {
-                                    content = "0";
-                                    sizeToCut = 0; //do not cut                                    
-                                    //TODO do it dic
-                                }
-                            }
-                            */
-
                             string url = oneService + urlpart + oneApendix; //place content string in HEX
                             secret = secret.Remove(0, sizeToCut); //cut x bits from whole
                             sc.AddInfoMessage("7HTTP: Asking: " + url);
@@ -809,7 +781,7 @@ namespace SteganoNetLib
                                 string url = httpReq.Uri;
                                 rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
 
-                                //work for regex to cut the message from url, now fast workaround
+                                //work for regex to cut the message from url, now workaround
                                 List<string> services = NetDevice.GetSocialMediaDomains();
                                 List<string> appendix = NetDevice.GetSocialMediaSuffix();
                                 foreach (string prependix in services)
@@ -829,27 +801,27 @@ namespace SteganoNetLib
                                 //rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
 
                                 //convert message from URL to binary
-                                string binarystring = Convert.ToString(Convert.ToInt64(url, 16), 2).PadLeft(url.Length * 4, '0');
-                                string binvalue = GetBinaryStringFromReceived(binarystring); //binarystring was just
-                                if (binvalue.Equals("0000") || binvalue.Equals("0")) //TODO THIS IS PROBLEM, since 0000 should be also 00 
+                                string binarystring = Convert.ToString(Convert.ToInt64(url, 16), 2).PadLeft(url.Length * 4, '0');                                
+                                string binvalue = GetBinaryStringFromReceived(binarystring); //check string
+                                if (binvalue.Equals("0000") || binvalue.Equals("0")) 
                                 {
-                                    binvalue = "0";
+                                    binvalue = "0"; //recognize zero strings
                                 }
                                 else
                                 {
-                                    int normalSizeOfReceivedNonBinMessage = (GetMethodCapacity(methodId) / 4);
-                                    if (url.Length < normalSizeOfReceivedNonBinMessage) //WARNING, calculation...
-                                    {
-                                        string whichMessage = binvalue;
-                                        //do not pad when is terminating part
-                                        //normal    c9a5b99cb8dce0c5
-                                        //terminate 2336356136
+                                    int normalLenghtOfReceivedHexaMessage = (GetMethodCapacity(methodId) / 4);  //WARNING, calculation...
+                                    if (url.Length < normalLenghtOfReceivedHexaMessage)
+                                    {                                        
+                                        //do not pad this message to full lenght since its shorter (last one)
+                                        while(binvalue[0].Equals('0') && binvalue.Length > 1) //cut intro zeros from string - padding effect, no zeros at the start
+                                        {
+                                            binvalue = binvalue.Remove(0, 1); //cut first zero
+                                        }
                                     }
                                     else
                                     {
-                                        binvalue = binvalue.PadLeft(GetMethodCapacity(methodId), '0');
+                                        binvalue = binvalue.PadLeft(GetMethodCapacity(methodId), '0'); //pad message to normal lenght
                                     }
-
                                 }
                                 BlocksOfSecret.Add(binvalue);
                             }
