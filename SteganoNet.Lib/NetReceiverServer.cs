@@ -111,7 +111,17 @@ namespace SteganoNetLib
 
                 do // Retrieve the packets
                 {
-                    PacketCommunicatorReceiveResult result = communicator.ReceivePacket(out Packet packet);
+                    Packet packet = null;
+                    PacketCommunicatorReceiveResult result = new PacketCommunicatorReceiveResult();
+                    try
+                    {
+                        result = communicator.ReceivePacket(out packet);
+                    }
+                    catch 
+                    {
+                        //fails when network interface fails...
+                        throw new Exception("Network connection error, restart app and keep connection stable.");
+                    }                    
 
                     if (packet is null)
                     {
@@ -414,9 +424,11 @@ namespace SteganoNetLib
                 return "Error! Received too many messages for processing! ";
             }
 
-            for(int i = StegoBinary.Count()-1; i >= 0; i--)
-            { 
-                if(stegoBinary[i].Length > 1 && !stegoBinary[i].ToString().Equals("spacebetweenstreams"))
+
+            //cut zeros from last message, because its padded and it should not be...
+            for (int i = StegoBinary.Count() - 1; i >= 0; i--)
+            {
+                if (stegoBinary[i].Length > 1 && !stegoBinary[i].ToString().Equals("spacebetweenstreams"))
                 {
                     string wordToCut = stegoBinary[i].ToString();
                     while (wordToCut[0].Equals('0')) //cut intro zeros from string - padding effect, no zeros at the start
@@ -424,7 +436,6 @@ namespace SteganoNetLib
                         wordToCut = wordToCut.Remove(0, 1); //cut first zero
                     }
                     stegoBinary[i] = new StringBuilder(wordToCut);
-
                     break;
                 }
             }
@@ -440,7 +451,6 @@ namespace SteganoNetLib
                 if (word.Length < 8 && !word.Equals("0")) //cut off mess (one char have 8 bits)
                 {
                     //making mess when 0 messages
-                    //Console.WriteLine("Info: empty word removed from received messages. ");
                     continue;
                 }
 
@@ -451,13 +461,13 @@ namespace SteganoNetLib
             Console.WriteLine("\n"); //just to make it visible in console           
 
             /*
+            //skipping align since it makes troubles for this method
             //check of bit align
             if (sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
             {
                 //if (StegoUsedMethodIds.Contains(NetSteganography.HttpDataInUrl))
 
-                //skipping aling since it makes troubles for this method
-                //TODO BETTER, only workaround
+                                
 
                 int howManyBitsCutted = 0;
                 do
