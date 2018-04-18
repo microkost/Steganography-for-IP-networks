@@ -7,7 +7,7 @@
     <ProjectGuid>{34905160-5786-46D9-8E86-890E771707E3}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>SteganoNet.UI.Console</RootNamespace>
-    <AssemblyName>SteganoNet.UI.Console</AssemblyName>
+    <AssemblyName>SteganoNet.Console</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -33,6 +33,9 @@
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>SteganographyIcon500.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>SteganoNet.UI.Console.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="PcapDotNet.Base, Version=0.10.0.20588, Culture=neutral, PublicKeyToken=4b6f3e583145a652, processorArchitecture=MSIL">

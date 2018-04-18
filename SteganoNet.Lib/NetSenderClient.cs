@@ -439,7 +439,7 @@ namespace SteganoNetLib
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
                     if (SecretMessage.Length == 0)
                     {
-                        AddInfoMessage(String.Format("All messages ({0}) departured, you can stop the process by pressing ESC", messageCounter)); //TODO it's confusing when is running from GUI
+                        AddInfoMessage(String.Format("All messages departured ({0}), you can stop the process by pressing ESC or button stop", messageCounter)); //TODO it's confusing when is running from GUI
 
                         Terminate = true;
                     }

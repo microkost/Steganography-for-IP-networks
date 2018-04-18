@@ -119,8 +119,11 @@ namespace SteganographyFramework
                 if (serverThread != null)
                 {
                     listener.Terminate = true;
+                    AppendDebugText("----------------------------------------------------------------------------SR\r\nReceived secret message are:\r\n");
+                    AppendDebugText(listener.GetSecretMessage() + "\r\n"); //get secret message                    
+                    //TODO this message have to be also written to GUI => textBoxSecret and label7 should change...
                 }
-                
+
                 if (backgroundWorkerDebugPrinter.IsBusy) //END backgroundWorkerDebugPrinter
                 {
                     closeDebug = true;
@@ -138,7 +141,7 @@ namespace SteganographyFramework
                 textBoxDebug.Text += "----------------------------------------------------------------------------SR\r\n";
                 isServerListening = true;
                 closeDebug = false;
-                buttonListen.Text = "Disconnect";
+                buttonListen.Text = "Stop receiving and disconnect";
                 textBoxServerStatus.Text = "connected";
 
                 listener = new NetReceiverServer(comboBoxServerAddress.Text, (ushort)numericUpDownServerPort.Value, comboBoxClientAddress.Text, (ushort)numericUpDownClientPort.Value);
@@ -219,26 +222,34 @@ namespace SteganographyFramework
             {
                 if (closeDebug == true)
                 {
-                    AppendDebugText("Output suspended" + "\r\n");
-                    break;
+                    AppendDebugText("Output suspended. Messages rested: " + mm.Messages.Count + "\r\n");                    
+                    break; //end endless loop
                 }
 
                 try
-                {
-                    //textBoxDebug.AppendText(mm.Messages.Dequeue() + "\r\n"); //unsafe
-                    AppendDebugText(mm.Messages.Dequeue().ToString() + "\r\n"); //safely show message inline on GUI           
+                {                   
+                    for(int i = 0; i < mm.Messages.Count; i++)
+                    {                        
+                        AppendDebugText(mm.Messages.Dequeue().ToString() + "\r\n"); //safely show message inline on GUI           
+                        //textBoxDebug.AppendText(mm.Messages.Dequeue() + "\r\n"); //unsafe
+                    }
                 }
                 catch
                 {
+                    AppendDebugText("Error on writing output");
                     Thread.Sleep(1000);
                 }
-
-                //Thread.Sleep(100); //slow down output
             }
         }
 
         private void AppendDebugText(string text) //safe appending to textBoxDebug support method
         {
+            if(text.StartsWith("All messages departured")) //how to recognize end of client method... Bad solution...
+            {
+                AppendDebugText("Procedure closed\r\n");
+                ButtonSteganogr_Click(null, null); //click to close                
+            }
+
             // InvokeRequired required compares the thread ID of the calling thread to the thread ID of the creating thread.
             if (this.textBoxDebug.InvokeRequired) //If these threads are different, it returns true.
             {

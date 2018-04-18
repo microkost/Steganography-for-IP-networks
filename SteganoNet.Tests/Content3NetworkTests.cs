@@ -25,6 +25,7 @@ namespace SteganoNet.Tests
             Tuple<IpV4Layer, string> actual = SteganoNetLib.NetSteganography.SetContent3Network(SteganoNetLib.NetStandard.GetIpV4Layer(new IpV4Address("127.0.0.1"), new IpV4Address("127.0.0.1")), methodsIds, binSource);
             
             //string expected = SteganoNetLib.NetSteganography.GetContent3Network(actual.Item1, methodsIds);
+            //TODO problem Datagram vs Layer, layer packet need to be builded and then compared...
             
             Assert.AreEqual(/*expected*/"", binSource);
         }

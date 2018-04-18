@@ -1,6 +1,17 @@
-﻿using System.Reflection;
+﻿using System.Resources;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+[assembly: AssemblyTitle("Steganography framework")]
+[assembly: AssemblyDescription("Steganography framework for IP networks")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: ComVisible(true)]
+[assembly: NeutralResourcesLanguage("en")]
+[assembly: AssemblyCopyright("Copyright © Microkost 2018")]
+[assembly: Guid("34905160-5786-46d9-8e86-890e771707e3")]
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information

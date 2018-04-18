@@ -730,7 +730,7 @@ namespace SteganoNetLib
 
                             if (urlpart.Equals("0"))
                             {
-                                urlpart = "8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC";
+                                urlpart = "8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC"; //static string replaced by 0, TODO dynamical like NetDevice.Get...()
                             }
 
                             string url = oneService + urlpart + oneApendix; //place content string in HEX
@@ -793,7 +793,7 @@ namespace SteganoNetLib
                                         url = url.Replace(append, "");
                                     }
                                 }
-                                if(url.Equals("8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC"))
+                                if(url.Equals("8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC")) //static string replaced by 0, TODO dynamical like NetDevice.Get...()
                                 {
                                     url = "0";
                                 }
