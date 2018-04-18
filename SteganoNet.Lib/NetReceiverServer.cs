@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using PcapDotNet.Packets.Http;
+using System.Diagnostics;
 
 namespace SteganoNetLib
 {
@@ -20,6 +21,7 @@ namespace SteganoNetLib
         public volatile bool Terminate = false; //ends listening otherwise endless       
         public List<int> StegoUsedMethodIds { get; set; }
         public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
+        public int TimeToWaitInMs { get; set; } //TODOTO timer for killing
 
         //network parametres
         public ushort PortLocal { get; set; } //portListening
@@ -38,7 +40,7 @@ namespace SteganoNetLib
         private bool FirstRun { get; set; }
         private bool IsListenedSameInterface { get; set; } //if debug mode is running
 
-        private int messageCounter = 0; //jsut counting processed messages
+        private int messageCounter = 0; //just counting processed messages
 
         private uint AckNumberLocal { get; set; } //for TCP answers
         private uint AckNumberRemote { get; set; } //for TCP answers
@@ -66,6 +68,7 @@ namespace SteganoNetLib
             Messages = new Queue<string>();
             Messages.Enqueue("Server created...");
             this.FirstRun = true;
+            TimeToWaitInMs = NetSenderClient.delayDns * 2; //TODO some more specific value...
         }
 
         public void Listening() //thread looped method
@@ -108,9 +111,20 @@ namespace SteganoNetLib
                     //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
                     AddInfoMessage("Traffic filter was not applied, because it have wrong format." + e.Message);
                 }
-
+                
+                bool listeningTimerExpired = false;
+                Stopwatch timer = new Stopwatch();
+                timer.Start();
+                               
                 do // Retrieve the packets
                 {
+                    if(timer.ElapsedMilliseconds > TimeToWaitInMs)
+                    {
+                        listeningTimerExpired = true;
+                        timer.Stop();
+                        
+                    }
+
                     Packet packet = null;
                     PacketCommunicatorReceiveResult result = new PacketCommunicatorReceiveResult();
                     try
@@ -151,7 +165,7 @@ namespace SteganoNetLib
                         default:
                             throw new InvalidOperationException("The result " + result + " should never be reached here");
                     }
-                } while (!Terminate);
+                } while (!Terminate && listeningTimerExpired);
 
                 AddInfoMessage(String.Format("Message is assembling from {0} sub messages", StegoBinary.Count));
                 return;
