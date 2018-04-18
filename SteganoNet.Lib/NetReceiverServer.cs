@@ -490,9 +490,9 @@ namespace SteganoNetLib
 
             try //DEBUG printing to file
             {
-                string report = String.Format("Server binary \r\n{0}\r\nSingle \r\n{1}\r\nSingleChecked \r\n{2}\r\nBinaryChecked \r\n{3}\r\n", sbBinary.ToString(), sbSingle.ToString(), (messageSingleChecked ?? "NULL").ToString(), (messageBinaryChecked ?? "NULL").ToString());
-                string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-server-secret.txt";
-                System.IO.File.AppendAllText(FilePath, report);
+                //string report = String.Format("Server binary \r\n{0}\r\nSingle \r\n{1}\r\nSingleChecked \r\n{2}\r\nBinaryChecked \r\n{3}\r\n", sbBinary.ToString(), sbSingle.ToString(), (messageSingleChecked ?? "NULL").ToString(), (messageBinaryChecked ?? "NULL").ToString());
+                //string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-server-secret.txt";
+                //System.IO.File.AppendAllText(FilePath, report);
             }
             catch { } //no report
 
@@ -579,6 +579,11 @@ namespace SteganoNetLib
         public bool AskTermination() //for handling threads synchronization from UI, returns if is terminated or not
         {
             return this.Terminate;
+        }
+
+        public void SetTermination() //used in for terminating based on output delivered to use
+        {
+            this.Terminate = true;
         }
     }
 }

@@ -55,22 +55,21 @@ namespace SteganoNetLib
                 //inform user about invisible settings in [] brackets like exact delay (if possible (constants))
 
                 { 301, "IP Type of service / DiffServ (agresive) - " + GetMethodCapacity(301) + "b" },
-                { 302, "IP Type of service / DiffServ - " + GetMethodCapacity(302) + "b" },
+                //{ 302, "IP Type of service / DiffServ - " + GetMethodCapacity(302) + "b" }, //OK, just messing testing with another option
                 { 303, String.Format("IP Identification [delay {0}s] - {1}b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000, GetMethodCapacity(303) )}, //adding exact time value to the name
-                { 305, "IP flag (MF + offset (when applicable)) - " + GetMethodCapacity(305) + "b" },
-                //TODO icmp methods are waiting for refactoring...
-                { 331, String.Format("ICMP ping (standard) [delay {0}s] - {1}b", (double)NetSenderClient.delayIcmp/1000, GetMethodCapacity(331) )},
+                { 305, "IP flag (MF + offset (when applicable)) - " + GetMethodCapacity(305) + "b" },                
+                { 331, String.Format("ICMP ping (NO STEGO) [delay {0}s] - {1}b", (double)NetSenderClient.delayIcmp/1000, GetMethodCapacity(331) )}, //TODO icmp methods are waiting for refactoring...
                 { 333, "ICMP ping (identifier) - " + GetMethodCapacity(333) + "b" },    //TODO should be set on start of transaction and not changed in the time
                 { 335, "ICMP ping (sequence number) - " + GetMethodCapacity(335) + "b" },   //TODO is actually changing all the time, improve by just incrementing
-                //{ 451, "TCP (standard)- " + GetMethodCapacity(451) + "b" },
+                //{ 451, "TCP (NO STEGO)- " + GetMethodCapacity(451) + "b" },
                 //{ 453, "TCP ISN (once) - " + GetMethodCapacity(453) + "b" }, //use idea from 303
                 //{ 455, "TCP Urgent pointer - " + GetMethodCapacity(455) + "b" }, //use idea from 305
                 //{ 457, "TCP Options (timestamp) - " + GetMethodCapacity(457) + "b" },
-                { 701, String.Format("DNS request (standard over UDP) [delay {0}s] - {1}b", (double)NetSenderClient.delayDns/1000, GetMethodCapacity(331)) },
+                { 701, String.Format("DNS request (NO STEGO) [delay {0}s] - {1}b", (double)NetSenderClient.delayDns/1000, GetMethodCapacity(331)) },
                 { 703, "DNS request (transaction id) - " + GetMethodCapacity(703) + "b" },
                 { 705, "DNS request (response) - " + GetMethodCapacity(705) + "b" },                 
                 //707 DNS flags https://tools.ietf.org/html/rfc1035#section-4.1.1, standard 0x00000100 //TODO update value Capacity
-                { 731, "HTTP GET (over TCP) - " + GetMethodCapacity(731) + "b" },
+                { 731, "HTTP GET (NO STEGO) - " + GetMethodCapacity(731) + "b" },
                 { 733, "HTTP GET (social media) - " + GetMethodCapacity(733) + "b" },  
                 //HTTP Entity tag headers 
                         
@@ -90,10 +89,10 @@ namespace SteganoNetLib
                 { 301, 8 },
                 { 302, 2 },
                 { 303, 16 },
+                { 305, 13 },
                 { 331, 0 },
                 { 333, 16 },
-                { 335, 16 },
-                { 305, 13 },
+                { 335, 16 },                
                 { 451, 0},
                 { 453, 32 },
                 { 455, 16 },

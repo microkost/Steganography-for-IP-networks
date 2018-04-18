@@ -25,11 +25,11 @@ namespace SteganoNetLib
 
 
         //timers public - saved to DelayInMs when used                
-        public const int delayGeneral = 400; //gap between all packets in miliseconds
+        public const int delayGeneral = 500; //gap between all packets in miliseconds
         public const int delayIcmp = 1000; //gap for ICMP requests (default 1000)
         public const int IpIdentificationChangeSpeedInMs = 10000; //timeout break for ip identification field - RFC value is 120000 ms = 2 mins
         public const int delayDns = 3000;
-        public const int delayHttp = 2000; //4000;e
+        public const int delayHttp = 2000; //4000;
 
 
         //network public parametres
@@ -118,8 +118,8 @@ namespace SteganoNetLib
 
             try //saving binary from sender to file, DEBUG purpose only
             {
-                string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-client-secret.txt";
-                System.IO.File.AppendAllText(FilePath, "Client binary \r\n" + SecretMessage.ToString());
+                //string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-client-secret.txt";
+                //System.IO.File.AppendAllText(FilePath, "Client binary \r\n" + SecretMessage.ToString());
             }
             catch
             {
@@ -514,6 +514,10 @@ namespace SteganoNetLib
         public bool AskTermination()
         {
             return this.Terminate;
+        }
+        public void SetTermination() //used in for terminating based on output delivered to use
+        {
+            this.Terminate = true;
         }
 
         private static bool MakeTcpHandshake(List<Layer> layers, TcpControlBits tcpOperation, bool separateSynOrFinAck, NetSenderClient ns)

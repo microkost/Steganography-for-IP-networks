@@ -52,7 +52,14 @@ namespace SteganoNet.UI.Console
             INetNode mm = (INetNode)(nn); //it's OK?           
             try
             {
-                System.Console.WriteLine("\t>{0}", mm.Messages.Dequeue());
+                string message = mm.Messages.Dequeue();
+                if (message.StartsWith("All messages departured")) //stopping 
+                {
+                    mm.SetTermination();
+                    //System.Windows.Forms.SendKeys.Send("ESC");
+                }
+
+                System.Console.WriteLine("\t{0}", message);
             }
             catch
             {

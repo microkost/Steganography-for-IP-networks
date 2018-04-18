@@ -28,6 +28,6 @@ namespace SteganoNetLib
         bool ArePrerequisitiesDone(); //checking if properties are not null before start
         void AddInfoMessage(string txt); //add something to output from everywhere else...        
         bool AskTermination(); //used by WriteInfo methods
-
+        void SetTermination(); //used for killing based on output
     }
 }
