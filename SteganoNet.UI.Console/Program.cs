@@ -322,13 +322,14 @@ namespace SteganoNet.UI.Console
 
                 rs.Terminate = true;
                 receiverServerThread.Abort(); //stop server thread
-                receiverServerThread.Join(); //needed?
+                //receiverServerThread.Join(); //needed?
 
                 messageEncrypted = rs.GetSecretMessage();
                 messageReadable = DataOperationsCrypto.ReadCrypto(messageEncrypted); //mock
 
                 System.Console.WriteLine("");
                 System.Console.WriteLine(String.Format("Received secret message are: (per line)\n{0}", messageReadable));
+
             }
             else if (String.Equals("c", role)) //its client
             {
@@ -359,7 +360,7 @@ namespace SteganoNet.UI.Console
                 senderClientThread.Start();
 
                 //client activity output
-                isHumanDriving = true; //TODO debug only CHANGE!!!
+                isHumanDriving = true; //TODO debug only, but its not enought working without...
                 if (isHumanDriving)
                 {
                     System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods) / 1000));
@@ -400,6 +401,8 @@ namespace SteganoNet.UI.Console
                 System.Console.WriteLine("\nSorry, I didnt understand your commands. Start again...");
             }
 
+            //common part for client and server
+
             /*
             try //handling opened console windows
             {
@@ -420,11 +423,13 @@ namespace SteganoNet.UI.Console
             System.Console.Write(String.Format("\nRun same scenario again with command: \n{0} ", System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName));
             System.Console.WriteLine(String.Format("-ip {0} -port {1} -ipremote {2} -portremote {3} -runsame {4} -serverTimeout {5} -message \"{6}\" -role {7} -methods {8}", ipSource, portSource, ipRemote, portRemote, "n", timeLimitForServerListeningInMs, "sample text", role, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray())));
 
-            if (isHumanDriving) //dont ask when script
-            {
-                System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool. Press any key to exit...");
-                System.Console.ReadKey();
-            }
+            //flush
+            while (System.Console.KeyAvailable)
+                System.Console.ReadKey(true);
+
+            //if (isHumanDriving) //dont ask when script //client we dont care, but we wanted to read a message of server... Should be done better like pipe from programm => TODO
+            System.Console.WriteLine("\nThat's all! Thank you for using Steganography for IP networks tool. Press any key to exit...");
+            System.Console.ReadKey();
 
             //TODO if server then return string result for pipelining
             //return messageReadable;
