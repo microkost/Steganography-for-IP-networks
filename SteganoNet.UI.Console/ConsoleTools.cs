@@ -47,23 +47,25 @@ namespace SteganoNet.UI.Console
             }
         }
 
-        public static void WriteInfoConsole(object nn) //printing output from console
+        public static bool WriteInfoConsole(object nn) //printing output from console
         {
             INetNode mm = (INetNode)(nn); //it's OK?           
             try
             {
                 string message = mm.Messages.Dequeue();
-                if (message.StartsWith("All messages departured")) //stopping 
-                {
-                    mm.SetTermination();
-                    //System.Windows.Forms.SendKeys.Send("ESC");
+                if (message.StartsWith("All messages departured") || message.StartsWith("Message is assembling from")) //stopping client or server //TODO better, quite dangerous
+                {                    
+                    //System.Console.WriteLine("\t{0}", "Termination signal received");
+                    return true;
                 }
 
                 System.Console.WriteLine("\t{0}", message);
+                return false;
             }
             catch
             {
                 Thread.Sleep(100);
+                return false;
             }
         }
 

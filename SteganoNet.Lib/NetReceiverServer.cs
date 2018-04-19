@@ -21,7 +21,7 @@ namespace SteganoNetLib
         public volatile bool Terminate = false; //ends listening otherwise endless       
         public List<int> StegoUsedMethodIds { get; set; }
         public Queue<string> Messages { get; set; } //txt info for UI pickuped by another thread
-        public int TimeToWaitInMs { get; set; } //TODOTO timer for killing
+        public int TimeToWaitForWholeMessageInMs { get; set; } //TODOTO timer for killing
 
         //network parametres
         public ushort PortLocal { get; set; } //portListening
@@ -68,7 +68,7 @@ namespace SteganoNetLib
             Messages = new Queue<string>();
             Messages.Enqueue("Server created...");
             this.FirstRun = true;
-            TimeToWaitInMs = NetSenderClient.delayDns * 2; //TODO some more specific value...
+            TimeToWaitForWholeMessageInMs = 0; //if needed different, change after creation...
         }
 
         public void Listening() //thread looped method
@@ -111,18 +111,21 @@ namespace SteganoNetLib
                     //Changing process: implement new method and capture traffic through Wireshark, prepare & debug filter then extend local filtering string by new rule
                     AddInfoMessage("Traffic filter was not applied, because it have wrong format." + e.Message);
                 }
-                
-                bool listeningTimerExpired = false;
+
                 Stopwatch timer = new Stopwatch();
-                timer.Start();
+                if (TimeToWaitForWholeMessageInMs > 0) //auto end listening only when is configured
+                {
+                    AddInfoMessage("Server is going to be listening for " + TimeToWaitForWholeMessageInMs / 1000 + "s and then terminates");
+                    timer.Start(); //starting immediatelly, not from first packet.
+                }                                                  
                                
                 do // Retrieve the packets
-                {
-                    if(timer.ElapsedMilliseconds > TimeToWaitInMs)
+                {                    
+                    if(timer.ElapsedMilliseconds > TimeToWaitForWholeMessageInMs) //autokill timer timer
                     {
-                        listeningTimerExpired = true;
+                        Terminate = true;
+                        AddInfoMessage("Listening terminated because timer " + TimeToWaitForWholeMessageInMs/1000 + "s expired");
                         timer.Stop();
-                        
                     }
 
                     Packet packet = null;
@@ -155,6 +158,7 @@ namespace SteganoNetLib
                                     {
                                         PacketSize = packet.Length;
                                         FirstRun = false;
+                                        //timer.Reset(); //WARNING, maybe bad idea
                                     }
 
                                     ProcessIncomingV4Packet(packet);
@@ -165,9 +169,10 @@ namespace SteganoNetLib
                         default:
                             throw new InvalidOperationException("The result " + result + " should never be reached here");
                     }
-                } while (!Terminate && listeningTimerExpired);
+                }while (!Terminate);
 
                 AddInfoMessage(String.Format("Message is assembling from {0} sub messages", StegoBinary.Count));
+                //warning: string "Message is assembling from" is used as termination keyword, be carefull when changing...
                 return;
             }
         }

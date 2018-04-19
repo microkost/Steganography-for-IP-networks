@@ -66,6 +66,7 @@ MsBuild.exe SteganographyFramework.sln /t:Build /m
 * -portremote 11001
 * -methods: 301,703
 * -runsame: n
+* -serverTimeout: 60000
 * -message: "secret message"
 
 

@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Windows.Forms;
 using System.Threading;
 
 namespace SteganoNet.UI.Console
@@ -50,6 +50,7 @@ namespace SteganoNet.UI.Console
             List<int> stegoMethods = new List<int>();
             System.Diagnostics.Process secondWindow = null; //testing solution on same computer
             string runSame = "y"; //user answer for same device
+            int timeLimitForServerListeningInMs = 0; //if 0 then is server listening forever (user termination)
 
             if (args.Length == 0 || args == null) //no user parametrized input = configuration WIZARD
             {
@@ -256,6 +257,14 @@ namespace SteganoNet.UI.Console
                                 messageEncrypted = DataOperationsCrypto.DoCrypto(messageReadable);
                                 break;
                             }
+                        case "-serverTimeout":
+                            {
+                                i++;
+                                if (args.Length <= i) throw new ArgumentException(args[i]);
+                                ushort.TryParse(args[i].ToString(), out ushort parsed); //parsing
+                                timeLimitForServerListeningInMs = parsed;
+                                break;
+                            }                            
 
                             //TODO parsing of -h HELP parameter which shows details...
                             //TODO verbose mode vs non verbose
@@ -271,7 +280,7 @@ namespace SteganoNet.UI.Console
                 if (runSame.StartsWith("y") || runSame.StartsWith("Y") || String.IsNullOrWhiteSpace(runSame))
                 {
                     string roleToRun = (role.StartsWith("c")) ? "s" : "c";
-                    string arguments = String.Format("-role {0} -ip {1} -port {2} -ipremote {3} -portremote {4} -methods {5} -runsame {6} -message \"{7}\"", roleToRun, ipRemote, portRemote, ipSource, portSource, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n", messageReadable); //inverted settings
+                    string arguments = String.Format("-role {0} -ip {1} -port {2} -ipremote {3} -portremote {4} -methods {5} -runsame {6} -message \"{7}\" -serverTimeout {8}", roleToRun, ipRemote, portRemote, ipSource, portSource, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray()), "n", messageReadable, timeLimitForServerListeningInMs); //inverted settings
                     secondWindow = System.Diagnostics.Process.Start(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, arguments);
                 }
             }
@@ -282,6 +291,7 @@ namespace SteganoNet.UI.Console
                 NetReceiverServer rs = new NetReceiverServer(ipSource, portSource, ipRemote, portRemote); //old way
                 //NetReceiverServer rs = new NetReceiverServer(ipSource, portSource); //new way passes default values
                 rs.StegoUsedMethodIds = stegoMethods;
+                rs.TimeToWaitForWholeMessageInMs = timeLimitForServerListeningInMs; //TIMER FOR KILL
 
                 //prepare thread for server
                 ThreadStart threadDelegate = new ThreadStart(rs.Listening);
@@ -293,13 +303,22 @@ namespace SteganoNet.UI.Console
 
                 //server activity output
                 System.Console.WriteLine("\nShowing server running information. Press ESC to stop when message is received.");
+
+                bool transferIsDone = false;
+                ConsoleKeyInfo cki;
                 do
                 {
                     while (!System.Console.KeyAvailable)
                     {
-                        ConsoleTools.WriteInfoConsole(rs);
+                        //printing info from workers in threads, lot of mess to recognize end and terminate
+                        transferIsDone = ConsoleTools.WriteInfoConsole(rs);
+                        if (transferIsDone) //kill inner loop
+                        {
+                            break;
+                        }
                     }
-                } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape);
+                }
+                while (!transferIsDone && (!System.Console.KeyAvailable || (cki = System.Console.ReadKey(true)).Key != ConsoleKey.Escape));
 
                 rs.Terminate = true;
                 receiverServerThread.Abort(); //stop server thread
@@ -345,14 +364,24 @@ namespace SteganoNet.UI.Console
                 {
                     System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods) / 1000));
                     System.Console.WriteLine("Showing client running information. Press ESC to stop when message is received.");
+                    
+                    bool transferIsDone = false;
+                    ConsoleKeyInfo cki;
                     do
                     {
                         while (!System.Console.KeyAvailable)
                         {
-                            ConsoleTools.WriteInfoConsole(sc);
-                        }
+                            //printing info from workers in threads, lot of mess to recognize end and terminate
+                            transferIsDone = ConsoleTools.WriteInfoConsole(sc); //writing till forever OR till program recognize that its over
 
-                    } while (System.Console.ReadKey(true).Key != ConsoleKey.Escape); //show when is human is watching
+                            if (transferIsDone) //kill inner loop
+                            { 
+                                break;
+                            }
+                        }
+                    }
+                    while (!transferIsDone && (!System.Console.KeyAvailable || (cki = System.Console.ReadKey(true)).Key != ConsoleKey.Escape));
+                  //while (System.Console.ReadKey(true).Key != ConsoleKey.Escape); //without auto terminating
                 }
                 else
                 {
@@ -364,13 +393,14 @@ namespace SteganoNet.UI.Console
 
                 sc.Terminate = true;
                 senderClientThread.Abort(); //stop client thread
-                senderClientThread.Join(); //needed?
+                //senderClientThread.Join(); //needed?
             }
             else //catch
             {
                 System.Console.WriteLine("\nSorry, I didnt understand your commands. Start again...");
             }
 
+            /*
             try //handling opened console windows
             {
                 if (secondWindow != null)
@@ -378,15 +408,17 @@ namespace SteganoNet.UI.Console
                     System.Console.WriteLine("\nWaiting for end of second window. Please close it manually.");
                 }
                 secondWindow.WaitForExit(); //correct ending of opened window
+                
             }
             catch (NullReferenceException)
             {
                 //System.Console.WriteLine("No another window opened...");
             }
+            */
 
             //making executable command (WIN+R) and copy-paste
             System.Console.Write(String.Format("\nRun same scenario again with command: \n{0} ", System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName));
-            System.Console.WriteLine(String.Format("-ip {0} -port {1} -ipremote {2} -portremote {3} -runsame {4} -message \"{5}\" -role {6} -methods {7}", ipSource, portSource, ipRemote, portRemote, "n", "sample text", role, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray())));
+            System.Console.WriteLine(String.Format("-ip {0} -port {1} -ipremote {2} -portremote {3} -runsame {4} -serverTimeout {5} -message \"{6}\" -role {7} -methods {8}", ipSource, portSource, ipRemote, portRemote, "n", timeLimitForServerListeningInMs, "sample text", role, string.Join(",", stegoMethods.Select(n => n.ToString()).ToArray())));
 
             if (isHumanDriving) //dont ask when script
             {

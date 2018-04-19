@@ -439,8 +439,8 @@ namespace SteganoNetLib
                     AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
                     if (SecretMessage.Length == 0)
                     {
-                        AddInfoMessage(String.Format("All messages departured ({0}), you can stop the process by pressing ESC or button stop", messageCounter)); //TODO it's confusing when is running from GUI
-
+                        AddInfoMessage(String.Format("All messages departured ({0}), you can stop the process by pressing ESC or button stop", messageCounter));
+                        //warning, phrase "All messages departured" is used as termination string.StartsWith, be carefull when changing...
                         Terminate = true;
                     }
 
