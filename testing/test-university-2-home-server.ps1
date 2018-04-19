@@ -1,20 +1,18 @@
 ﻿#-stego-config-
 #$methodListSinle = ("301","303","305","333","335","703","705","733")
-$methodListSinle = ("301")
+$methodListSinle = ("301", "733","703,705")
 $methodListCombination = ("305,333","333,703","333,335","301,303,305","305,705","703,705","333,733")
-#$message1 = "The quick brown fox jumps over the lazy dog";
 $message1 = ""
-$message2 = "VSB - Technical University of Ostrava has long tradition in high quality engineering. Our study programmes stand on a tradition going back more than 165 years, but reflect current, state of the art technologies.";
+$message2 = ""
 $messages = ($message1) #list of messages
-#stupid server dont know messages!
 
 #-config-zone--
-$ipLocal = "10.211.232.125"
-$ipRemote = "10.211.232.80"
+$ipLocal = "84.251.221.209"
+$ipRemote = "194.251.107.142"
 $portLocal = "11000"
 $portRemote = "11011"
 $serverTimeout = "60000" #in miliSeconds
-$pathToExe = "C:\Users\ivo\Dropbox\Visual Studio Projects\Projects\Steganography-for-IP-networks\Releases"
+$pathToExe = "D:\Dropbox\Visual Studio Projects\Projects\Steganography-for-IP-networks\releases"
 
 #--------------
 

@@ -118,8 +118,8 @@ namespace SteganoNetLib
 
             try //saving binary from sender to file, DEBUG purpose only
             {
-                //string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-client-secret.txt";
-                //System.IO.File.AppendAllText(FilePath, "Client binary \r\n" + SecretMessage.ToString());
+                string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-client-secret.txt";
+                System.IO.File.AppendAllText(FilePath, "Client binary \r\n" + SecretMessage.ToString());
             }
             catch
             {
