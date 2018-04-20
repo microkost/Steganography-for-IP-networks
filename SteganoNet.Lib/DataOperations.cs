@@ -167,7 +167,12 @@ namespace SteganoNetLib
         }
 
         public static string ErrorDetectionCutHashOut(string messageWithRedundancy)
-        {
+        {            
+            if(messageWithRedundancy.Length <= 0)
+            {
+                return ""; //obviosly could come zero lenght
+            }
+
             //cuts off hash, used for user outputs
             try
             {

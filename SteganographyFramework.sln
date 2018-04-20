@@ -8,6 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteganoNet.UI.Console", "St
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5508D41E-D97B-4811-A1C1-2F12FAFD2BA7}"
 	ProjectSection(SolutionItems) = preProject
+		CodeMap.dgml = CodeMap.dgml
 		MethodDescription.txt = MethodDescription.txt
 		README.md = README.md
 	EndProjectSection

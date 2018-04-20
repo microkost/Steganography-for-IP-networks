@@ -57,7 +57,7 @@ namespace SteganoNetLib
                 { 301, "IP Type of service / DiffServ (agresive) - " + GetMethodCapacity(301) + "b" },
                 //{ 302, "IP Type of service / DiffServ - " + GetMethodCapacity(302) + "b" }, //OK, just messing testing with another option
                 { 303, String.Format("IP Identification [delay {0}s] - {1}b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000, GetMethodCapacity(303) )}, //adding exact time value to the name
-                { 305, "IP flag (MF + offset (when applicable)) - " + GetMethodCapacity(305) + "b" },                
+                { 305, "IP flag (MF + offset (when applicable)) - " + GetMethodCapacity(305) + "b" },
                 { 331, String.Format("ICMP ping (NO STEGO) [delay {0}s] - {1}b", (double)NetSenderClient.delayIcmp/1000, GetMethodCapacity(331) )}, //TODO icmp methods are waiting for refactoring...
                 { 333, "ICMP ping (identifier) - " + GetMethodCapacity(333) + "b" },    //TODO should be set on start of transaction and not changed in the time
                 { 335, "ICMP ping (sequence number) - " + GetMethodCapacity(335) + "b" },   //TODO is actually changing all the time, improve by just incrementing
@@ -92,7 +92,7 @@ namespace SteganoNetLib
                 { 305, 13 },
                 { 331, 0 },
                 { 333, 16 },
-                { 335, 16 },                
+                { 335, 16 },
                 { 451, 0},
                 { 453, 32 },
                 { 455, 16 },
@@ -179,12 +179,12 @@ namespace SteganoNetLib
             //if (Double.Parse(binvalue) == 0)
             System.Text.RegularExpressions.Regex r = new System.Text.RegularExpressions.Regex("^[0\\s]*$"); //checking even very long string for only zeros
             if (r.IsMatch(binvalue) || binvalue[0].Equals("0")) //check if whole sequence is zero or it starts with zero
-            {               
-                return "0";
+            {
+                return "0" + NetReceiverServer.ZeroSeparator;
             }
             else
             {
-                return binvalue;
+                return binvalue + NetReceiverServer.WordSeparator;
             }
         }
 
@@ -277,14 +277,14 @@ namespace SteganoNetLib
                 {
                     case 301: //IP (Type of service / DiffServ agresive) //RECEIVER
                         {
-                            rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
+                            rs.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId)); //add number of received bits in this iteration
                             string binvalue = Convert.ToString(ip.TypeOfService, 2).PadLeft(GetMethodCapacity(methodId), '0');
                             BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                             break;
                         }
                     case 302: //IP (Type of service / DiffServ) //RECEIVER
                         {
-                            rs.AddInfoMessage("3IP: method " + methodId);
+                            rs.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
                             string binvalue = Convert.ToString(ip.TypeOfService, 2).PadLeft(GetMethodCapacity(methodId), '0');
                             BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                             break;
@@ -294,7 +294,7 @@ namespace SteganoNetLib
                             string binvalue = Convert.ToString(ip.Identification, 2).PadLeft(GetMethodCapacity(methodId), '0');
                             if (IdentificationIP != binvalue) //do not add value when it didnt change
                             {
-                                rs.AddInfoMessage("3IP: method " + methodId); //add number of received bits in this iteration
+                                rs.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId)); //add number of received bits in this iteration
                                 IdentificationIP = binvalue; //remember for next time
                                 BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                             }
@@ -304,7 +304,7 @@ namespace SteganoNetLib
                         {
                             if (ip.Fragmentation.Options == IpV4FragmentationOptions.MoreFragments)
                             {
-                                rs.AddInfoMessage("3IP: method " + methodId);
+                                rs.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
                                 string binvalue = Convert.ToString(ip.Fragmentation.Offset, 2).PadLeft(GetMethodCapacity(methodId), '0');
                                 BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                             }
@@ -315,7 +315,7 @@ namespace SteganoNetLib
 
             if (BlocksOfSecret.Count != 0) //providing value output
             {
-                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+                return string.Join(NetReceiverServer.WordSeparator, BlocksOfSecret.ToArray()); //joining binary substring
             }
             else
             {
@@ -335,64 +335,43 @@ namespace SteganoNetLib
                 {
                     case IcmpGenericPing: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
                         {
-                            sc.AddInfoMessage("3ICMP: method " + methodId);
-                            icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number
-                            icmp.Identifier = (ushort)rand.Next(0, 65535);
+                            sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
+                            //icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number, should be also without this...
+                            //icmp.Identifier = (ushort)rand.Next(0, 65535);
                             //add delay 1000 miliseconds on parent object
                             break;
                         }
                     case 333: //ICMP (Identifier) //SENDER
                         {
-                            sc.AddInfoMessage("3ICMP: method " + methodId);
-                            if (!stegoUsedMethodIds.Contains(335)) //do not overwrite sequence number when that method selected
-                            {
-                                icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number
-                            }
+                            sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
 
-                            const int usedbits = 16;
-                            try
+                            //if (!stegoUsedMethodIds.Contains(335)) //do not overwrite sequence number when that method selected, thats stupid, do not touch then
+                            //{icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number }
+
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            icmp.Identifier = Convert.ToUInt16(content, 2);
+                            secret = secret.Remove(0, content.Length); //cut x bits from whole
+                            if (content.Length == 0 || secret.Length == 0)
                             {
-                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                icmp.Identifier = Convert.ToUInt16(partOfSecret, 2);
-                                secret = secret.Remove(0, usedbits);
-                            }
-                            catch
-                            {
-                                if (secret.Length != 0)
-                                {
-                                    //icmp.Identifier = Convert.ToUInt16(secret.PadLeft(usedbits, '0'), 2); //using rest + padding
-                                    icmp.Identifier = Convert.ToUInt16(secret, 2); //using rest + padding
-                                    secret = secret.Remove(0, secret.Length);
-                                }
-                                return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
+                                return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more      
                             }
                             break;
                         }
                     case 335: //ICMP (Sequence number) //SENDER
                         {
-                            sc.AddInfoMessage("3ICMP: method " + methodId);
-                            if (!stegoUsedMethodIds.Contains(333)) //do not overwrite identifier when that method selected
-                            {
-                                icmp.Identifier = icmp.Identifier = (ushort)rand.Next(0, 65535); //legacy Identifier number
-                            }
+                            sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
 
-                            const int usedbits = 16;
-                            try
+                            //if (!stegoUsedMethodIds.Contains(333)) //do not overwrite identifier when that method selected
+                            //{ icmp.Identifier = icmp.Identifier = (ushort)rand.Next(0, 65535); //legacy Identifier number}
+
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            icmp.SequenceNumber = Convert.ToUInt16(content, 2);
+                            secret = secret.Remove(0, content.Length); //cut x bits from whole
+                            if (content.Length == 0 || secret.Length == 0)
                             {
-                                string partOfSecret = secret.Remove(usedbits, secret.Length - usedbits);
-                                icmp.SequenceNumber = Convert.ToUInt16(partOfSecret, 2);
-                                secret = secret.Remove(0, usedbits);
+                                return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more      
                             }
-                            catch
-                            {
-                                if (secret.Length != 0)
-                                {
-                                    icmp.SequenceNumber = Convert.ToUInt16(secret, 2); //using rest + padding .PadLeft(usedbits, '0')
-                                    secret = secret.Remove(0, secret.Length);
-                                }
-                                return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more                               
-                            }
-                            break;
+                            break;                            
                         }
                 }
             }
@@ -417,24 +396,24 @@ namespace SteganoNetLib
                         }
                     case 333: //ICMP (Identifier) RECEIVER
                         {
-                            rs.AddInfoMessage("3ICMP: method " + methodId);
-                            string binvalue = Convert.ToString(icmp.Identifier, 2);
-                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
+                            rs.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId)); //add number of received bits in this iteration
+                            string binvalue = Convert.ToString(icmp.Identifier, 2).PadLeft(GetMethodCapacity(methodId), '0');
+                            BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                             break;
                         }
                     case 335: //ICMP (Sequence number) RECEIVER
                         {
-                            rs.AddInfoMessage("3ICMP: method " + methodId);
-                            string binvalue = Convert.ToString(icmp.SequenceNumber, 2);
-                            BlocksOfSecret.Add(binvalue.PadLeft(16, '0')); //when zeros was cutted
-                            break;
+                            rs.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId)); //add number of received bits in this iteration
+                            string binvalue = Convert.ToString(icmp.SequenceNumber, 2).PadLeft(GetMethodCapacity(methodId), '0');
+                            BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
+                            break;                            
                         }
                 }
             }
 
             if (BlocksOfSecret.Count != 0) //providing value output
             {
-                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+                return string.Join(NetReceiverServer.WordSeparator, BlocksOfSecret.ToArray()); //joining binary substring
             }
             else
             {
@@ -529,7 +508,7 @@ namespace SteganoNetLib
 
             if (BlocksOfSecret.Count != 0) //providing value output
             {
-                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+                return string.Join(NetReceiverServer.WordSeparator, BlocksOfSecret.ToArray()); //joining binary substring
             }
             else
             {
@@ -683,7 +662,7 @@ namespace SteganoNetLib
 
             if (BlocksOfSecret.Count != 0) //providing value output
             {
-                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+                return string.Join(NetReceiverServer.WordSeparator, BlocksOfSecret.ToArray()); //joining binary substring
             }
             else
             {
@@ -718,7 +697,7 @@ namespace SteganoNetLib
                             //cut content to some smaller parts and convert them to hex
                             string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
                             int sizeToCut = content.Length;
-                            string urlpart = "";                    
+                            string urlpart = "";
 
                             string hexValue = String.Format("{0:X4}", Convert.ToUInt64(content, 2));
                             if (hexValue == "0000")
@@ -792,16 +771,16 @@ namespace SteganoNetLib
                                         url = url.Replace(append, "");
                                     }
                                 }
-                                if(url.Equals("8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC")) //static string replaced by 0, TODO dynamical like NetDevice.Get...()
+                                if (url.Equals("8_bZH7ZEKz8SLRG1fo7evhDeaTdzIAPsQCJoC")) //static string replaced by 0, TODO dynamical like NetDevice.Get...()
                                 {
                                     url = "0";
                                 }
                                 //rs.AddInfoMessage("7HTTP: method " + methodId + " received: " + url);
 
                                 //convert message from URL to binary
-                                string binarystring = Convert.ToString(Convert.ToInt64(url, 16), 2).PadLeft(url.Length * 4, '0');                                
+                                string binarystring = Convert.ToString(Convert.ToInt64(url, 16), 2).PadLeft(url.Length * 4, '0');
                                 string binvalue = GetBinaryStringFromReceived(binarystring); //check string
-                                if (binvalue.Equals("0000") || binvalue.Equals("0")) 
+                                if (binvalue.Equals("0000") || binvalue.Equals("0"))
                                 {
                                     binvalue = "0"; //recognize zero strings
                                 }
@@ -809,9 +788,9 @@ namespace SteganoNetLib
                                 {
                                     int normalLenghtOfReceivedHexaMessage = (GetMethodCapacity(methodId) / 4);  //WARNING, calculation...
                                     if (url.Length < normalLenghtOfReceivedHexaMessage)
-                                    {                                        
+                                    {
                                         //do not pad this message to full lenght since its shorter (last one)
-                                        while(binvalue[0].Equals('0') && binvalue.Length > 1) //cut intro zeros from string - padding effect, no zeros at the start
+                                        while (binvalue[0].Equals('0') && binvalue.Length > 1) //cut intro zeros from string - padding effect, no zeros at the start
                                         {
                                             binvalue = binvalue.Remove(0, 1); //cut first zero
                                         }
@@ -830,7 +809,7 @@ namespace SteganoNetLib
 
             if (BlocksOfSecret.Count != 0) //providing value output
             {
-                return string.Join("", BlocksOfSecret.ToArray()); //joining binary substring
+                return string.Join(NetReceiverServer.WordSeparator, BlocksOfSecret.ToArray()); //joining binary substring
             }
             else
             {

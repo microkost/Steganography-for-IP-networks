@@ -31,6 +31,11 @@ namespace SteganoNetLib
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
 
+        //processing constants
+        public const string StreamSeparator = "spacebetweenstreams"; //deprecated                
+        public const string WordSeparator = "spacebetweenwords"; //used in same metod
+        public const string ZeroSeparator = "spacebetweenzeros"; //used in same word, lower priority when processed GetSecretMessage() than WordSeparator
+
         //internal         
         private PacketDevice selectedDevice = null;
         private IpV4Address IpLocalListening { get; set; }
@@ -39,7 +44,6 @@ namespace SteganoNetLib
         private int PacketSize { get; set; } //recognize change in stream
         private bool FirstRun { get; set; }
         private bool IsListenedSameInterface { get; set; } //if debug mode is running
-
         private int messageCounter = 0; //just counting processed messages
 
         private uint AckNumberLocal { get; set; } //for TCP answers
@@ -117,14 +121,14 @@ namespace SteganoNetLib
                 {
                     AddInfoMessage("Server is going to be listening for " + TimeToWaitForWholeMessageInMs / 1000 + "s and then terminates");
                     timer.Start(); //starting immediatelly, not from first packet.
-                }                                                  
-                               
+                }
+
                 do // Retrieve the packets
-                {                    
-                    if(timer.ElapsedMilliseconds > TimeToWaitForWholeMessageInMs) //autokill timer timer
+                {
+                    if (timer.ElapsedMilliseconds > TimeToWaitForWholeMessageInMs) //autokill timer timer
                     {
                         Terminate = true;
-                        AddInfoMessage("Listening terminated because timer " + TimeToWaitForWholeMessageInMs/1000 + "s expired");
+                        AddInfoMessage("Listening terminated because timer " + TimeToWaitForWholeMessageInMs / 1000 + "s expired");
                         timer.Stop();
                     }
 
@@ -169,7 +173,7 @@ namespace SteganoNetLib
                         default:
                             throw new InvalidOperationException("The result " + result + " should never be reached here");
                     }
-                }while (!Terminate);
+                } while (!Terminate);
 
                 AddInfoMessage(String.Format("Message is assembling from {0} sub messages", StegoBinary.Count));
                 //warning: string "Message is assembling from" is used as termination keyword, be carefull when changing...
@@ -251,7 +255,8 @@ namespace SteganoNetLib
             List<int> icmpSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.IcmpRangeStart, NetSteganography.IcmpRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
             if (StegoUsedMethodIds.Any(icmpSelectionIds.Contains))
             {
-                messageCollector.Append(NetSteganography.GetContent3Icmp(icmp, StegoUsedMethodIds, this));
+                string received = NetSteganography.GetContent3Icmp(icmp, StegoUsedMethodIds, this);
+                messageCollector.Append(received);
                 //if EchoRequest not needed because typeof(icmp) == IcmpEchoDatagram
                 SendReplyPacket(NetStandard.GetIcmpEchoReplyPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, icmp));
             }
@@ -443,65 +448,82 @@ namespace SteganoNetLib
                 return "Error! Received too many messages for processing! ";
             }
 
+            //should I firts do 
 
-            //cut zeros from last message, because its padded and it should not be...
-            for (int i = StegoBinary.Count() - 1; i >= 0; i--)
+            //process output to prepare for rest
+            List<string> stegoBinaryClean = new List<string>();
+            foreach (StringBuilder block in StegoBinary)
             {
-                if (stegoBinary[i].Length > 1 && !stegoBinary[i].ToString().Equals("spacebetweenstreams"))
+                if (block.Length > 1 && !block.Equals(StreamSeparator)) //everything what is not null and separator
                 {
-                    string wordToCut = stegoBinary[i].ToString();
-                    while (wordToCut[0].Equals('0')) //cut intro zeros from string - padding effect, no zeros at the start
+                    if (block.ToString().Contains(WordSeparator) || block.ToString().Contains(ZeroSeparator)) //splitting words from same method, should be padded when they were last
                     {
-                        wordToCut = wordToCut.Remove(0, 1); //cut first zero
+                        string[] metwords = Regex.Split(block.ToString(), WordSeparator); //get strings before and after that separator
+                        foreach (string metWord in metwords)
+                        {
+                            if (metWord.Length == 0)
+                            {
+                                continue; //do not process empty messages from end
+                            }
+
+                            if (metWord.Contains(ZeroSeparator)) //splitting single zeros when they came together in same metod
+                            {
+                                string[] words = Regex.Split(metWord, ZeroSeparator); //get strings before and after that separator
+                                foreach (string singleWord in words)
+                                {
+                                    if (singleWord.Length != 0) //when its not empty string
+                                    {
+                                        stegoBinaryClean.Add(singleWord); //add it!
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                stegoBinaryClean.Add(metWord); //add when not ZeroSeparator
+                            }
+                        }
                     }
-                    stegoBinary[i] = new StringBuilder(wordToCut);
-                    break;
+                    else
+                    {
+                        stegoBinaryClean.Add(block.ToString()); //add if not WordSeparator
+                    }
                 }
+                //others are thrown away...
+            }            
+
+            //clean from starting zeros of every message
+            for (int i = 0; i < stegoBinaryClean.Count(); i++)
+            {
+                string wordToCut = stegoBinaryClean[i].ToString(); //save as string
+                while (wordToCut.Length > 1 && wordToCut[0].Equals('0')) //cut intro zeros (when more than 1 char) from string - padding effect, no zeros at the start
+                {
+                    wordToCut = wordToCut.Remove(0, 1); //cut first zero
+                }
+                stegoBinaryClean[i] = (wordToCut.Length > 0) ? wordToCut : "0"; //save it back
             }
+            
 
-            StringBuilder sbSingle = new StringBuilder();
-            stegoBinary.ForEach(item => sbSingle.Append(item)); //convert many binary substrings to one message
-            string[] streams = Regex.Split(sbSingle.ToString(), "spacebetweenstreams"); //split separate messages by server string spacebetweenstreams
+            StringBuilder sbSingle = new StringBuilder(); //convets every word to ASCII and appending
+            StringBuilder sbBinary = new StringBuilder(); //convers whole binary to ASCII
 
-            sbSingle.Clear(); //reused for output
-            StringBuilder sbBinary = new StringBuilder();
+            stegoBinaryClean.ForEach(item => sbSingle.Append(item)); //convert many binary substrings to one message            
+            string[] streams = Regex.Split(sbSingle.ToString(), StreamSeparator); //split separate messages by server string spacebetweenstreams //its deprecated...
+            sbSingle.Clear(); //reused for output            
             foreach (string word in streams)
             {
                 if (word.Length < 8 && !word.Equals("0")) //cut off mess (one char have 8 bits)
                 {
-                    //making mess when 0 messages
-                    continue;
+                    continue; //making mess when 0 messages
                 }
 
                 //two methods of proceesing...              
                 sbBinary.Append(word); //all messages are part of one binary                
                 sbSingle.Append(DataOperations.BinaryNumber2stringASCII(word)); //each message is separate
             }
-            Console.WriteLine("\n"); //just to make it visible in console           
-
-            /*
-            //skipping align since it makes troubles for this method
-            //check of bit align
-            if (sbBinary.Length % DataOperations.bitsForChar != 0) //TODO is quite brutal method... Not performed on sbSingle to be able compare
-            {
-                //if (StegoUsedMethodIds.Contains(NetSteganography.HttpDataInUrl))
-
-                                
-
-                int howManyBitsCutted = 0;
-                do
-                {
-                    sbBinary.Length = sbBinary.Length - 1;
-                    howManyBitsCutted++;
-                }
-                while (sbBinary.Length % DataOperations.bitsForChar == 0);
-                Console.WriteLine("\tWarning: Message is not aligned to bit lenght of " + DataOperations.bitsForChar + ". Cutted " + howManyBitsCutted + " bits to align.");
-            }
-            */
+            Console.WriteLine("\n"); //just to make it visible in console                       
 
             string messageFromSingle = sbSingle.ToString();
             string messageFromBinary = DataOperations.BinaryNumber2stringASCII(sbBinary.ToString()).Trim();
-
 
             //consistency check https://en.wikipedia.org/wiki/Error_detection_and_correction
             string messageSingleChecked = DataOperations.ErrorDetectionASCII2Clean(messageFromSingle);
@@ -557,6 +579,8 @@ namespace SteganoNetLib
                     }
                 }
             }
+
+            string tmp = "break point, something is zero";
 
             return ("Warning! Following messages are corrupted.\n\r" +
                     "\t" + messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +

@@ -152,6 +152,9 @@ namespace SteganoNetLib
                 }
 
                 int messageCounter = 0;
+                Stopwatch timer = new Stopwatch();                
+                timer.Start();
+
                 do
                 {
                     AddInfoMessage("-C-L-I-E-N-T--------------------------------" + (++messageCounter));
@@ -427,7 +430,7 @@ namespace SteganoNetLib
                             }
                             catch
                             {
-                                AddInfoMessage("ICMP: backup option in backup layer creation used");
+                                AddInfoMessage("ICMP: backup option in backup layer creation used - no more content to transfer?");
                                 layers.Add(new IcmpEchoLayer());
                             }                                                           
                             DelayInMs = delayIcmp;
@@ -451,6 +454,9 @@ namespace SteganoNetLib
                     System.Threading.Thread.Sleep(DelayInMs);
                 }
                 while (!Terminate || SecretMessage.Length != 0);
+
+                timer.Stop();
+                AddInfoMessage("Message was transfered in " + timer.ElapsedMilliseconds / 1000 + "s and in " + messageCounter + " messages.");
             }
         }
 

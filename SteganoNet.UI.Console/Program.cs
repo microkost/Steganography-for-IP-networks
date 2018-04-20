@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using System.Threading;
+using System.Diagnostics;
 
 namespace SteganoNet.UI.Console
 {
@@ -357,6 +358,8 @@ namespace SteganoNet.UI.Console
                 Thread senderClientThread = new Thread(threadDelegate);
                 senderClientThread.Name = "SpeakingThread";
                 senderClientThread.IsBackground = true;
+                Stopwatch timerClient = new Stopwatch();
+                timerClient.Start();
                 senderClientThread.Start();
 
                 //client activity output
@@ -395,6 +398,8 @@ namespace SteganoNet.UI.Console
                 sc.Terminate = true;
                 senderClientThread.Abort(); //stop client thread
                 //senderClientThread.Join(); //needed?
+                timerClient.Stop();
+                System.Console.WriteLine("\nTransfer took " + timerClient.ElapsedMilliseconds/1000 + " seconds");
             }
             else //catch
             {
