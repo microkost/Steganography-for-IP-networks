@@ -49,7 +49,7 @@ namespace SteganoNetLib
         private int DelayInMs { get; set; } //how long to wait between iterations of sending
 
 
-        //network private parametres = methods value keepers 
+        //////network private parametres = methods value keepers 
         static Random rnd = new Random();
         private Stopwatch Timer { get; set; } //IP identification timer
         private bool FirstRun { get; set; } //IP identification decision bit
@@ -89,7 +89,7 @@ namespace SteganoNetLib
             this.PortLocal = portSendFrom;
             this.PortRemote = portSendTo;
             this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpOfInterface);
-            this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpOfRemoteHost);
+            this.MacAddressRemote = new MacAddress("5c:03:39:8f:47:0e"); //NetDevice.GetRandomMacAddress(); //NetStandard.GetMacAddressFromArp(NetStandard.GetDefaultGateway()); //ipOfRemoteHost);
 
             //bussiness ctor           
             Authenticated = false;

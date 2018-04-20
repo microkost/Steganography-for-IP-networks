@@ -49,6 +49,8 @@ namespace SteganoNetLib
                 ipAddressInterface = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip                
             }
 
+            //TODO something wrong with that method when inserted foreign IP address
+
             try
             {
                 var mac = NetDevice.GetLocalMacAddress(ipAddressInterface); //first ask local device for mac based on IP
