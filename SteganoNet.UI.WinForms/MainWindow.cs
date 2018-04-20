@@ -27,7 +27,7 @@ namespace SteganographyFramework
 
         public MainWindow() //ctor default generic
         {
-            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false)
+            if (SteganoNetLib.SystemCheck.AreSystemPrerequisitiesDone() == false)
             {
                 throw new Exception("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap");
             }
@@ -46,7 +46,7 @@ namespace SteganographyFramework
 
         public MainWindow(bool isServer, string method) //ctor with role specified
         {
-            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false)
+            if (SteganoNetLib.SystemCheck.AreSystemPrerequisitiesDone() == false)
             {
                 throw new Exception("Initializing of steganography application failed, please check prerequisites especially availability of WinPcap");
             }

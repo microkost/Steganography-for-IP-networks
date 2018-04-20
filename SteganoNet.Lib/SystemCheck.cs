@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SteganoNet.Lib
+namespace SteganoNetLib
 {
     public static class SystemCheck //cannot have dependecies to anything from PcapDotNet!
     {

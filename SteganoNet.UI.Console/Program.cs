@@ -28,7 +28,7 @@ namespace SteganoNet.UI.Console
             bool isHumanDriving = true; //skip asking when is runned from parametres //TODO change hardcoded it in code...
 
             System.Console.WriteLine("Welcome in Steganography for IP networks tool.\n");
-            if (SteganoNet.Lib.SystemCheck.AreSystemPrerequisitiesDone() == false) //can run?
+            if (SteganoNetLib.SystemCheck.AreSystemPrerequisitiesDone() == false) //can run?
             {
                 System.Console.WriteLine("Nessesary library WinPcap is not installed or PcapDotNet is not present. Check it please and restart.");
                 System.Console.WriteLine("Press any key to exit... ");
