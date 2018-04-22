@@ -1,0 +1,20 @@
+﻿vaše ip adresa
+
+84.250.93.122
+
+Hostname: dsl-jklbng11-54fa5d-122.dhcp.inet.fi
+Protokol: IPv4
+IPv6 compression : ::1 n
+IPv6 Uncompression : 0:0:0:0:0:0:0:1 n
+
+Zpětná kontrola IP: 84.250.93.122
+
+Tracing route to dsl-jklbng12-54fbdd-209.dhcp.inet.fi [84.251.221.209]
+over a maximum of 30 hops:
+
+  1    53 ms     *        *     dsl-jklbng12-54fbdd-209.dhcp.inet.fi [84.251.221.209] 
+  2     1 ms     1 ms     1 ms  dsl-jklbng11-54fa40-2.dhcp.inet.fi [84.250.64.2] 
+  3     1 ms     1 ms     1 ms  141.208.193.86 
+  4     3 ms     3 ms     4 ms  dsl-jklbng12-54fbdd-209.dhcp.inet.fi [84.251.221.209] 
+
+Trace complete.
