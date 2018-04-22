@@ -35,8 +35,8 @@ namespace SteganoNetLib
         //network public parametres
         public ushort PortRemote { get; set; }
         public ushort PortLocal { get; set; }
-        public ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
-        public ushort PortRemoteHttp = 80; //where to expect "fake" HTTP webserver
+        public const ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
+        public const ushort PortRemoteHttp = 80; //where to expect "fake" HTTP webserver        
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
 
@@ -66,6 +66,7 @@ namespace SteganoNetLib
 
         public NetSenderClient(string ipOfSendingInterface, ushort portSendFrom, string ipOfReceivingInterface, ushort portSendTo)
         {
+
             //network ctor
             try
             {
@@ -86,17 +87,13 @@ namespace SteganoNetLib
                 this.IpOfRemoteHost = new IpV4Address("0.0.0.0");
                 AddInfoMessage("Arrived value of IP (" + ipOfReceivingInterface + ") was wrong. Changed to " + IpOfRemoteHost.ToString());
             }
+
             this.PortLocal = portSendFrom;
             this.PortRemote = portSendTo;
 
-            this.MacAddressLocal = NetStandard.GetMacByIp(IpOfInterface.ToString());//NetStandard.GetMacAddressFromArp(IpOfInterface);
-            AddInfoMessage("Mac address local: " + MacAddressLocal.ToString()); //DEBUG
-
-
-            string t = "tmp";
-            this.MacAddressRemote = NetStandard.GetMacByIp(IpOfRemoteHost.ToString()); //NetStandard.GetMacAddressFromArp(NetStandard.GetDefaultGateway()); //ipOfRemoteHost);
-            AddInfoMessage("Mac address remote: " + MacAddressRemote.ToString() + " - is not random? " + NetDevice.GetRandomMacAddress()); //DEBUG
-
+            this.MacAddressLocal = NetStandard.GetMacAddressFromIp(IpOfInterface);
+            this.MacAddressRemote = NetStandard.GetMacAddressFromIp(IpOfRemoteHost);
+           
             //bussiness ctor           
             Authenticated = false;
             Messages = new Queue<string>();
@@ -107,7 +104,7 @@ namespace SteganoNetLib
             AckNumberLocal = 0;
             IsEnstablishedTCP = false; //TCP flow control            
             DomainsToAsk = null; //DNS + HTTP layers
-            AddInfoMessage("Client created...");
+            //AddInfoMessage("Client created...");
         }
 
         public void Speaking() //thread main method
@@ -143,6 +140,9 @@ namespace SteganoNetLib
                 //AddInfoMessage("DNS will ask port " + PortRemoteDns + ", otherwise is remote port " + PortRemote);
                 //AddInfoMessage("HTTP will ask port " + PortRemoteHttp + ", otherwise is remote port " + PortRemote);
             }
+
+            AddInfoMessage("Mac address local: " + MacAddressLocal.ToString()); //DEBUG
+            AddInfoMessage("Mac address remote: " + MacAddressRemote.ToString()); //DEBUG
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {

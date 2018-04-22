@@ -59,8 +59,8 @@ namespace SteganoNetLib
             this.IpRemoteSpeaker = new IpV4Address(ipRemoteString);
             this.PortLocal = portLocal;
             this.PortRemote = portRemote;
-            this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpLocalListening);
-            this.MacAddressRemote = NetStandard.GetMacAddressFromArp(IpRemoteSpeaker); //use gateway mac
+            this.MacAddressLocal = NetStandard.GetMacAddressFromIp(IpLocalListening); //NetStandard.GetMacAddressFromArp(IpLocalListening);
+            this.MacAddressRemote = NetStandard.GetMacAddressFromIp(IpRemoteSpeaker); //NetStandard.GetMacAddressFromArp(IpRemoteSpeaker); //use gateway mac
 
             //local running mode
             bool remoteIsSameAsLocal = IpLocalListening.ToString().Equals(IpRemoteSpeaker.ToString());
@@ -70,7 +70,7 @@ namespace SteganoNetLib
             //bussiness ctor
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
-            Messages.Enqueue("Server created...");
+            //Messages.Enqueue("Server created...");
             this.FirstRun = true;
             TimeToWaitForWholeMessageInMs = 0; //if needed different, change after creation...
         }
@@ -84,6 +84,9 @@ namespace SteganoNetLib
             }
 
             selectedDevice = NetDevice.GetSelectedDevice(IpLocalListening); //take the selected adapter           
+
+            AddInfoMessage("Mac address local: " + MacAddressLocal.ToString()); //DEBUG
+            AddInfoMessage("Mac address remote: " + MacAddressRemote.ToString()); //DEBUG
 
             using (PacketCommunicator communicator = selectedDevice.Open(65536, PacketDeviceOpenAttributes.Promiscuous, 1000))
             {
@@ -297,8 +300,15 @@ namespace SteganoNetLib
             if (StegoUsedMethodIds.Any(httpSelectionIds.Contains))
             {
                 //update local TCP values from arriving packet
-                SeqNumberRemote = tcp.SequenceNumber;
-                AckNumberRemote = tcp.AcknowledgmentNumber;
+                try
+                {
+                    SeqNumberRemote = tcp.SequenceNumber;
+                    AckNumberRemote = tcp.AcknowledgmentNumber;
+                }
+                catch
+                {
+                    return; //when is receiving some another traffic from interface...
+                }
 
                 if (tcp.ControlBits == TcpControlBits.Synchronize || (tcp.ControlBits == TcpControlBits.Synchronize | tcp.ControlBits == TcpControlBits.Acknowledgment) || tcp.ControlBits == TcpControlBits.Fin || tcp.ControlBits == (TcpControlBits.Fin | TcpControlBits.Acknowledgment))
                 {
@@ -489,7 +499,7 @@ namespace SteganoNetLib
                     }
                 }
                 //others are thrown away...
-            }            
+            }
 
             //clean from starting zeros of every message
             for (int i = 0; i < stegoBinaryClean.Count(); i++)
@@ -501,7 +511,7 @@ namespace SteganoNetLib
                 }
                 stegoBinaryClean[i] = (wordToCut.Length > 0) ? wordToCut : "0"; //save it back
             }
-            
+
 
             StringBuilder sbSingle = new StringBuilder(); //convets every word to ASCII and appending
             StringBuilder sbBinary = new StringBuilder(); //convers whole binary to ASCII
@@ -579,8 +589,6 @@ namespace SteganoNetLib
                     }
                 }
             }
-
-            string tmp = "break point, something is zero";
 
             return ("Warning! Following messages are corrupted.\n\r" +
                     "\t" + messageFromSingle + " or " + DataOperations.ErrorDetectionCutHashOut(messageFromSingle) + "\n\r" +

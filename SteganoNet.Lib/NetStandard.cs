@@ -105,23 +105,42 @@ namespace SteganoNetLib
             }
         }
 
-
-        public static MacAddress GetMacByIp(string ip)
+        public static MacAddress GetMacAddressFromIp(IpV4Address ip)
         {
-            var macIpPairs = GetAllMacAddressesAndIppairs();
-            int index = macIpPairs.FindIndex(x => x.IpAddress == ip);
-            if (index >= 0)
-            {
-                return new MacAddress(macIpPairs[index].MacAddress.ToUpper());
-            }
-            else
-            {
-                return GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString())); //return NetDevice.GetRandomMacAddress();                
-            }
+            //is local interface ip - take it from device
+            //is subnet ip - take it from ARP
+            //is remote ip => default gateway - take it from devide OR arp
+            MacAddress? output = new MacAddress();
+           
+            output = NetDevice.GetLocalMacAddress(ip);
+            if (output != null)
+                return (MacAddress)output;
+
+            output = GetMacByIp(ip.ToString());
+            if (output != null)
+                return (MacAddress)output;
+
+            output = GetMacAddressFromArp(ip);
+            if (output != null)
+                return (MacAddress)output;
+
+            output = NetDevice.GetLocalMacAddress(GetDefaultGateway());
+            if (output != null)
+                return (MacAddress)output;
+
+            output = GetMacByIp(GetDefaultGateway().ToString());
+            if (output != null)
+                return (MacAddress)output;
+
+            output = GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString()));
+            if (output != null)
+                return (MacAddress)output;
+            
+            return (MacAddress)NetDevice.GetRandomMacAddress();                     
         }
 
-        private static List<MacIpPair> GetAllMacAddressesAndIppairs()
-        {
+        public static MacAddress? GetMacByIp(string ip)
+        {            
             List<MacIpPair> mip = new List<MacIpPair>();
             System.Diagnostics.Process pProcess = new System.Diagnostics.Process();
             pProcess.StartInfo.FileName = "arp";
@@ -141,9 +160,19 @@ namespace SteganoNetLib
                     IpAddress = m.Groups["ip"].Value
                 });
             }
+            var macIpPairs = mip;
 
-            return mip;
+            int index = macIpPairs.FindIndex(x => x.IpAddress == ip);
+            if (index >= 0)
+            {
+                return new MacAddress(macIpPairs[index].MacAddress.ToUpper());
+            }
+            else
+            {
+                return null;                
+            }
         }
+
         private struct MacIpPair
         {
             public string MacAddress;
