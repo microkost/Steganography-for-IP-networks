@@ -47,7 +47,7 @@ namespace SteganoNetLib
 
             if (ipAddressInterface == null || ipAddressInterface.ToString().Length == 0 || ipAddressInterface.ToString().Equals("0.0.0.0")) //in case of input problem or unknown
             {
-                ipAddressInterface = new IpV4Address(GetDefaultGateway().ToString()); //get alternative default gateway ip                
+                ipAddressInterface = new IpV4Address(GetDefaultGateway(ipAddressInterface).ToString()); //get alternative default gateway ip                
             }
 
             //TODO something wrong with that method when inserted foreign IP address
@@ -75,7 +75,7 @@ namespace SteganoNetLib
                     if (SendARP(StringIPToInt(ipAddressInterface.ToString()), 0, macAddr, ref macAddrLen) != 0)
                     {
                         //if requested MAC is not found, ask for MAC address of system default gateway
-                        if (SendARP(StringIPToInt(GetDefaultGateway().ToString()), 0, macAddr, ref macAddrLen) != 0)
+                        if (SendARP(StringIPToInt(GetDefaultGateway(ipAddressInterface).ToString()), 0, macAddr, ref macAddrLen) != 0)
                         {
                             //if still not valid then return smth universal
                             //return NetDevice.GetRandomMacAddress(); //problem on 802.11 alias WiFi
@@ -94,7 +94,7 @@ namespace SteganoNetLib
                     try
                     {
                         //ask for MAC address of local gateway
-                        return GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString()));
+                        return GetMacAddressFromArp(new IpV4Address(GetDefaultGateway(ipAddressInterface).ToString()));
                     }
                     catch
                     {
@@ -111,7 +111,7 @@ namespace SteganoNetLib
             //is subnet ip - take it from ARP
             //is remote ip => default gateway - take it from devide OR arp
             MacAddress? output = new MacAddress();
-           
+
             output = NetDevice.GetLocalMacAddress(ip);
             if (output != null)
                 return (MacAddress)output;
@@ -120,27 +120,27 @@ namespace SteganoNetLib
             if (output != null)
                 return (MacAddress)output;
 
-            output = GetMacAddressFromArp(ip);
+            //output = GetMacAddressFromArp(ip); //frezing
             if (output != null)
                 return (MacAddress)output;
 
-            output = NetDevice.GetLocalMacAddress(GetDefaultGateway());
+            output = NetDevice.GetLocalMacAddress(GetDefaultGateway(ip));
             if (output != null)
                 return (MacAddress)output;
 
-            output = GetMacByIp(GetDefaultGateway().ToString());
+            output = GetMacByIp(GetDefaultGateway(ip).ToString());
             if (output != null)
                 return (MacAddress)output;
 
-            output = GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString()));
+            //output = GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString())); //freezing
             if (output != null)
                 return (MacAddress)output;
-            
-            return (MacAddress)NetDevice.GetRandomMacAddress();                     
+
+            return (MacAddress)NetDevice.GetRandomMacAddress();
         }
 
         public static MacAddress? GetMacByIp(string ip)
-        {            
+        {
             List<MacIpPair> mip = new List<MacIpPair>();
             System.Diagnostics.Process pProcess = new System.Diagnostics.Process();
             pProcess.StartInfo.FileName = "arp";
@@ -164,12 +164,13 @@ namespace SteganoNetLib
 
             int index = macIpPairs.FindIndex(x => x.IpAddress == ip);
             if (index >= 0)
-            {
-                return new MacAddress(macIpPairs[index].MacAddress.ToUpper());
+            {                
+                string macAddressWithDash = macIpPairs[index].MacAddress.ToUpper(); //gets value from arp -a command where are dashes
+                return new MacAddress(macAddressWithDash.Replace('-',':'));
             }
             else
             {
-                return null;                
+                return null;
             }
         }
 
@@ -199,11 +200,11 @@ namespace SteganoNetLib
             return ipv4Vrstva;
         }
 
-        public static IpV4Address GetDefaultGateway() //returns default gateway from system, not from PcapDotNet
+        public static IpV4Address GetDefaultGateway(IpV4Address forWhichInterface, int subnetMask = 16) //returns default gateway from system, not from PcapDotNet
         {
             //source: http://stackoverflow.com/questions/13634868/get-the-default-gateway
 
-            IPAddress result = null;
+            List<IPAddress> allGateways = new List<IPAddress>();
             var cards = NetworkInterface.GetAllNetworkInterfaces().ToList();
             if (cards.Any())
             {
@@ -221,14 +222,60 @@ namespace SteganoNetLib
                     if (gateway == null)
                         continue;
 
-                    result = gateway.Address;
-                    break;
+                    allGateways.Add(gateway.Address);
                 };
             }
 
-            string address = result.ToString();
-            IpV4Address ipv4address = new IpV4Address(address);
-            return ipv4address;
+            if (allGateways.Count > 1)
+            {
+                int bytesToCut = 2; //update that value based on subnet mask
+                if (subnetMask <= 8)
+                    bytesToCut = 1;
+
+                if (subnetMask > 8 && subnetMask <= 16)
+                    bytesToCut = 2;
+
+                if (subnetMask > 16 && subnetMask <= 24)
+                    bytesToCut = 3;
+
+                if (subnetMask > 24 && subnetMask <= 32)
+                    bytesToCut = 4;
+
+                IPAddress ip = IPAddress.Parse(forWhichInterface.ToString()); //convert format
+                string compareIp = ""; //regex start with
+                int iteration = 1;
+                foreach (byte i in ip.GetAddressBytes()) //iterate the byte[] and print each byte
+                {
+                    compareIp += i + ".";
+
+                    if (iteration == bytesToCut)
+                        break;
+
+                    iteration++;
+                }
+
+                foreach (IPAddress address in allGateways)
+                {
+                    IpV4Address gateway = new IpV4Address(address.ToString());
+                    if (gateway.ToString().StartsWith(compareIp))
+                    {
+                        return new IpV4Address(address.ToString());
+                    }
+                }
+
+                return new IpV4Address(allGateways.Last().ToString()); //randomly return last
+            }
+            else
+            {
+                try
+                {
+                    return new IpV4Address(allGateways.First().ToString()); //return only one
+                }
+                catch
+                {
+                    return new IpV4Address("0.0.0.0"); //TODO tricky
+                }
+            }
         }
 
         public static List<Layer> GetIcmpEchoReplyPacket(MacAddress MacAddressLocal, MacAddress MacAddressRemote, IpV4Address SourceIP, IpV4Address DestinationIP, IcmpEchoDatagram icmp)
@@ -389,7 +436,7 @@ namespace SteganoNetLib
                         }
                     }
 
-                    if (sw.ElapsedMilliseconds > TcpTimeoutInMs/2) //timeout break //divide by two is DEBUG faster...
+                    if (sw.ElapsedMilliseconds > TcpTimeoutInMs / 2) //timeout break //divide by two is DEBUG faster...
                     {
                         sw.Stop();
                         return null;
@@ -485,7 +532,7 @@ namespace SteganoNetLib
                     while (waitForDns)
                     {
                         iptranslated = GetDnsIpFromHostnameReal(query.DomainName.ToString());
-                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs/2) //timeout break //SLOW
+                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs / 2) //timeout break //SLOW
                         {
                             sw.Stop();
                             waitForDns = false;
