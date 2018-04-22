@@ -33,10 +33,10 @@ namespace SteganoNetLib
 
 
         //network public parametres
-        public ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
-        public ushort PortRemoteHttp = 80; //where to expect "fake" HTTP webserver
         public ushort PortRemote { get; set; }
         public ushort PortLocal { get; set; }
+        public ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
+        public ushort PortRemoteHttp = 80; //where to expect "fake" HTTP webserver
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
 
@@ -88,8 +88,14 @@ namespace SteganoNetLib
             }
             this.PortLocal = portSendFrom;
             this.PortRemote = portSendTo;
-            this.MacAddressLocal = NetStandard.GetMacAddressFromArp(IpOfInterface);
-            this.MacAddressRemote = new MacAddress("5c:03:39:8f:47:0e"); //NetDevice.GetRandomMacAddress(); //NetStandard.GetMacAddressFromArp(NetStandard.GetDefaultGateway()); //ipOfRemoteHost);
+
+            this.MacAddressLocal = NetStandard.GetMacByIp(IpOfInterface.ToString());//NetStandard.GetMacAddressFromArp(IpOfInterface);
+            AddInfoMessage("Mac address local: " + MacAddressLocal.ToString()); //DEBUG
+
+
+            string t = "tmp";
+            this.MacAddressRemote = NetStandard.GetMacByIp(IpOfRemoteHost.ToString()); //NetStandard.GetMacAddressFromArp(NetStandard.GetDefaultGateway()); //ipOfRemoteHost);
+            AddInfoMessage("Mac address remote: " + MacAddressRemote.ToString() + " - is not random? " + NetDevice.GetRandomMacAddress()); //DEBUG
 
             //bussiness ctor           
             Authenticated = false;
@@ -152,7 +158,7 @@ namespace SteganoNetLib
                 }
 
                 int messageCounter = 0;
-                Stopwatch timer = new Stopwatch();                
+                Stopwatch timer = new Stopwatch();
                 timer.Start();
 
                 do
@@ -347,7 +353,7 @@ namespace SteganoNetLib
                             Packet receivedAckPack = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Acknowledgment);
                             if (receivedAckPack == null)
                             {
-                                AddInfoMessage("Problem with receiving TCP ACK...");                                
+                                AddInfoMessage("Problem with receiving TCP ACK...");
                             }
                             else
                             {
@@ -360,7 +366,7 @@ namespace SteganoNetLib
                             Packet reply = NetStandard.CatchTcpReply(IpOfInterface, IpOfRemoteHost, PortLocal, PortRemote, SeqNumberLocal, TcpControlBits.Push | TcpControlBits.Acknowledgment);
                             if (reply == null)
                             {
-                                AddInfoMessage("Answer for request not received...");                                
+                                AddInfoMessage("Answer for request not received...");
                             }
                             else
                             {
@@ -432,7 +438,7 @@ namespace SteganoNetLib
                             {
                                 AddInfoMessage("ICMP: backup option in backup layer creation used - no more content to transfer?");
                                 layers.Add(new IcmpEchoLayer());
-                            }                                                           
+                            }
                             DelayInMs = delayIcmp;
                         }
 

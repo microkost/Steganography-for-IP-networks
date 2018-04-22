@@ -14,6 +14,7 @@ using PcapDotNet.Packets.Dns;
 using PcapDotNet.Base;
 using System.Text;
 using PcapDotNet.Packets.Http;
+using System.Text.RegularExpressions;
 
 namespace SteganoNetLib
 {
@@ -102,6 +103,51 @@ namespace SteganoNetLib
                     }
                 }
             }
+        }
+
+
+        public static MacAddress GetMacByIp(string ip)
+        {
+            var macIpPairs = GetAllMacAddressesAndIppairs();
+            int index = macIpPairs.FindIndex(x => x.IpAddress == ip);
+            if (index >= 0)
+            {
+                return new MacAddress(macIpPairs[index].MacAddress.ToUpper());
+            }
+            else
+            {
+                return GetMacAddressFromArp(new IpV4Address(GetDefaultGateway().ToString())); //return NetDevice.GetRandomMacAddress();                
+            }
+        }
+
+        private static List<MacIpPair> GetAllMacAddressesAndIppairs()
+        {
+            List<MacIpPair> mip = new List<MacIpPair>();
+            System.Diagnostics.Process pProcess = new System.Diagnostics.Process();
+            pProcess.StartInfo.FileName = "arp";
+            pProcess.StartInfo.Arguments = "-a ";
+            pProcess.StartInfo.UseShellExecute = false;
+            pProcess.StartInfo.RedirectStandardOutput = true;
+            pProcess.StartInfo.CreateNoWindow = true;
+            pProcess.Start();
+            string cmdOutput = pProcess.StandardOutput.ReadToEnd();
+            string pattern = @"(?<ip>([0-9]{1,3}\.?){4})\s*(?<mac>([a-f0-9]{2}-?){6})";
+
+            foreach (Match m in Regex.Matches(cmdOutput, pattern, RegexOptions.IgnoreCase))
+            {
+                mip.Add(new MacIpPair()
+                {
+                    MacAddress = m.Groups["mac"].Value,
+                    IpAddress = m.Groups["ip"].Value
+                });
+            }
+
+            return mip;
+        }
+        private struct MacIpPair
+        {
+            public string MacAddress;
+            public string IpAddress;
         }
 
         [DllImport("iphlpapi.dll", ExactSpelling = true)] //used by SendARP() + GetMacAddress()
