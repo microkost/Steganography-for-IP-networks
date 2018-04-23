@@ -1,0 +1,123 @@
+﻿Welcome in Steganography for IP networks tool.
+
+Do you want to run configuration wizard? (y/n) n
+
+Using following parametres as settings:
+        -ip value: 10.211.232.125
+        -port value: 80
+        -ipremote value: 10.211.232.80
+        -portremote value: 11000
+        -runsame value: n
+        -message value:
+        -role value: s
+        -methods value: 301,733
+        -serverTimeout value: 0
+
+Showing server running information. Press ESC to stop when message is received.
+        Mac address local: 7C:7A:91:CA:69:F3
+        Mac address remote: 00:1E:65:AA:6D:CC
+        Listening on 10.211.232.125 = Network adapter 'Microsoft' on local host...
+        Server settings: Local: 10.211.232.125:80, Remote: 10.211.232.80:11000
+        -S-E-R-V-E-R--------------------------------1
+        received IPv4: 04.59.14.383 length:60
+        3IP: method 301 size of: 8
+        Replying with TCP SYN/ACK...
+        SERVER: SYN seq: 34825, ack: 51439, seqr 51438, ackr 12155
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        -S-E-R-V-E-R--------------------------------2
+        received IPv4: 04.59.15.396 length:60
+        3IP: method 301 size of: 8
+        -S-E-R-V-E-R--------------------------------3
+        received IPv4: 04.59.15.418 length:249
+        3IP: method 301 size of: 8
+        Server data handling
+        Server: PSH received, ACK outgoing...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        7HTTP: method 733 received: https://www.facebook.com/groups/photos/d0ca40e2ead2c6d6_o.jpg?_nc_cat=0&oh=f39
+        Reply datagram sent from server (PcapDotNet.Packets.Http.HttpResponseLayer).
+        -S-E-R-V-E-R--------------------------------4
+        received IPv4: 04.59.26.929 length:249
+        3IP: method 301 size of: 8
+        Server data handling
+        Server: PSH received, ACK outgoing...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        7HTTP: method 733 received: https://www.facebook.com/groups/photos/8189c9bdddb88199_o.jpg?_nc_cat=0&oh=f39
+        Reply datagram sent from server (PcapDotNet.Packets.Http.HttpResponseLayer).
+        -S-E-R-V-E-R--------------------------------5
+        received IPv4: 04.59.38.439 length:245
+        3IP: method 301 size of: 8
+        Server data handling
+        Server: PSH received, ACK outgoing...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        7HTTP: method 733 received: https://scontent-arn2-1.xx.fbcdn.net/v/t31.0-8/e081a9d5b5c1cc81.jpg:small?
+        Reply datagram sent from server (PcapDotNet.Packets.Http.HttpResponseLayer).
+        -S-E-R-V-E-R--------------------------------6
+        received IPv4: 04.59.49.948 length:277
+        3IP: method 301 size of: 8
+        Server data handling
+        Server: PSH received, ACK outgoing...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        7HTTP: method 733 received: https://scontent-arn2-1.xx.fbcdn.net/v/t1.0-9/d995c881d1a19481.png?GSyvvWwOovw_0L7_sxhjjGto=w265-h177-p-rw
+        Reply datagram sent from server (PcapDotNet.Packets.Http.HttpResponseLayer).
+        -S-E-R-V-E-R--------------------------------7
+        received IPv4: 05.00.01.459 length:282
+        3IP: method 301 size of: 8
+        Server data handling
+        Server: PSH received, ACK outgoing...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        7HTTP: method 733 received: https://lh3.googleusercontent.com/EEkBjHI/X0EEkBjH/85e9e48191bd9ce5.png?GSyvvWwOovw_0L7_sxhjjGto=w265-h177-p-rw
+        Reply datagram sent from server (PcapDotNet.Packets.Http.HttpResponseLayer).
+        -S-E-R-V-E-R--------------------------------8
+        received IPv4: 05.00.12.967 length:256
+        3IP: method 301 size of: 8
+        Server data handling
+        Server: PSH received, ACK outgoing...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        7HTTP: method 733 received: https://img.washingtonpost.com/rf/image_1484w/c4c0dd90e590ccdc_o.jpg?_nc_cat=0&oh=f39
+        Reply datagram sent from server (PcapDotNet.Packets.Http.HttpResponseLayer).
+        -S-E-R-V-E-R--------------------------------9
+        received IPv4: 05.00.24.476 length:249
+        3IP: method 301 size of: 8
+        Server data handling
+        Server: PSH received, ACK outgoing...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        7HTTP: method 733 received: https://lh3.googleusercontent.com/proxy/DFRhoqce1yHrzurt/2262363832.jpg:small?
+        Reply datagram sent from server (PcapDotNet.Packets.Http.HttpResponseLayer).
+        -S-E-R-V-E-R--------------------------------10
+        received IPv4: 05.00.35.486 length:60
+        3IP: method 301 size of: 8
+        Replying with TCP FIN/ACK...
+        Reply datagram sent from server (PcapDotNet.Packets.Transport.TcpLayer).
+        I am self terminating...
+
+
+
+Received secret message are: (per line)
+Warning! Following messages are probably corrupted.
+¨ÐÊ@âêÒÆÖ@ÄäÞîÜ@Ì½à?©ÕµÁÌ?½Ù?È?Ñ¡??±?éä??½?å?ÄÀÝ?å?ÌÜÉ??ØàË     or ¨ÐÊ@âêÒÆÖ@ÄäÞîÜ@Ì½à?©ÕµÁÌ?½Ù?È?Ñ¡??±?éä??½?å
+¨ÐÊ@âêÒÆÖ@ÄäÞîÜ@ÌÞð@ÔêÚàæ@ÞìÊä@èÐÊ@ØÂôò@ÈÞÎrÊb`nÈrÈfndÄÄlpeI or ¨ÐÊ@âêÒÆÖ@ÄäÞîÜ@ÌÞð@ÔêÚàæ@ÞìÊä@èÐÊ@ØÂôò@ÈÞÎr
+
+Run same scenario again with command:
+C:\Users\ivo\Dropbox\Visual Studio Projects\Projects\Steganography-for-IP-networks\SteganoNet.UI.Console\bin\Release\SteganoNet.Console.exe -ip 10.211.232.125 -port 80 -ipremote 10.211.232.80 -portremote 11000 -runsame n -serverTimeout 0 -message "sample text" -role s -methods 301,733
+
+That's all! Thank you for using Steganography for IP networks tool. Press any key to exit...
+
+
+Server binary 
+10101000110100001100101001000000111000101110101011010010110001101101011001000000110001001110010011011110111011101101110001000000110011001101111011110000010000001101010011101010110110101110000011100110010000001101111011101100110010101110010001000000111010001101000011001010010000001101100011000010111101001111001001000000110010001101111011001110011100101100101001100010011000000110111011001000011100101100100001100110011011100110010011000100110001000110110001110000011001011001001
+Single 
+¨ÐÊ@âêÒÆÖ@ÄäÞîÜ@Ì½à©ÕµÁÌ½ÙÈÑ¡±éä½åÄÀÝåÌÜÉØàË	
+SingleChecked 
+NULL
+BinaryChecked 
+NULL
+
+
+
+---
+tmp 
+Client binary 
+0101010001101000011001010010000001110001011101010110100101100011011010110010000001100010011100100110111101110111011011100010000001100110011011110111100000100000011010100111010101101101011100000111001100100000011011110111011001100101011100100010000001110100011010000110010100100000011011000110000101111010011110010010000001100100011011110110011100111001011001010011000100110000001101110110010000111001011001000011001100110111001100100110001001100010001101100011100000110010
+
+Server
+x101010001101000011001010010000001110001011101010110100101100011011010110010000001100010011100100110111101110111011011100010000001100110011011110111100000100000011010100111010101101101011100000111001100100000011011110111011001100101011100100010000001110100011010000110010100100000011011000110000101111010011110010010000001100100011011110110011100111001011001010011000100110000001101110110010000111001011001000011001100110111001100100110001001100010001101100011100000110010-11001001

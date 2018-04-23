@@ -1,0 +1,85 @@
+﻿Welcome in Steganography for IP networks tool.
+
+Do you want to run configuration wizard? (y/n) n
+
+Using following parametres as settings:
+        -ip value: 10.211.232.80
+        -port value: 11000
+        -ipremote value: 10.211.232.125
+        -portremote value: 80
+        -runsame value: n
+        -message value: The quick brown fox jumps over the lazy dog
+        -role value: c
+        -methods value: 301,733
+        -serverTimeout value: 0
+
+        Actual message:
+                The quick brown fox jumps over the lazy dog
+
+Sending should take around 11 s
+Showing client running information. Press ESC to stop when message is received.
+        DNS or HTTP is going to be used. Prepared 5 to request
+        Mac address local: 00:1E:65:AA:6D:CC
+        Mac address remote: 7C:7A:91:CA:69:F3
+        Sending prepared on 10.211.232.80 = Network adapter 'Microsoft' on local host...
+        Server settings: Local: 10.211.232.80:11000, Remote: 10.211.232.125:80
+        -C-L-I-E-N-T--------------------------------1
+        3IP: method 301 size of: 8
+        TCP SYN sent.
+        TCP SYN ACK received.
+        -C-L-I-E-N-T--------------------------------2
+        3IP: method 301 size of: 8
+        7HTTP: method 733 size of: 64
+        7HTTP: Asking: https://www.facebook.com/groups/photos/d0ca40e2ead2c6d6_o.jpg?_nc_cat=0&oh=f39
+        399 bits of TCP + HTTP left to send - data size: 195
+        Answer for request not received...
+        -C-L-I-E-N-T--------------------------------3
+        3IP: method 301 size of: 8
+        7HTTP: method 733 size of: 64
+        7HTTP: Asking: https://www.facebook.com/groups/photos/8189c9bdddb88199_o.jpg?_nc_cat=0&oh=f39
+        334 bits of TCP + HTTP left to send - data size: 195
+        Answer for request not received...
+        -C-L-I-E-N-T--------------------------------4
+        3IP: method 301 size of: 8
+        7HTTP: method 733 size of: 64
+        7HTTP: Asking: https://scontent-arn2-1.xx.fbcdn.net/v/t31.0-8/e081a9d5b5c1cc81.jpg:small?
+        262 bits of TCP + HTTP left to send - data size: 191
+        Answer for request not received...
+        -C-L-I-E-N-T--------------------------------5
+        3IP: method 301 size of: 8
+        7HTTP: method 733 size of: 64
+        7HTTP: Asking: https://scontent-arn2-1.xx.fbcdn.net/v/t1.0-9/d995c881d1a19481.png?GSyvvWwOovw_0L7_sxhjjGto=w265-h177-p-rw
+        190 bits of TCP + HTTP left to send - data size: 223
+        Answer for request not received...
+        -C-L-I-E-N-T--------------------------------6
+        3IP: method 301 size of: 8
+        7HTTP: method 733 size of: 64
+        7HTTP: Asking: https://lh3.googleusercontent.com/EEkBjHI/X0EEkBjH/85e9e48191bd9ce5.png?GSyvvWwOovw_0L7_sxhjjGto=w265-h177-p-rw
+        118 bits of TCP + HTTP left to send - data size: 228
+        Answer for request not received...
+        -C-L-I-E-N-T--------------------------------7
+        3IP: method 301 size of: 8
+        7HTTP: method 733 size of: 64
+        7HTTP: Asking: https://img.washingtonpost.com/rf/image_1484w/c4c0dd90e590ccdc_o.jpg?_nc_cat=0&oh=f39
+        46 bits of TCP + HTTP left to send - data size: 202
+        Answer for request not received...
+        -C-L-I-E-N-T--------------------------------8
+        3IP: method 301 size of: 8
+        7HTTP: method 733 size of: 64
+        7HTTP: Asking: https://lh3.googleusercontent.com/proxy/DFRhoqce1yHrzurt/2262363832.jpg:small?
+        0 bits of TCP + HTTP left to send - data size: 195
+        Answer for request not received...
+        TCP is terminating
+        TCP FIN sent.
+        TCP FIN ACK received.
+        Message was transfered in 82s and in 8 messages.
+
+Transfer took 87 seconds
+
+Run same scenario again with command:
+C:\Users\ivo\Dropbox\Visual Studio Projects\Projects\Steganography-for-IP-networks\SteganoNet.UI.Console\bin\Release\SteganoNet.Console.exe -ip 10.211.232.80 -port 11000 -ipremote 10.211.232.125 -portremote 80 -runsame n -serverTimeout 0 -message "sample text" -role c -methods 301,733
+
+That's all! Thank you for using Steganography for IP networks tool. Press any key to exit...
+
+Client binary 
+0101010001101000011001010010000001110001011101010110100101100011011010110010000001100010011100100110111101110111011011100010000001100110011011110111100000100000011010100111010101101101011100000111001100100000011011110111011001100101011100100010000001110100011010000110010100100000011011000110000101111010011110010010000001100100011011110110011100111001011001010011000100110000001101110110010000111001011001000011001100110111001100100110001001100010001101100011100000110010

@@ -11,7 +11,7 @@
      )
 
 $methods = $methods.split(",").Trim() #making array from strings
-$messages = $messages.split(",").Trim() #making array from strings
+#$messages = $messages.split(",").Trim() #making array from strings
 
 Write-Host "Runing from $pathToExe"
 if($role.StartsWith("s".ToLower()))

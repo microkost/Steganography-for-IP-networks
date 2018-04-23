@@ -747,7 +747,6 @@ namespace SteganoNetLib
                     case 731: //HTTP (pure) RECEIVER
                         {
                             rs.AddInfoMessage("7HTTP: method " + methodId);
-
                             break;
                         }
                     case 733: //HTTP GET social network picture //RECEIVER

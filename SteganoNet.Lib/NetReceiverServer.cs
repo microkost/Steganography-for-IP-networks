@@ -98,7 +98,7 @@ namespace SteganoNetLib
                 if (IsListenedSameInterface)
                 {
                     AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                                        
-                    filter = String.Format("(tcp port {0}) or (icmp[icmptype] != icmp-echoreply) or (udp port {1} and not src port {2}) or ((ip[6:2] > 0) and (not ip[6] = 64))", PortLocal, PortLocalDns, PortLocalDns);
+                    filter = String.Format("(tcp port {0} and tcp port {1}) or (icmp[icmptype] != icmp-echoreply) or (udp port {2} and not src port {3}) or ((ip[6:2] > 0) and (not ip[6] = 64))", PortLocal, PortRemote, PortLocalDns, PortLocalDns);
                     //condition ((ip[6:2] > 0) and (not ip[6] = 64)) means matching the ip fragments and ip last fragments, source https://www.wains.be/pub/networking/tcpdump_advanced_filters.txt
                 }
                 else
