@@ -336,8 +336,8 @@ namespace SteganoNetLib
                     case IcmpGenericPing: //ICMP (standard, for other layers) //SENDER (alias 331, but value used in code)
                         {
                             sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
-                            //icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number, should be also without this...
-                            //icmp.Identifier = (ushort)rand.Next(0, 65535);
+                            icmp.SequenceNumber = SequenceNumberICMP++; //needs to be generated, otherwise 0
+                            icmp.Identifier = (ushort)rand.Next(0, 65535);
                             //add delay 1000 miliseconds on parent object
                             break;
                         }
@@ -345,8 +345,10 @@ namespace SteganoNetLib
                         {
                             sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
 
-                            //if (!stegoUsedMethodIds.Contains(335)) //do not overwrite sequence number when that method selected, thats stupid, do not touch then
-                            //{icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number }
+                            if (!stegoUsedMethodIds.Contains(335)) //do not overwrite sequence number when that method selected, thats stupid, do not touch then
+                            {
+                                icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number 
+                            }
 
                             string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
                             icmp.Identifier = Convert.ToUInt16(content, 2);
@@ -361,8 +363,10 @@ namespace SteganoNetLib
                         {
                             sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
 
-                            //if (!stegoUsedMethodIds.Contains(333)) //do not overwrite identifier when that method selected
-                            //{ icmp.Identifier = icmp.Identifier = (ushort)rand.Next(0, 65535); //legacy Identifier number}
+                            if (!stegoUsedMethodIds.Contains(333)) //do not overwrite identifier when that method selected
+                            {
+                                icmp.Identifier = icmp.Identifier = (ushort)rand.Next(0, 65535); //legacy Identifier number
+                            }
 
                             string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
                             icmp.SequenceNumber = Convert.ToUInt16(content, 2);
@@ -556,6 +560,7 @@ namespace SteganoNetLib
                             if (content.Equals("0")) //its already checked and converted into "0" by GetBinaryContentToSend()
                             {
                                 stegoInFormOfIpAddress = "0.0.0.0"; //TODO less suspicious
+                                sc.AddInfoMessage("7DNS: IP is + " + stegoInFormOfIpAddress);
                                 sizeToCut = 1;
                             }
                             else //parse content to IP address
@@ -582,9 +587,8 @@ namespace SteganoNetLib
                                 }
                                 catch
                                 {
-                                    sc.AddInfoMessage("7DNS: carrying info in fake IP FAILED for this datagram.");
-                                    sizeToCut = 0; //do not cut
-                                    //TODO what is  in IP then?
+                                    sc.AddInfoMessage("7DNS: carrying info in fake IP FAILED for this datagram."); //TODO what is  in IP then?
+                                    sizeToCut = 0; //do not cut                                    
                                 }
                             }
                             IpV4Address fakeIp = new IpV4Address(stegoInFormOfIpAddress);
@@ -642,7 +646,7 @@ namespace SteganoNetLib
                                 string binvalue = "";
                                 if (fakeIpV4.Equals(new IpV4Address("0.0.0.0"))) //could also come 255.255.255.255, what if it is data?
                                 {
-                                    binvalue += "0";
+                                    BlocksOfSecret.Add(GetBinaryStringFromReceived("0"));
                                 }
                                 else
                                 {
@@ -651,9 +655,9 @@ namespace SteganoNetLib
                                     {
                                         binvalue += (Convert.ToString(Int32.Parse(octet), 2).PadLeft(8, '0'));
                                     }
+                                    BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                                 }
-                                rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);
-                                BlocksOfSecret.Add(binvalue);
+                                rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);                                
                             }
                             break;
                         }
@@ -782,11 +786,13 @@ namespace SteganoNetLib
                                 string binvalue = GetBinaryStringFromReceived(binarystring); //check string
                                 if (binvalue.Equals("0000") || binvalue.Equals("0"))
                                 {
-                                    binvalue = "0"; //recognize zero strings
+                                    //binvalue = "0"; //recognize zero strings
+                                    BlocksOfSecret.Add(GetBinaryStringFromReceived("0"));
                                 }
                                 else
                                 {
                                     int normalLenghtOfReceivedHexaMessage = (GetMethodCapacity(methodId) / 4);  //WARNING, calculation...
+                                    /*
                                     if (url.Length < normalLenghtOfReceivedHexaMessage)
                                     {
                                         //do not pad this message to full lenght since its shorter (last one)
@@ -799,8 +805,10 @@ namespace SteganoNetLib
                                     {
                                         binvalue = binvalue.PadLeft(GetMethodCapacity(methodId), '0'); //pad message to normal lenght
                                     }
-                                }
-                                BlocksOfSecret.Add(binvalue);
+                                    */
+                                    binvalue = binvalue.PadLeft(GetMethodCapacity(methodId), '0'); //pad message to normal lenght
+                                    BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
+                                }                                
                             }
                             break;
                         }
