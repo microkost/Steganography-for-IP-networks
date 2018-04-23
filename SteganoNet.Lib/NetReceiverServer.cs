@@ -104,7 +104,8 @@ namespace SteganoNetLib
                 else
                 {
                     //cut off replies from same interface, localhost debug needs them
-                    filter = String.Format("(not src host {0}) and (tcp port {1} or icmp or udp port {2} and not src port {3}) or (icmp[icmptype] != icmp-echoreply) or ((ip[6:2] > 0) and (not ip[6] = 64))", IpLocalListening, PortLocal, PortLocalDns, PortLocalDns);
+                    filter = String.Format("(not src host {0}) and ((tcp port {1} and tcp port {2})or icmp or udp port {3} and not src port {4}) or (icmp[icmptype] != icmp-echoreply) or ((ip[6:2] > 0) and (not ip[6] = 64))", IpLocalListening, PortLocal, PortRemote, PortLocalDns, PortLocalDns);
+                    //this filter is selecting both tcp ports, TODO add to IsListenedSameInterface version?
                 }
 
                 try
@@ -541,9 +542,9 @@ namespace SteganoNetLib
 
             try //DEBUG printing to file
             {
-                string report = String.Format("Server binary \r\n{0}\r\nSingle \r\n{1}\r\nSingleChecked \r\n{2}\r\nBinaryChecked \r\n{3}\r\n", sbBinary.ToString(), sbSingle.ToString(), (messageSingleChecked ?? "NULL").ToString(), (messageBinaryChecked ?? "NULL").ToString());
-                string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-server-secret.txt";
-                System.IO.File.AppendAllText(FilePath, report);
+                //string report = String.Format("Server binary \r\n{0}\r\nSingle \r\n{1}\r\nSingleChecked \r\n{2}\r\nBinaryChecked \r\n{3}\r\n", sbBinary.ToString(), sbSingle.ToString(), (messageSingleChecked ?? "NULL").ToString(), (messageBinaryChecked ?? "NULL").ToString());
+                //string FilePath = System.AppDomain.CurrentDomain.BaseDirectory + DateTime.Now.ToLongTimeString() + "-server-secret.txt";
+                //System.IO.File.AppendAllText(FilePath, report);
             }
             catch { } //no report
 
