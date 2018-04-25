@@ -33,6 +33,8 @@ namespace SteganoNetLib
                 return null;
             }
 
+            //should be also converted to BASE64 to avoid problems with non-ASCII characters
+
             string binaryNumInString = "";
             for (int i = 0; i < input.Length; i++)
             {
@@ -57,6 +59,9 @@ namespace SteganoNetLib
         {
             List<string> binNumToConvert = input.SplitInParts(bitsForChar).ToList();
             string result = "";
+
+            //should be also converted from BASE64 as avoiding problems with non-ASCII characters
+
 
             foreach (string num in binNumToConvert)
             {
