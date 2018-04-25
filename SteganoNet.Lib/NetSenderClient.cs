@@ -35,7 +35,7 @@ namespace SteganoNetLib
         //network public parametres
         public ushort PortRemote { get; set; }
         public ushort PortLocal { get; set; }
-        public const ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
+        //public const ushort PortRemoteDns = 53; //where to expect "fake" DNS service on server side > != PortRemote when DNS methods
         public const ushort PortRemoteHttp = 80; //where to expect "fake" HTTP webserver        
         public MacAddress MacAddressLocal { get; set; }
         public MacAddress MacAddressRemote { get; set; }
@@ -255,7 +255,7 @@ namespace SteganoNetLib
                     List<int> dnsSelectionIds = NetSteganography.GetListMethodsId(NetSteganography.DnsRangeStart, NetSteganography.DnsRangeEnd, NetSteganography.GetListStegoMethodsIdAndKey());
                     if (StegoUsedMethodIds.Any(dnsSelectionIds.Contains) && SecretMessage.Length != 0)
                     {
-                        UdpLayer udpLayer = NetStandard.GetUdpLayer(PortLocal, PortRemoteDns); //using 53 hardcoded!
+                        UdpLayer udpLayer = NetStandard.GetUdpLayer(PortLocal, PortRemote);
                         layers.Add(udpLayer); //udp is carrying layer
 
                         //create standard DNS request layer

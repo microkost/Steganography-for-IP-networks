@@ -1,0 +1,114 @@
+﻿Welcome in Steganography for IP networks tool.
+
+Do you want to run configuration wizard? (y/n) n
+
+Using following parametres as settings:
+        -ip value: 158.196.194.30
+        -port value: 11000
+        -ipremote value: 84.251.160.115
+        -portremote value: 11011
+        -runsame value: n
+        -message value: The quick brown fox jumps over the lazy dog
+        -role value: c
+        -methods value: 303,305,333,335
+        -serverTimeout value: 0
+
+        Actual message:
+                The quick brown fox jumps over the lazy dog
+
+Sending should take around 5 s
+Showing client running information. Press ESC to stop when message is received.
+        Mac address local: 00:05:9A:3C:7A:00
+        Mac address remote: 00:11:22:33:44:55
+        Sending prepared on 158.196.194.30 = Network adapter 'Cisco AnyConnect VPN Virtual Miniport Adapter for Windows x64' on local host...
+        Server settings: Local: 158.196.194.30:11000, Remote: 84.251.160.115:11011
+        -C-L-I-E-N-T--------------------------------1
+        3IP: method 303 size of: 16 it's first or reseted run
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        439 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------2
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        407 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------3
+        3IP: method 305 size of: 13
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        392 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------4
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        375 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------5
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        343 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------6
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        311 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------7
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        279 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------8
+        3IP: method 305 size of: 13
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        264 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------9
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        247 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------10
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        230 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------11
+        IP identification timer reseted after: 10 sec.
+        3IP: method 303 size of: 16 it's first or reseted run
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        182 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------12
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        150 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------13
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        118 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------14
+        3IP: method 305 size of: 13
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        73 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------15
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        41 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------16
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        39 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------17
+        3IP: method 305 size of: 13
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        9 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------18
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        7 bits left to send, waiting 1000 ms for next
+        -C-L-I-E-N-T--------------------------------19
+        3ICMP: method 333 size of: 16
+        3ICMP: method 335 size of: 16
+        0 bits left to send, waiting 1000 ms for next
+
+Transfer took 18 seconds
+
+Run same scenario again with command:
+C:\Users\ivo\Dropbox\Visual Studio Projects\Projects\Steganography-for-IP-networks\SteganoNet.UI.Console\bin\Release\SteganoNet.Console.exe -ip 158.196.194.30 -port 11000 -ipremote 84.251.160.115 -portremote 11011 -runsame n -serverTimeout 0 -message "sample text" -role c -methods 303,305,333,335
+
+That's all! Thank you for using Steganography for IP networks tool. Press any key to exit...

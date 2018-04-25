@@ -1,0 +1,107 @@
+﻿Welcome in Steganography for IP networks tool.
+
+Do you want to run configuration wizard? (y/n) n
+
+Using following parametres as settings:
+        -ip value: 84.251.160.115
+        -port value: 11011
+        -ipremote value: 158.196.194.30
+        -portremote value: 11000
+        -runsame value: n
+        -message value:
+        -role value: s
+        -methods value: 303,333,335
+        -serverTimeout value: 0
+
+Showing server running information. Press ESC to stop when message is received.
+        Mac address local: 54:04:A6:46:51:6A
+        Mac address remote: 84:2B:2B:23:8C:AB
+        Listening on 84.251.160.115 = Network adapter 'Realtek PCIe GBE Family Controller' on local host...
+        Server settings: Local: 84.251.160.115:11011, Remote: 158.196.194.30:11000
+        -S-E-R-V-E-R--------------------------------1
+        received IPv4: 02:48:46.361 length:60
+        3IP: method 303 size of: 16
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(2832255552)).
+        -S-E-R-V-E-R--------------------------------2
+        received IPv4: 02:48:47.370 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3807040198)).
+        -S-E-R-V-E-R--------------------------------3
+        received IPv4: 02:48:48.371 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3594568932)).
+        -S-E-R-V-E-R--------------------------------4
+        received IPv4: 02:48:49.372 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3740195904)).
+        -S-E-R-V-E-R--------------------------------5
+        received IPv4: 02:48:50.513 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3437162560)).
+        -S-E-R-V-E-R--------------------------------6
+        received IPv4: 02:48:51.504 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3572161248)).
+        -S-E-R-V-E-R--------------------------------7
+        received IPv4: 02:48:52.458 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3863011052)).
+        -S-E-R-V-E-R--------------------------------8
+        received IPv4: 02:48:53.400 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3403939840)).
+        -S-E-R-V-E-R--------------------------------9
+        received IPv4: 02:48:54.616 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(2177999252)).
+        -S-E-R-V-E-R--------------------------------10
+        received IPv4: 02:48:55.425 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(2175895017)).
+        -S-E-R-V-E-R--------------------------------11
+        received IPv4: 02:48:56.438 length:60
+        3IP: method 303 size of: 16
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(2445122789)).
+        -S-E-R-V-E-R--------------------------------12
+        received IPv4: 02:48:57.442 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(2495922397)).
+        -S-E-R-V-E-R--------------------------------13
+        received IPv4: 02:48:58.443 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(2430963916)).
+        -S-E-R-V-E-R--------------------------------14
+        received IPv4: 02:48:59.467 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3704195464)).
+        -S-E-R-V-E-R--------------------------------15
+        received IPv4: 02:49:00.470 length:60
+        3IP: method 333 size of: 16
+        3IP: method 335 size of: 16
+        Reply datagram sent from server (EchoReply.0(3638558770)).
+
+
+
+Received secret message are: (per line)
+The quick brown fox jumps over the lazy dog
+
+Run same scenario again with command:
+D:\Dropbox\Visual Studio Projects\Projects\Steganography-for-IP-networks\SteganoNet.UI.Console\bin\Release\SteganoNet.Console.exe -ip 84.251.160.115 -port 11011 -ipremote 158.196.194.30 -portremote 11000 -runsame n -serverTimeout 0 -message "sample text" -role s -methods 303,333,335
+
+That's all! Thank you for using Steganography for IP networks tool. Press any key to exit...

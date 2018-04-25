@@ -263,7 +263,7 @@ namespace SteganoNetLib
                     }
                 }
 
-                return new IpV4Address(allGateways.Last().ToString()); //randomly return last
+                return new IpV4Address(allGateways.First().ToString()); //randomly return last
             }
             else
             {

@@ -13,3 +13,10 @@ tcp or http and (ip.addr == 84.251.221.209 and ip.addr == 85.76.2.236)
 
 
 tcp or http and (ip.addr == 192.168.43.153 and ip.addr == 192.168.43.108)
+
+
+---
+
+ip.addr == 158.196.194.30 and ip.addr == 84.251.160.115
+
+icmp and (ip.addr == 158.196.194.30 and ip.addr == 84.251.160.115)

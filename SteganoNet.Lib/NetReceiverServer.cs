@@ -25,7 +25,7 @@ namespace SteganoNetLib
 
         //network parametres
         public ushort PortLocal { get; set; } //portListening
-        public ushort PortLocalDns = 53; //where to expect "fake" DNS service
+        //public ushort PortLocalDns = 53; //where to expect "fake" DNS service //turned off to support DNS on different ports
         public ushort PortLocalHttp = 80; //where to expect "fake" HTTP service
         public ushort PortRemote { get; set; } //used mostly for reply
         public MacAddress MacAddressLocal { get; set; }
@@ -98,13 +98,15 @@ namespace SteganoNetLib
                 if (IsListenedSameInterface)
                 {
                     AddInfoMessage("Used filter for local debugging = listening same device"); //cannot apply filter which cutting off (reply) packets from same interface                                        
-                    filter = String.Format("(tcp port {0} and tcp port {1}) or (icmp[icmptype] != icmp-echoreply) or (udp port {2} and not src port {3}) or ((ip[6:2] > 0) and (not ip[6] = 64))", PortLocal, PortRemote, PortLocalDns, PortLocalDns);
+                    filter = String.Format("(tcp port {0} and tcp port {1}) or (icmp[icmptype] != icmp-echoreply) or (udp port {2} and not src port {3}) or ((ip[6:2] > 0) and (not ip[6] = 64))", PortLocal, PortRemote, PortLocal, PortLocal);
+                    //filter = String.Format("(tcp port {0} and tcp port {1}) or (icmp[icmptype] != icmp-echoreply) or (udp port {2} and not src port {3}) or ((ip[6:2] > 0) and (not ip[6] = 64))", PortLocal, PortRemote, PortLocalDns, PortLocalDns); //changed DNS to listen on specified ports
                     //condition ((ip[6:2] > 0) and (not ip[6] = 64)) means matching the ip fragments and ip last fragments, source https://www.wains.be/pub/networking/tcpdump_advanced_filters.txt
                 }
                 else
                 {
                     //cut off replies from same interface, localhost debug needs them
-                    filter = String.Format("(not src host {0}) and ((tcp port {1} and tcp port {2})or icmp or udp port {3} and not src port {4}) or (icmp[icmptype] != icmp-echoreply) or ((ip[6:2] > 0) and (not ip[6] = 64))", IpLocalListening, PortLocal, PortRemote, PortLocalDns, PortLocalDns);
+                    filter = String.Format("(not src host {0}) and ((tcp port {1} and tcp port {2})or icmp or udp port {3} and not src port {4}) or (icmp[icmptype] != icmp-echoreply) or ((ip[6:2] > 0) and (not ip[6] = 64))", IpLocalListening, PortLocal, PortRemote, PortLocal, PortLocal);
+                    //filter = String.Format("(not src host {0}) and ((tcp port {1} and tcp port {2})or icmp or udp port {3} and not src port {4}) or (icmp[icmptype] != icmp-echoreply) or ((ip[6:2] > 0) and (not ip[6] = 64))", IpLocalListening, PortLocal, PortRemote, PortLocalDns, PortLocalDns); //changed DNS to listen on specified ports
                     //this filter is selecting both tcp ports, TODO add to IsListenedSameInterface version?
                 }
 
@@ -288,7 +290,7 @@ namespace SteganoNetLib
             {
                 AddInfoMessage("7DNS: Be patient with terminating (when manually), wait for reply."); //TODO remove?
                 messageCollector.Append(NetSteganography.GetContent7Dns(dns, StegoUsedMethodIds, this));
-                PortLocal = PortLocalDns; //TODO should test if port "53" is listening + receiving                
+                //PortLocal = PortLocalDns; //TODO should test if port "53" is listening + receiving                
                 PortRemote = (PortRemote == 0) ? udp.SourcePort : PortRemote; //if local port is not specified, save it from incoming                               
                 SendReplyPacket(NetStandard.GetDnsPacket(MacAddressLocal, MacAddressRemote, IpLocalListening, IpRemoteSpeaker, PortLocal, PortRemote, dns));
 
