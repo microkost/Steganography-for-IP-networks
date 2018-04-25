@@ -1,5 +1,5 @@
 ﻿param([string]$role = "s",                          #server or client
-      [string[]]$methods = "301,301,303",
+      [string[]]$methods = "301,303",
       [string[]]$messages = "VSB - Technical University of Ostrava has long tradition in high quality engineering.",
       [string]$ipLocal = "172.31.31.31",
       [string]$ipRemote = "172.31.31.31",
@@ -7,7 +7,7 @@
       [string]$portRemote = "11011",
       [string]$serverTimeout = "60000",             #in miliSeconds
       [string]$pathToExe = "%SYSTEMDRIVE%\temp",  #where is app   
-      [string]$wiresharkPath = "C:\Program Files\Wireshark"  
+      [string]$wiresharkPath = "%SYSTEMDRIVE%:\Program Files\Wireshark"  
      )
 
 $methods = $methods.split(",").Trim() #making array from strings

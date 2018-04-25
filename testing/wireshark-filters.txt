@@ -1,5 +1,15 @@
 dns and ip.addr == 10.211.232.125 and ip.addr == 10.211.232.80
 
-http and ip.addr == 10.211.232.125 and ip.addr == 10.211.232.80
-
 tcp or http and (ip.addr == 10.211.232.125 and ip.addr == 10.211.232.80)
+
+---
+
+dns and (ip.addr == 84.251.221.209 and ip.addr == 85.76.2.236)
+
+tcp or http and (ip.addr == 84.251.221.209 and ip.addr == 85.76.2.236)
+
+
+---
+
+
+tcp or http and (ip.addr == 192.168.43.153 and ip.addr == 192.168.43.108)
