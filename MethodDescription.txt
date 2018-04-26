@@ -21,9 +21,12 @@ https://tools.ietf.org/html/rfc791#page-11
           010 - Immediate
           001 - Priority
           000 - Routine
+Practise: this field is not tranferable via internet, since is QoS is reseted on borders of ISP. Works only in local networks...
 --------------------------------------------------------------------------------
 302: same as 301 but using only 2 bits
 		used: Bit  6-7:  Reserved for Future Use.
+		not used finally, but working
+Practise: this field is not tranferable via internet, since is QoS is reseted on borders of ISP. Works only in local networks...
 --------------------------------------------------------------------------------
 303: https://tools.ietf.org/html/rfc6864
      RFC 6864 updated RFC’s 791, 1122, and 2003 to clarify the definition of the IPv4 ID field.
@@ -32,29 +35,40 @@ https://tools.ietf.org/html/rfc791#page-11
         The IPv4 ID field is thus meaningful only for non-atomic datagrams
 		Sources emitting non-atomic datagrams MUST NOT repeat IPv4 ID values within one MDL for a given source address/destination address/protocol tuple.
 		does not repeat within the maximum datagram lifetime (MDL) [RFC791] [RFC1122] which is typically interpreted as two minutes
+Practise: this field needs to be changed slowly, but even 10 seconds change make it terribly slow transfer channel, but works over internet.
 --------------------------------------------------------------------------------
-305: to do!
+305: Using IP offset value for transfer and flag MF to indicate that is used. 
+	Value inside offset needs to be %8 == 0, so its hard to use. Some networks dropping fragmented packets. Also very small transfer speeds.
 --------------------------------------------------------------------------------
 331 alias constant IcmpGenericPing: no steganography, implemented according to RFC
 --------------------------------------------------------------------------------
 333: using ICMP Identifier 16bit field in EchoRequest (ping) datagram. 
 	Not conflicting with method 335, when selected then left Sequence number untouched.	
+	Practise: good place for steganography, 16 bits, transferable via internet. Some IPS react if this field is changed to offten and too randomly.
 --------------------------------------------------------------------------------
 335: using ICMP Sequence number 16 bit field in EchoRequest (ping) datagram.
 	Not conflicting with method 333.
 	Sequence number is increasing during transmission => should be used only once.
+	Practise: good place for steganography, 16 bits, transferable via internet. Some IPS react if this field is changed to offten and too randomly.
 --------------------------------------------------------------------------------
 4xx: TCP
---------------------------------------------------------------------------------
-4xx: TCP
+	actually not very good place, since there is ony Sequence and Acknumber which is enought big for stego, but is only
+	initialized once. Implementation of TCP method needs to be done manually and is quite exhausting...
 --------------------------------------------------------------------------------
 701: no steganography, implemented according to RFC
 --------------------------------------------------------------------------------
 703: using DNS ID field from https://www.ietf.org/rfc/rfc1035.txt
 ID A 16 bit identifier assigned by the program that generates any kind of query. This identifier is copied
 the corresponding reply and can be used by the requester to match up replies to outstanding queries.
+	Practise: very good place, transferable via internet
 --------------------------------------------------------------------------------
-731:
+705: using DNS request but appending DNS response field.
+	Inside response IP address (32 bit) is coded stego
 --------------------------------------------------------------------------------
-733:
+731: just http get without steganography, originally testing method
+--------------------------------------------------------------------------------
+733: using steganography to URL field. Making request for some predefined social network and appending to that 
+	already complicated URL some additional stego converted to hex. After that is appended smth like .jpg or similar
+	so after cut off is there 64 bit string of stego information. Transferable via internet, just easily detectable
+	since URL is invalid. Server returns 200 OK for that request.
 --------------------------------------------------------------------------------
