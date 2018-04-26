@@ -1,10 +1,15 @@
-$methods = ("703","705","703;705","303;705")
+$methodListIcmp = ("301","303","333","335","301;303;305;333;335","303;305;333;335","303;333;335","333;335")
+$methodListDns = ("703","705","703;705","301;705","303;705")
+$methodListHttp = ("733")
 $message1 = ""
 
+#assign
+$methods = $methodListHttp
+
 $role = "s"
-$ipLocal = "84.251.221.209"
-$ipRemote = "85.76.2.236" #elisa-mobile
-$portLocal = "53"
+$ipLocal = "84.251.160.115"
+$ipRemote = "194.157.230.101"
+$portLocal = "80"
 $portRemote = "11000"
 $serverTimeout = "0" #in miliSeconds
 $pathToExe = "D:\Dropbox\Visual Studio Projects\Projects\Steganography-for-IP-networks\SteganoNet.UI.Console\bin\Release"

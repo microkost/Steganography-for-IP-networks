@@ -58,9 +58,9 @@ namespace SteganoNetLib
                 //{ 302, "IP Type of service / DiffServ - " + GetMethodCapacity(302) + "b" }, //OK, just messing testing with another option
                 { 303, String.Format("IP Identification [delay {0}s] - {1}b", (double)NetSenderClient.IpIdentificationChangeSpeedInMs/1000, GetMethodCapacity(303) )}, //adding exact time value to the name
                 { 305, "IP flag (MF + offset (when applicable)) - " + GetMethodCapacity(305) + "b" },
-                { 331, String.Format("ICMP ping (NO STEGO) [delay {0}s] - {1}b", (double)NetSenderClient.delayIcmp/1000, GetMethodCapacity(331) )}, //TODO icmp methods are waiting for refactoring...
-                { 333, "ICMP ping (identifier) - " + GetMethodCapacity(333) + "b" },    //TODO should be set on start of transaction and not changed in the time
-                { 335, "ICMP ping (sequence number) - " + GetMethodCapacity(335) + "b" },   //TODO is actually changing all the time, improve by just incrementing
+                { 331, String.Format("ICMP ping (NO STEGO) [delay {0}s] - {1}b", (double)NetSenderClient.delayIcmp/1000, GetMethodCapacity(331) )},
+                { 333, "ICMP ping (identifier) - " + GetMethodCapacity(333) + "b" },
+                { 335, "ICMP ping (sequence number) - " + GetMethodCapacity(335) + "b" },
                 //{ 451, "TCP (NO STEGO)- " + GetMethodCapacity(451) + "b" },
                 //{ 453, "TCP ISN (once) - " + GetMethodCapacity(453) + "b" }, //use idea from 303
                 //{ 455, "TCP Urgent pointer - " + GetMethodCapacity(455) + "b" }, //use idea from 305
@@ -71,10 +71,8 @@ namespace SteganoNetLib
                 //707 DNS flags https://tools.ietf.org/html/rfc1035#section-4.1.1, standard 0x00000100 //TODO update value Capacity
                 { 731, "HTTP GET (NO STEGO) - " + GetMethodCapacity(731) + "b" },
                 { 733, "HTTP GET (social media) - " + GetMethodCapacity(733) + "b" },  
-                //HTTP Entity tag headers 
                         
-                //TODO time channel! (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay)
-                //https://github.com/PcapDotNet/Pcap.Net/wiki/Pcap.Net-Tutorial-Gathering-Statistics-on-the-network-traffic
+                //TODO time channel (ttl methods, resting value is magic value, round trip timer) (ping delay or TCP delay) //https://github.com/PcapDotNet/Pcap.Net/wiki/Pcap.Net-Tutorial-Gathering-Statistics-on-the-network-traffic
                 //TODO TTL usage or similar (count TTL and use some value under as rest...)
             };
 
@@ -93,7 +91,7 @@ namespace SteganoNetLib
                 { 331, 0 },
                 { 333, 16 },
                 { 335, 16 },
-                { 451, 0},
+                { 451, 0 },
                 { 453, 32 },
                 { 455, 16 },
                 { 457, 0 }, //TODO update when implemented
@@ -131,11 +129,26 @@ namespace SteganoNetLib
         }
 
         //service method for all
-        private static string GetBinaryContentToSend(string secret, int usedbits) //returns value to steganogram for all methods
+        private static string GetBinaryContentToSend(string secret, int usedbits, NetSenderClient sc) //debug method to count how many messages was zero sized
         {
-            if (secret.Equals(""))
+            string output = GetBinaryContentToSendNoStats(secret, usedbits);
+            if (output.Equals("0"))
             {
-                //exception handling                
+                //sc.AddInfoMessage("DBG: Message 0 sized");
+                sc.zeroMessagesCounter++;
+            }
+            else
+            {
+                //sc.AddInfoMessage("DBG: Message other sized");
+                sc.otherMessagesCounter++;
+            }
+            return output;
+        }
+
+        private static string GetBinaryContentToSendNoStats(string secret, int usedbits) //returns value to steganogram for all methods
+        {
+            if (secret.Equals("")) //exception handling
+            {
                 System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace(); // Get call stack                                
                 throw new Exception("Internal error! Canot be sent empty message. Error caused by: " + stackTrace.GetFrame(1).GetMethod().Name);
             }
@@ -202,7 +215,7 @@ namespace SteganoNetLib
                     case 301: //IP (Type of service / DiffServ) agresive //SENDER
                         {
                             sc.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             ip.TypeOfService = Convert.ToByte(content, 2); //place content string
                             secret = secret.Remove(0, content.Length); //cut x bits from whole
                             if (content.Length == 0 || secret.Length == 0)
@@ -214,7 +227,7 @@ namespace SteganoNetLib
                     case 302: //IP (Type of service / DiffServ) //SENDER
                         {
                             sc.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             ip.TypeOfService = Convert.ToByte(content, 2); //place content string
                             secret = secret.Remove(0, content.Length); //cut x bits from whole
                             if (content.Length == 0 || secret.Length == 0)
@@ -228,7 +241,7 @@ namespace SteganoNetLib
                             if (firstAndResetRunIP == true)
                             {
                                 sc.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId) + " it's first or reseted run");
-                                string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                                string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
 
                                 ip.Identification = Convert.ToUInt16(content, 2); //place content string
                                 secret = secret.Remove(0, content.Length); //cut x bits from whole
@@ -241,7 +254,7 @@ namespace SteganoNetLib
                         }
                     case 305: //IP flag (MF + offset) //SENDER
                         {
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             ushort offset = Convert.ToUInt16(content, 2);
                             if (offset % 8 == 0 && offset != 0) //offset rule
                             {
@@ -341,7 +354,7 @@ namespace SteganoNetLib
                             //add delay 1000 miliseconds on parent object
                             break;
                         }
-                    case 333: //ICMP (Identifier) //SENDER
+                    case 333: //ICMP (Identifier) //SENDER //TODO should be set on start of transaction and not changed in the time
                         {
                             sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
 
@@ -350,7 +363,7 @@ namespace SteganoNetLib
                                 icmp.SequenceNumber = SequenceNumberICMP++; //legacy sequence number 
                             }
 
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             icmp.Identifier = Convert.ToUInt16(content, 2);
                             secret = secret.Remove(0, content.Length); //cut x bits from whole
                             if (content.Length == 0 || secret.Length == 0)
@@ -359,7 +372,7 @@ namespace SteganoNetLib
                             }
                             break;
                         }
-                    case 335: //ICMP (Sequence number) //SENDER
+                    case 335: //ICMP (Sequence number) //SENDER //TODO is actually changing all the time, improve by just incrementing
                         {
                             sc.AddInfoMessage("3ICMP: method " + methodId + " size of: " + GetMethodCapacity(methodId));
 
@@ -368,14 +381,14 @@ namespace SteganoNetLib
                                 icmp.Identifier = icmp.Identifier = (ushort)rand.Next(0, 65535); //legacy Identifier number
                             }
 
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             icmp.SequenceNumber = Convert.ToUInt16(content, 2);
                             secret = secret.Remove(0, content.Length); //cut x bits from whole
                             if (content.Length == 0 || secret.Length == 0)
                             {
                                 return new Tuple<IcmpEchoLayer, string>(icmp, secret); //nothing more      
                             }
-                            break;                            
+                            break;
                         }
                 }
             }
@@ -410,7 +423,7 @@ namespace SteganoNetLib
                             rs.AddInfoMessage("3IP: method " + methodId + " size of: " + GetMethodCapacity(methodId)); //add number of received bits in this iteration
                             string binvalue = Convert.ToString(icmp.SequenceNumber, 2).PadLeft(GetMethodCapacity(methodId), '0');
                             BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
-                            break;                            
+                            break;
                         }
                 }
             }
@@ -451,7 +464,7 @@ namespace SteganoNetLib
                             if (firstAndResetRunTCP == true)
                             {
                                 sc.AddInfoMessage("4TCP: method " + methodId + " size of: " + GetMethodCapacity(methodId) + " it's first or reseted run");
-                                string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                                string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
 
                                 tcp.SequenceNumber = Convert.ToUInt32(content, 2); //place content string
                                 secret = secret.Remove(0, content.Length); //cut x bits from whole
@@ -540,7 +553,7 @@ namespace SteganoNetLib
                     case 703: //DNS (transaction id) //SENDER
                         {
                             sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId));
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             dns.Id = Convert.ToUInt16(content, 2); //place content string 
                             secret = secret.Remove(0, content.Length); //cut x bits from whole
                             if (content.Length == 0 || secret.Length == 0)
@@ -551,8 +564,8 @@ namespace SteganoNetLib
                         }
                     case 705: //DNS request containing anwer with stego //SENDER
                         {
-                            sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId));
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            //sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             int sizeToCut = content.Length;
 
                             //make from content IP address form
@@ -560,7 +573,7 @@ namespace SteganoNetLib
                             if (content.Equals("0")) //its already checked and converted into "0" by GetBinaryContentToSend()
                             {
                                 stegoInFormOfIpAddress = "0.0.0.0"; //TODO less suspicious
-                                sc.AddInfoMessage("7DNS: IP is + " + stegoInFormOfIpAddress);
+                                sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId) + "\tIP: " + stegoInFormOfIpAddress);
                                 sizeToCut = 1;
                             }
                             else //parse content to IP address
@@ -583,11 +596,11 @@ namespace SteganoNetLib
                                     }
 
                                     stegoInFormOfIpAddress = Convert.ToUInt16(octets[0], 2) + "." + Convert.ToUInt16(octets[1], 2) + "." + Convert.ToUInt16(octets[2], 2) + "." + Convert.ToUInt16(octets[3], 2);
-                                    sc.AddInfoMessage("7DNS: IP is + " + stegoInFormOfIpAddress);
+                                    sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId) + "\tIP is + " + stegoInFormOfIpAddress);
                                 }
                                 catch
                                 {
-                                    sc.AddInfoMessage("7DNS: carrying info in fake IP FAILED for this datagram."); //TODO what is  in IP then?
+                                    sc.AddInfoMessage("7DNS: method " + methodId + " size of: " + GetMethodCapacity(methodId) + "carrying info in fake IP FAILED for this datagram."); //TODO what is  in IP then?
                                     sizeToCut = 0; //do not cut                                    
                                 }
                             }
@@ -633,7 +646,14 @@ namespace SteganoNetLib
                         {
                             rs.AddInfoMessage("7DNS: method " + methodId);
                             string binvalue = Convert.ToString(dns.Id, 2).PadLeft(GetMethodCapacity(methodId), '0');
-                            BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
+                            if(dns.Id == 0)
+                            { 
+                                BlocksOfSecret.Add(GetBinaryStringFromReceived("0"));
+                            }
+                            else
+                            {
+                                BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
+                            }
                             break;
                         }
                     case 705:
@@ -657,7 +677,7 @@ namespace SteganoNetLib
                                     }
                                     BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
                                 }
-                                rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);                                
+                                rs.AddInfoMessage("7DNS: method " + methodId + "\tIP: " + fakeIpV4);
                             }
                             break;
                         }
@@ -699,7 +719,7 @@ namespace SteganoNetLib
                             string oneApendix = appendix[rand.Next(appendix.Count)];
 
                             //cut content to some smaller parts and convert them to hex
-                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId));
+                            string content = GetBinaryContentToSend(secret, GetMethodCapacity(methodId), sc);
                             int sizeToCut = content.Length;
                             string urlpart = "";
 
@@ -807,7 +827,7 @@ namespace SteganoNetLib
                                     */
                                     binvalue = binvalue.PadLeft(GetMethodCapacity(methodId), '0'); //pad message to normal lenght
                                     BlocksOfSecret.Add(GetBinaryStringFromReceived(binvalue));
-                                }                                
+                                }
                             }
                             break;
                         }

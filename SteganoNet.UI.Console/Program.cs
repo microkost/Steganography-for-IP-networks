@@ -363,10 +363,10 @@ namespace SteganoNet.UI.Console
                 senderClientThread.Start();
 
                 //client activity output
-                isHumanDriving = true; //TODO debug only, but its not enought working without...
+                isHumanDriving = true; //when autotermination added is useless, but no time to remove it...
                 if (isHumanDriving)
                 {
-                    System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods) / 1000));
+                    //System.Console.WriteLine(String.Format("\nSending should take around {0} s", ConsoleTools.HowLongIsTransferInMs(messageEncrypted, stegoMethods) / 1000));
                     System.Console.WriteLine("Showing client running information. Press ESC to stop when message is received.");
                     
                     bool transferIsDone = false;
@@ -399,7 +399,7 @@ namespace SteganoNet.UI.Console
                 senderClientThread.Abort(); //stop client thread
                 //senderClientThread.Join(); //needed?
                 timerClient.Stop();
-                System.Console.WriteLine("\nTransfer took " + timerClient.ElapsedMilliseconds/1000 + " seconds");
+                System.Console.WriteLine("\nTransfer took " + timerClient.ElapsedMilliseconds/1000 + " seconds (" + timerClient.ElapsedMilliseconds + " ms)");
             }
             else //catch
             {

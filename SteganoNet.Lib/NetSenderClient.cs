@@ -47,6 +47,8 @@ namespace SteganoNetLib
         private IpV4Address IpOfRemoteHost { get; set; } //isolation of referencies
         private List<StringBuilder> StegoBinary { get; set; } //contains parts of long steganography string in binary
         private int DelayInMs { get; set; } //how long to wait between iterations of sending
+        internal int zeroMessagesCounter = 0; //debug or info counter how was messages used
+        internal int otherMessagesCounter = 0; //debug or info counter how was messages used
 
 
         //////network private parametres = methods value keepers 
@@ -60,7 +62,6 @@ namespace SteganoNetLib
         internal uint AckNumberRemote { get; set; } //for TCP answers - incoming value
         private bool IsTerminatingTCP { get; set; } //TCP flow control
         private bool IsEnstablishedTCP { get; set; } //TCP flow control
-
         private List<String> DomainsToAsk { get; set; } //dns domains
 
 
@@ -92,8 +93,8 @@ namespace SteganoNetLib
             this.PortRemote = portSendTo;
 
             this.MacAddressLocal = NetStandard.GetMacAddressFromIp(IpOfInterface);
-            this.MacAddressRemote = NetStandard.GetMacAddressFromIp(IpOfRemoteHost);
-           
+            this.MacAddressRemote = NetStandard.GetMacAddressFromIp(IpOfRemoteHost); //if troubles, check value from there
+
             //bussiness ctor           
             Authenticated = false;
             Messages = new Queue<string>();
@@ -104,7 +105,7 @@ namespace SteganoNetLib
             AckNumberLocal = 0;
             IsEnstablishedTCP = false; //TCP flow control            
             DomainsToAsk = null; //DNS + HTTP layers
-            //AddInfoMessage("Client created...");
+            Messages.Enqueue("Client created...");
         }
 
         public void Speaking() //thread main method
@@ -149,13 +150,14 @@ namespace SteganoNetLib
                 AddInfoMessage(String.Format("Sending prepared on {0} = {1}...", IpOfInterface, selectedDevice.Description));
                 AddInfoMessage(String.Format("Server settings: Local: {0}:{1}, Remote: {2}:{3}", IpOfInterface, PortLocal, IpOfRemoteHost, PortRemote));
 
-                if (!Authenticated)
+                /*
+                if (!Authenticated) //TODO
                 {
-                    string chapsecret = NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString());
-                    //TODO
-                    //first convert message to bits, then do chap, since you can transfer final size of message, which can dramatically help with reasembling
+                    string chapsecret = NetAuthentication.ChapChallenge(StegoUsedMethodIds.ToString());                    
+                    //idea in background: convert message to bits, then do chap, since you can transfer final size of message, which can dramatically help with reasembling
                     Authenticated = true;
                 }
+                */
 
                 int messageCounter = 0;
                 Stopwatch timer = new Stopwatch();
@@ -445,24 +447,28 @@ namespace SteganoNetLib
                         //TODO layers need to be correctly ordered! Cannot append L2 to end...
                     }
 
-                    AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
-                    if (SecretMessage.Length == 0)
-                    {
-                        AddInfoMessage(String.Format("All messages departured ({0}), you can stop the process by pressing ESC or button stop", messageCounter));
-                        //warning, phrase "All messages departured" is used as termination string.StartsWith, be carefull when changing...
-                        Terminate = true;
-                    }
-
                     //build packet and send
                     PacketBuilder builder = new PacketBuilder(layers);
                     Packet packet = builder.Build(DateTime.Now); //if exception "Can't determine ether type automatically from next layer", you need to put layers to proper order as RM ISO/OSI specifies...
                     communicator.SendPacket(packet);
-                    System.Threading.Thread.Sleep(DelayInMs);
+
+                    if (SecretMessage.Length == 0)
+                    {
+                        AddInfoMessage(String.Format("\nTransfered was: {0} messages. There were {1} parts. Full lenght: {2} and zero lenght: {3}", messageCounter, otherMessagesCounter+zeroMessagesCounter, otherMessagesCounter, zeroMessagesCounter));
+                        AddInfoMessage(String.Format("All messages departured, you can stop the process by pressing ESC or button stop"));
+                        //warning, phrase "All messages departured" is used as termination string.StartsWith, be carefull when changing...                        
+                        Terminate = true;                        
+                    }
+                    else
+                    {
+                        AddInfoMessage(String.Format("{0} bits left to send, waiting {1} ms for next", SecretMessage.Length, DelayInMs));
+                        System.Threading.Thread.Sleep(DelayInMs);
+                    }                                              
                 }
                 while (!Terminate || SecretMessage.Length != 0);
 
                 timer.Stop();
-                AddInfoMessage("Message was transfered in " + timer.ElapsedMilliseconds / 1000 + "s and in " + messageCounter + " messages.");
+                AddInfoMessage("Message was transfered in " + timer.ElapsedMilliseconds / 1000 + "s (" + timer.ElapsedMilliseconds + " ms) and in " + messageCounter + " messages.");
             }
         }
 

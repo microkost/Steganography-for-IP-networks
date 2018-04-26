@@ -20,3 +20,16 @@ tcp or http and (ip.addr == 192.168.43.153 and ip.addr == 192.168.43.108)
 ip.addr == 158.196.194.30 and ip.addr == 84.251.160.115
 
 icmp and (ip.addr == 158.196.194.30 and ip.addr == 84.251.160.115)
+
+dns and (ip.addr == 158.196.194.30 and ip.addr == 84.251.160.115)
+
+(udp.port == 11000 or udp.port == 11011) and (ip.addr == 158.196.194.30 and ip.addr == 84.251.160.115)
+
+tcp or http and (ip.addr == 158.196.194.30 and ip.addr == 84.251.160.115)
+
+
+---
+
+dns and (ip.addr == 194.157.230.101 and ip.addr == 84.251.160.115)
+
+tcp or http and (ip.addr == 194.157.230.101 and ip.addr == 84.251.160.115)

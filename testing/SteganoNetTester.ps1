@@ -1,5 +1,5 @@
 ﻿param([string]$role = "s",                          #server or client
-      [string[]]$methods = "301,303",
+      [string[]]$methods = "705",
       [string[]]$messages = "VSB - Technical University of Ostrava has long tradition in high quality engineering.",
       [string]$ipLocal = "172.31.31.31",
       [string]$ipRemote = "172.31.31.31",
@@ -11,7 +11,6 @@
      )
 
 $methods = $methods.split(",").Trim() #making array from strings
-#$messages = $messages.split(",").Trim() #making array from strings
 
 Write-Host "Runing from $pathToExe"
 if($role.StartsWith("s".ToLower()))

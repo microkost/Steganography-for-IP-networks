@@ -24,7 +24,7 @@ namespace SteganoNetLib
 
         //timers public copy to DelayInMs when used and then executed
         public const int TcpTimeoutInMs = 20000; //gap between all packets in miliseconds
-        public const int DnsTimeoutInMs = NetSenderClient.delayDns * 2; //how long to wait for official DNS answer
+        public const int DnsTimeoutInMs = NetSenderClient.delayDns / 2; //how long to wait for official DNS answer
 
         //public static List<String> TCPphrases = new List<string> { "SYN", "SYN ACK", "ACK SYNACK", "DATA", "DATA ACK", "FIN", "FIN ACK", "ACK FINACK" }; //TCP legal
         private static Random rand = new Random(); //TCP legal values                
@@ -532,7 +532,7 @@ namespace SteganoNetLib
                     while (waitForDns)
                     {
                         iptranslated = GetDnsIpFromHostnameReal(query.DomainName.ToString());
-                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs / 2) //timeout break //SLOW
+                        if (sw.ElapsedMilliseconds > DnsTimeoutInMs) //timeout break //SLOW
                         {
                             sw.Stop();
                             waitForDns = false;

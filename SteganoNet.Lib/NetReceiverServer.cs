@@ -70,7 +70,7 @@ namespace SteganoNetLib
             //bussiness ctor
             StegoBinary = new List<StringBuilder>(); //needs to be initialized in case nothing is incomming
             Messages = new Queue<string>();
-            //Messages.Enqueue("Server created...");
+            Messages.Enqueue("Server created...");
             this.FirstRun = true;
             TimeToWaitForWholeMessageInMs = 0; //if needed different, change after creation...
         }
@@ -146,8 +146,7 @@ namespace SteganoNetLib
                     }
                     catch
                     {
-                        //fails when network interface fails...
-                        //throw new Exception("Network connection error, restart app and keep connection stable.");
+                        //fails when network interface fails... //throw new Exception("Network connection error, restart app and keep connection stable.");
                         AddInfoMessage("Packet Communicator failed!"); //will not show since reading from that is ended
                     }
 
@@ -168,7 +167,6 @@ namespace SteganoNetLib
                                     {
                                         PacketSize = packet.Length;
                                         FirstRun = false;
-                                        //timer.Reset(); //WARNING, maybe bad idea
                                     }
 
                                     ProcessIncomingV4Packet(packet);

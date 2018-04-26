@@ -8,7 +8,7 @@ using System.Linq;
 namespace SteganoNet.UI.Console
 {
     public static class ConsoleTools
-    {
+    {        
         public static string SelectInterface()
         {
             List<Tuple<string, string>> ipv4localadd;
@@ -49,7 +49,7 @@ namespace SteganoNet.UI.Console
 
         public static bool WriteInfoConsole(object nn) //printing output from console
         {
-            INetNode mm = (INetNode)(nn); //it's OK?           
+            INetNode mm = (INetNode)(nn); //obviously works...           
             try
             {
                 string message = mm.Messages.Dequeue();
@@ -108,6 +108,8 @@ namespace SteganoNet.UI.Console
 
         public static int HowLongIsTransferInMs(string messageEncrypted, List<int> stegoMethods)
         {
+            //this method is completely wrong... Is not using exact NetSteganography.GetMethodCapacity() value...
+
             //how many bits have messageEncrypted
             int bitsInMessage = DataOperations.MessageASCIItoBitLenght(messageEncrypted);
 
